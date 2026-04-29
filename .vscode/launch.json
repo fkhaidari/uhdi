@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "hgdb",
+            "request": "launch",
+            "name": "hgdb: uhdi (port 19990)",
+            "program": "${workspaceFolder}/.cmp/${input:fixture}.uhdi.db",
+            "runtimeIP": "127.0.0.1",
+            "runtimePort": 19990
+        },
+        {
+            "type": "hgdb",
+            "request": "launch",
+            "name": "hgdb: native hgdb-firrtl (port 19991)",
+            "program": "${workspaceFolder}/.cmp/${input:fixture}.native.db",
+            "runtimeIP": "127.0.0.1",
+            "runtimePort": 19991
+        }
+    ],
+    "inputs": [
+        {
+            "id": "fixture",
+            "type": "pickString",
+            "description": "Fixture for the symbol-table compare",
+            "options": ["counter", "preserved_reg"],
+            "default": "counter"
+        }
+    ]
+}

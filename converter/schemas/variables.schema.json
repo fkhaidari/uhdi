@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/variables.schema.json",
+  "$defs": {
+    "VarRef": {
+      "type": "string"
+    },
+    "TypeRef": {
+      "type": "string"
+    },
+    "ExprRef": {
+      "type": "string"
+    },
+    "ScopeRef": {
+      "type": "string"
+    },
+    "Location": {
+      "type": "object",
+      "required": [
+        "file"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "beginLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "beginColumn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endColumn": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "BindKind": {
+      "enum": [
+        "port",
+        "wire",
+        "reg",
+        "node",
+        "literal",
+        "mem",
+        "synthetic",
+        "probe",
+        "rwprobe"
+      ]
+    },
+    "Direction": {
+      "enum": [
+        "input",
+        "output",
+        "inout"
+      ]
+    },
+    "Status": {
+      "enum": [
+        "preserved",
+        "reconstructed",
+        "lost"
+      ]
+    },
+    "ValueBinding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "sigName"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "sigName": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "exprRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "exprRef": {
+              "$ref": "#/$defs/ExprRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "constant"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "constant": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "bitVector"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bitVector": {
+              "type": "string",
+              "pattern": "^[01xzXZ?]+$"
+            }
+          }
+        }
+      ]
+    },
+    "PerRepresentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/Location"
+        },
+        "value": {
+          "$ref": "#/$defs/ValueBinding"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        }
+      }
+    },
+    "Variable": {
+      "type": "object",
+      "required": [
+        "typeRef",
+        "bindKind",
+        "ownerScopeRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "typeRef": {
+          "$ref": "#/$defs/TypeRef"
+        },
+        "ownerScopeRef": {
+          "$ref": "#/$defs/ScopeRef"
+        },
+        "bindKind": {
+          "$ref": "#/$defs/BindKind"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "representations": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/PerRepresentation"
+          }
+        },
+        "delay": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/Variable"
+  }
+}

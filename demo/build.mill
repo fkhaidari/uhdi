@@ -1,0 +1,21 @@
+//| mill-version: 1.0.6-jvm
+
+import mill._
+import mill.scalalib._
+
+object gcd extends ScalaModule {
+  def scalaVersion = "2.13.18"
+  def mainClass = Task { Some("Main") }
+
+  def mvnDeps = Seq(
+    ivy"com.github.fkhaidari.chisel::chisel:v0.1.1-uhdi",
+    ivy"com.github.fkhaidari.chisel:chisel-plugin_2.13.18:v0.1.1-uhdi",
+  )
+
+  def scalacOptions = Task {
+    val plugin = compileClasspath()
+      .find(_.path.toString.contains("chisel-plugin"))
+      .map(p => s"-Xplugin:${p.path}")
+    Seq("-Ymacro-annotations") ++ plugin
+  }
+}

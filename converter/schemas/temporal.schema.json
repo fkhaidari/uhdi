@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/temporal.schema.json",
+  "$defs": {
+    "VarRef": {
+      "type": "string"
+    },
+    "ScopeRef": {
+      "type": "string"
+    },
+    "ClockRef": {
+      "type": "string"
+    },
+    "ResetRef": {
+      "type": "string"
+    },
+    "Clock": {
+      "type": "object",
+      "required": [
+        "sigRef",
+        "edge"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sigRef": {
+          "$ref": "#/$defs/VarRef"
+        },
+        "edge": {
+          "enum": [
+            "rising",
+            "falling",
+            "both"
+          ]
+        },
+        "frequencyHz": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "Reset": {
+      "type": "object",
+      "required": [
+        "sigRef",
+        "kind",
+        "activeHigh"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sigRef": {
+          "$ref": "#/$defs/VarRef"
+        },
+        "kind": {
+          "enum": [
+            "sync",
+            "async"
+          ]
+        },
+        "activeHigh": {
+          "type": "boolean"
+        },
+        "initialValue": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "constant"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "constant": {
+                  "type": "integer"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "bitVector"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "bitVector": {
+                  "type": "string",
+                  "pattern": "^[01xzXZ?]+$"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "DomainAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clock": {
+          "$ref": "#/$defs/ClockRef"
+        },
+        "reset": {
+          "$ref": "#/$defs/ResetRef"
+        }
+      }
+    },
+    "Delay": {
+      "type": "object",
+      "required": [
+        "varRef",
+        "depth"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "varRef": {
+          "$ref": "#/$defs/VarRef"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "clockRef": {
+          "$ref": "#/$defs/ClockRef"
+        }
+      }
+    },
+    "Temporal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clocks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Clock"
+          }
+        },
+        "resets": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Reset"
+          }
+        },
+        "domains": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/DomainAssignment"
+          }
+        },
+        "delays": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Delay"
+          }
+        },
+        "defaultClockRef": {
+          "$ref": "#/$defs/ClockRef"
+        },
+        "defaultResetRef": {
+          "$ref": "#/$defs/ResetRef"
+        }
+      }
+    }
+  },
+  "$ref": "#/$defs/Temporal"
+}

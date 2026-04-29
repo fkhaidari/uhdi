@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/dataflow.schema.json",
+  "$defs": {
+    "VarRef": {
+      "type": "string"
+    },
+    "ExprRef": {
+      "type": "string"
+    },
+    "EndpointRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "varRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "varRef": {
+              "$ref": "#/$defs/VarRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "exprRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "exprRef": {
+              "$ref": "#/$defs/ExprRef"
+            }
+          }
+        }
+      ]
+    },
+    "ConditionRef": {
+      "type": "object",
+      "required": [
+        "exprRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "exprRef": {
+          "$ref": "#/$defs/ExprRef"
+        }
+      }
+    },
+    "Edge": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/EndpointRef"
+        },
+        "to": {
+          "$ref": "#/$defs/EndpointRef"
+        },
+        "kind": {
+          "enum": [
+            "Data",
+            "Conditional",
+            "Index",
+            "Declaration",
+            "Clock",
+            "Reset"
+          ]
+        },
+        "clocked": {
+          "type": "boolean",
+          "default": false
+        },
+        "assignDelay": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "condition": {
+          "$ref": "#/$defs/ConditionRef"
+        }
+      }
+    },
+    "Dataflow": {
+      "type": "object",
+      "required": [
+        "edges"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        }
+      }
+    }
+  },
+  "$ref": "#/$defs/Dataflow"
+}

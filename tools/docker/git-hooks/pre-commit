@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Pre-commit hook: when a commit touches the inputs that feed into
+# tools/image-tag.txt, refuse the commit unless the tag is up to date.
+#
+# Enable once per clone:
+#   git config core.hooksPath tools/git-hooks
+#
+# Disable for a single commit (rarely needed):
+#   git commit --no-verify
+#
+# Server-side, build-tools.yml runs the same check -- this hook just
+# saves a round-trip when bumping a fork pin.
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+# Only fire when the staged set actually touches the tag inputs OR
+# the tag file itself.  Editing converter/ or bench/ shouldn't run
+# the check.  Including image-tag.txt in the watch list catches the
+# case where someone edits the recorded tag directly to a bogus
+# value -- still rare, but server-side build-tools.yml is the only
+# other safety net for that path.
+watched=(tools/versions.env tools/docker/Dockerfile tools/docker/entrypoint.sh tools/docker/image-tag.txt)
+staged=$(git diff --cached --name-only)
+relevant=0
+for f in "${watched[@]}"; do
+    if grep -qxF "$f" <<<"$staged"; then
+        relevant=1
+        break
+    fi
+done
+
+if [ "$relevant" -eq 0 ]; then
+    exit 0
+fi
+
+if ! tools/docker/check-tag.sh; then
+    echo "(commit aborted by tools/git-hooks/pre-commit)" >&2
+    exit 1
+fi

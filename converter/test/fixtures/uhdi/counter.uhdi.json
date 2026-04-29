@@ -1,0 +1,103 @@
+{
+  "format": {"name": "uhdi", "version": "1.0"},
+  "producer": {"name": "test-fixture", "version": "1.0"},
+  "representations": {
+    "chisel": {"kind": "source", "language": "Chisel", "files": ["Counter.scala"]},
+    "verilog": {"kind": "hdl", "language": "SystemVerilog", "files": ["Counter.sv"]}
+  },
+  "roles": {"authoring": "chisel", "simulation": "verilog", "canonical": "verilog"},
+  "top": ["Counter"],
+  "types": {
+    "bool": {"kind": "uint", "width": 1},
+    "u8":   {"kind": "uint", "width": 8}
+  },
+  "expressions": {
+    "r_plus_1": {
+      "opcode": "+",
+      "operands": [{"varRef": "var_Counter_r"}, {"constant": 1, "width": 8}]
+    }
+  },
+  "variables": {
+    "var_Counter_clock": {
+      "typeRef": "bool", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Counter",
+      "representations": {
+        "chisel":  {"name": "clock", "location": {"file": 0, "beginLine": 4, "beginColumn": 5}},
+        "verilog": {"name": "clock", "value": {"sigName": "clock"}, "location": {"file": 0, "beginLine": 4, "beginColumn": 5}}
+      }
+    },
+    "var_Counter_reset": {
+      "typeRef": "bool", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Counter",
+      "representations": {
+        "chisel":  {"name": "reset", "location": {"file": 0, "beginLine": 5, "beginColumn": 5}},
+        "verilog": {"name": "reset", "value": {"sigName": "reset"}, "location": {"file": 0, "beginLine": 5, "beginColumn": 5}}
+      }
+    },
+    "var_Counter_en": {
+      "typeRef": "bool", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Counter",
+      "representations": {
+        "chisel":  {"name": "en", "location": {"file": 0, "beginLine": 6, "beginColumn": 5}},
+        "verilog": {"name": "en", "value": {"sigName": "en"}, "location": {"file": 0, "beginLine": 6, "beginColumn": 5}}
+      }
+    },
+    "var_Counter_q": {
+      "typeRef": "u8", "bindKind": "port", "direction": "output",
+      "ownerScopeRef": "Counter",
+      "representations": {
+        "chisel":  {"name": "q", "location": {"file": 0, "beginLine": 7, "beginColumn": 5}},
+        "verilog": {"name": "q", "value": {"sigName": "r"}, "location": {"file": 0, "beginLine": 7, "beginColumn": 5}}
+      }
+    },
+    "var_Counter_r": {
+      "typeRef": "u8", "bindKind": "reg",
+      "ownerScopeRef": "Counter",
+      "representations": {
+        "chisel":  {"name": "r", "location": {"file": 0, "beginLine": 9, "beginColumn": 5}},
+        "verilog": {"name": "r", "value": {"sigName": "r"}, "location": {"file": 0, "beginLine": 9, "beginColumn": 5}}
+      }
+    }
+  },
+  "scopes": {
+    "Counter": {
+      "name": "Counter", "kind": "module",
+      "representations": {
+        "chisel":  {"name": "Counter", "location": {"file": 0, "beginLine": 3, "beginColumn": 1}},
+        "verilog": {"name": "Counter", "location": {"file": 0, "beginLine": 1, "beginColumn": 1}}
+      },
+      "variableRefs": ["var_Counter_clock", "var_Counter_reset", "var_Counter_en", "var_Counter_q", "var_Counter_r"],
+      "body": [
+        {
+          "kind": "decl", "varRef": "var_Counter_r",
+          "locations": {"chisel": {"file": 0, "beginLine": 9, "beginColumn": 5}}
+        },
+        {
+          "kind": "block",
+          "guardRef": "var_Counter_reset",
+          "body": [{
+            "kind": "connect", "varRef": "var_Counter_r",
+            "valueRef": {"constant": 0},
+            "locations": {"chisel": {"file": 0, "beginLine": 11, "beginColumn": 7}},
+            "bp": {"enableRef": "var_Counter_reset"}
+          }]
+        },
+        {
+          "kind": "block",
+          "guardRef": "var_Counter_en",
+          "body": [{
+            "kind": "connect", "varRef": "var_Counter_r",
+            "valueRef": {"exprRef": "r_plus_1"},
+            "locations": {"chisel": {"file": 0, "beginLine": 13, "beginColumn": 7}},
+            "bp": {"enableRef": "var_Counter_en"}
+          }]
+        },
+        {
+          "kind": "connect", "varRef": "var_Counter_q",
+          "valueRef": {"varRef": "var_Counter_r"},
+          "locations": {"chisel": {"file": 0, "beginLine": 14, "beginColumn": 5}}
+        }
+      ]
+    }
+  }
+}

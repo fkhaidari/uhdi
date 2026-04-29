@@ -1,0 +1,128 @@
+{
+  "annotation": [],
+  "assignment": [
+    {
+      "breakpoint_key": "Top@LeafAndTop.scala:15:5|1",
+      "condition": "",
+      "name": "b",
+      "scope_id": null,
+      "value": "b"
+    },
+    {
+      "breakpoint_key": "Top.l@LeafAndTop.scala:6:5|1",
+      "condition": "",
+      "name": "y",
+      "scope_id": null,
+      "value": "y"
+    }
+  ],
+  "breakpoint": [
+    {
+      "column_num": 5,
+      "condition": "1",
+      "filename": "LeafAndTop.scala",
+      "instance_name": "Top",
+      "line_num": 15,
+      "trigger": ""
+    },
+    {
+      "column_num": 5,
+      "condition": "1",
+      "filename": "LeafAndTop.scala",
+      "instance_name": "Top.l",
+      "line_num": 6,
+      "trigger": ""
+    }
+  ],
+  "context_variable": [
+    {
+      "breakpoint_key": "Top@LeafAndTop.scala:15:5|1",
+      "name": "a",
+      "type": 0,
+      "variable_value": "a"
+    },
+    {
+      "breakpoint_key": "Top@LeafAndTop.scala:15:5|1",
+      "name": "b",
+      "type": 0,
+      "variable_value": "b"
+    },
+    {
+      "breakpoint_key": "Top.l@LeafAndTop.scala:6:5|1",
+      "name": "x",
+      "type": 0,
+      "variable_value": "x"
+    },
+    {
+      "breakpoint_key": "Top.l@LeafAndTop.scala:6:5|1",
+      "name": "y",
+      "type": 0,
+      "variable_value": "y"
+    }
+  ],
+  "event": [],
+  "generator_variable": [
+    {
+      "annotation": "",
+      "instance_name": "Top",
+      "name": "a",
+      "variable_value": "a"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Top",
+      "name": "b",
+      "variable_value": "b"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Top.l",
+      "name": "x",
+      "variable_value": "x"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Top.l",
+      "name": "y",
+      "variable_value": "y"
+    }
+  ],
+  "instance": [
+    {
+      "annotation": "",
+      "name": "Top"
+    },
+    {
+      "annotation": "",
+      "name": "Top.l"
+    }
+  ],
+  "scope": [
+    {
+      "breakpoints": "1",
+      "scope": 1
+    },
+    {
+      "breakpoints": "2",
+      "scope": 2
+    }
+  ],
+  "variable": [
+    {
+      "is_rtl": 1,
+      "value": "a"
+    },
+    {
+      "is_rtl": 1,
+      "value": "b"
+    },
+    {
+      "is_rtl": 1,
+      "value": "x"
+    },
+    {
+      "is_rtl": 1,
+      "value": "y"
+    }
+  ]
+}

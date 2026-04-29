@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/expressions.schema.json",
+  "$defs": {
+    "ExprRef": {
+      "type": "string"
+    },
+    "VarRef": {
+      "type": "string"
+    },
+    "LeafVar": {
+      "type": "object",
+      "required": [
+        "varRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "varRef": {
+          "$ref": "#/$defs/VarRef"
+        }
+      }
+    },
+    "LeafConst": {
+      "type": "object",
+      "required": [
+        "constant"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "constant": {
+          "type": "integer"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "LeafBitVec": {
+      "type": "object",
+      "required": [
+        "bitVector"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bitVector": {
+          "type": "string",
+          "pattern": "^[01xzXZ?]+$"
+        }
+      }
+    },
+    "LeafSig": {
+      "type": "object",
+      "required": [
+        "sigName"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sigName": {
+          "type": "string"
+        }
+      }
+    },
+    "LeafRef": {
+      "type": "object",
+      "required": [
+        "exprRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "exprRef": {
+          "$ref": "#/$defs/ExprRef"
+        }
+      }
+    },
+    "OpNode": {
+      "type": "object",
+      "required": [
+        "opcode",
+        "operands"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "opcode": {
+          "enum": [
+            "+",
+            "-",
+            "*",
+            "/",
+            "%",
+            "neg",
+            "&",
+            "|",
+            "^",
+            "~",
+            "&&",
+            "||",
+            "!",
+            "andr",
+            "orr",
+            "xorr",
+            "<<",
+            ">>",
+            ">>>",
+            "==",
+            "!=",
+            "<",
+            ">",
+            "<=",
+            ">=",
+            "===",
+            "!==",
+            "==?",
+            "!=?",
+            "?:",
+            "{}",
+            "R{}",
+            "[]",
+            "pad",
+            "asUInt",
+            "asSInt",
+            "cvt",
+            "asClock",
+            "asAsyncReset",
+            "'{",
+            ".",
+            "idx",
+            "Mux",
+            "Cat",
+            "Fill",
+            "VecInit"
+          ]
+        },
+        "operands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Operand"
+          }
+        },
+        "fieldName": {
+          "type": "string"
+        }
+      }
+    },
+    "Operand": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/LeafVar"
+        },
+        {
+          "$ref": "#/$defs/LeafConst"
+        },
+        {
+          "$ref": "#/$defs/LeafBitVec"
+        },
+        {
+          "$ref": "#/$defs/LeafSig"
+        },
+        {
+          "$ref": "#/$defs/LeafRef"
+        },
+        {
+          "$ref": "#/$defs/OpNode"
+        }
+      ]
+    },
+    "Expression": {
+      "$ref": "#/$defs/OpNode"
+    }
+  },
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/Expression"
+  }
+}

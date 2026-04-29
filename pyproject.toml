@@ -1,0 +1,82 @@
+# Workspace root.  Holds lint/type/coverage configs shared by both
+# subprojects; no [project] block (this directory is not a buildable
+# package on its own).  Each subproject has its own pyproject.toml
+# with its own [project] + [build-system].
+#
+# Local install for development:
+#     uv pip install -e ./converter -e ./bench
+#
+# Both pytest suites:
+#     pytest converter/ bench/
+
+[tool.coverage.run]
+branch = true
+# Cover both subprojects' src trees.  CI runs each in its own job
+# with its own --source filter, but local invocations pick up both.
+source = [
+    "converter/src",
+    "bench/src",
+]
+
+[tool.coverage.report]
+# Skip files that are pure boilerplate -- __init__.py just re-exports,
+# __main__.py is a one-line shim around uhdi_common.cli.main_for_backend
+# (which IS covered).  Reporting them dilutes the score with no signal.
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == \"__main__\":",
+    "raise NotImplementedError",
+    # Abstract-method placeholders (`def foo(self): ...`) carry a bare
+    # `...` literal whose body never runs -- subclasses override.
+    "^\\s*\\.\\.\\.\\s*$",
+]
+omit = [
+    "*/__main__.py",
+]
+skip_empty = true
+show_missing = true
+# Floor, not target.  Current actual ~79% on the converter; bench has
+# its own surface and is allowed to lag while it's still a smoke
+# harness.  Drop only with explicit sign-off in a PR.
+fail_under = 75
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+# Narrow rule set: real bugs, not stylistic churn.
+#   F   pyflakes (unused imports, undefined names, redefined symbols)
+#   E9  syntax errors / runtime-fatal pycodestyle subset
+#   I   isort (import block ordering)
+select = ["F", "E9", "I"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use `assert` (pytest convention) and may redefine helper
+# names across parametrize blocks.
+"**/test/**" = ["S101", "F811"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+# Strict only on the converter's shared surface (Backend, BaseContext,
+# refs).  Bench is integration glue and converters' own emitter logic
+# stays loose against Dict[str, Any] -- a typed UHDI model is a
+# format-spec rewrite, not a CI gate.
+module = "uhdi_common.*"
+disallow_untyped_defs = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+# validate.py is thin glue around jsonschema + referencing whose
+# typing surface drifts version-to-version.  Function signatures
+# remain typed (parent rule); body checks skipped.
+module = "uhdi_common.validate"
+disallow_untyped_defs = false
+warn_return_any = false
+ignore_errors = true

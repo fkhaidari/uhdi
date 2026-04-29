@@ -1,0 +1,93 @@
+{
+  "format": {"name": "uhdi", "version": "1.0"},
+  "producer": {"name": "test-fixture", "version": "1.0"},
+  "representations": {
+    "chisel": {"kind": "source", "language": "Chisel", "files": ["Adder.scala"]},
+    "verilog": {"kind": "hdl", "language": "SystemVerilog", "files": ["Adder.sv"]}
+  },
+  "roles": {"authoring": "chisel", "simulation": "verilog", "canonical": "verilog"},
+  "top": ["Adder"],
+  "types": {
+    "u8": {"kind": "uint", "width": 8},
+    "bool": {"kind": "uint", "width": 1}
+  },
+  "expressions": {
+    "a_plus_b": {
+      "opcode": "+",
+      "operands": [{"varRef": "var_Adder_a"}, {"varRef": "var_Adder_b"}]
+    },
+    "or_of_inputs": {
+      "opcode": "||",
+      "operands": [{"varRef": "var_Adder_en"}, {"varRef": "var_Adder_force"}]
+    },
+    "guarded_add": {
+      "opcode": "&&",
+      "operands": [
+        {"exprRef": "or_of_inputs"},
+        {"exprRef": "a_plus_b"}
+      ]
+    }
+  },
+  "variables": {
+    "var_Adder_a": {
+      "typeRef": "u8", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Adder",
+      "representations": {
+        "chisel":  {"name": "a", "location": {"file": 0, "beginLine": 4, "beginColumn": 5}},
+        "verilog": {"name": "a", "value": {"sigName": "a"}, "location": {"file": 0, "beginLine": 4, "beginColumn": 5}}
+      }
+    },
+    "var_Adder_b": {
+      "typeRef": "u8", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Adder",
+      "representations": {
+        "chisel":  {"name": "b", "location": {"file": 0, "beginLine": 5, "beginColumn": 5}},
+        "verilog": {"name": "b", "value": {"sigName": "b"}, "location": {"file": 0, "beginLine": 5, "beginColumn": 5}}
+      }
+    },
+    "var_Adder_en": {
+      "typeRef": "bool", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Adder",
+      "representations": {
+        "chisel":  {"name": "en", "location": {"file": 0, "beginLine": 6, "beginColumn": 5}},
+        "verilog": {"name": "en", "value": {"sigName": "en"}, "location": {"file": 0, "beginLine": 6, "beginColumn": 5}}
+      }
+    },
+    "var_Adder_force": {
+      "typeRef": "bool", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Adder",
+      "representations": {
+        "chisel":  {"name": "force", "location": {"file": 0, "beginLine": 7, "beginColumn": 5}},
+        "verilog": {"name": "force_in", "value": {"sigName": "force_in"}, "location": {"file": 0, "beginLine": 7, "beginColumn": 5}}
+      }
+    },
+    "var_Adder_sum": {
+      "typeRef": "u8", "bindKind": "port", "direction": "output",
+      "ownerScopeRef": "Adder",
+      "representations": {
+        "chisel":  {"name": "sum", "location": {"file": 0, "beginLine": 8, "beginColumn": 5}},
+        "verilog": {"name": "sum", "value": {"sigName": "sum"}, "location": {"file": 0, "beginLine": 8, "beginColumn": 5}}
+      }
+    }
+  },
+  "scopes": {
+    "Adder": {
+      "name": "Adder", "kind": "module",
+      "representations": {
+        "chisel":  {"name": "Adder", "location": {"file": 0, "beginLine": 3, "beginColumn": 1}},
+        "verilog": {"name": "Adder", "location": {"file": 0, "beginLine": 1, "beginColumn": 1}}
+      },
+      "variableRefs": ["var_Adder_a", "var_Adder_b", "var_Adder_en", "var_Adder_force", "var_Adder_sum"],
+      "body": [{
+        "kind": "block",
+        "guardRef": "or_of_inputs",
+        "body": [{
+          "kind": "connect", "varRef": "var_Adder_sum",
+          "valueRef": {"exprRef": "a_plus_b"},
+          "locations": {"chisel": {"file": 0, "beginLine": 11, "beginColumn": 7}},
+          "bp": {"enableRef": "or_of_inputs"}
+        }]
+      }]
+    }
+  }
+}

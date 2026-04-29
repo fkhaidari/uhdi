@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/types.schema.json",
+  "$defs": {
+    "TypeRef": {
+      "type": "string"
+    },
+    "GroundInt": {
+      "type": "object",
+      "required": [
+        "kind",
+        "width"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "uint",
+            "sint"
+          ]
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "GroundClock": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "clock",
+            "reset",
+            "asyncreset",
+            "analog"
+          ]
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "StructMember": {
+      "type": "object",
+      "required": [
+        "name",
+        "typeRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "typeRef": {
+          "$ref": "#/$defs/TypeRef"
+        },
+        "flipped": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "Struct": {
+      "type": "object",
+      "required": [
+        "kind",
+        "members"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "struct"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StructMember"
+          }
+        }
+      }
+    },
+    "Vector": {
+      "type": "object",
+      "required": [
+        "kind",
+        "elementRef",
+        "size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "vector"
+        },
+        "elementRef": {
+          "$ref": "#/$defs/TypeRef"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Enum": {
+      "type": "object",
+      "required": [
+        "kind",
+        "underlyingTypeRef",
+        "variants"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "enum"
+        },
+        "underlyingTypeRef": {
+          "$ref": "#/$defs/TypeRef"
+        },
+        "variants": {
+          "type": "object",
+          "patternProperties": {
+            "^-?[0-9]+$": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "Type": {
+      "description": "Tag-discriminated union over the five Type variants. We dispatch on `kind` first via an if/then/else chain so a typo like `{\"kind\":\"clock\",\"members\":[]}` produces a single, focused error path under the right branch instead of jsonschema's all-branches-tried-and-failed report.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["uint", "sint", "clock", "reset", "asyncreset",
+                   "analog", "struct", "vector", "enum"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "enum": ["uint", "sint"] } } },
+          "then": { "$ref": "#/$defs/GroundInt" }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": { "enum": ["clock", "reset", "asyncreset", "analog"] }
+            }
+          },
+          "then": { "$ref": "#/$defs/GroundClock" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "struct" } } },
+          "then": { "$ref": "#/$defs/Struct" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "vector" } } },
+          "then": { "$ref": "#/$defs/Vector" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "enum" } } },
+          "then": { "$ref": "#/$defs/Enum" }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/Type"
+  }
+}

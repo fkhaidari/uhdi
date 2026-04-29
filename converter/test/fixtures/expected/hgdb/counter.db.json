@@ -1,0 +1,254 @@
+{
+  "annotation": [
+    {
+      "name": "clock",
+      "value": "Counter.clock"
+    }
+  ],
+  "assignment": [
+    {
+      "breakpoint_key": "Counter@Counter.scala:14:5|1",
+      "condition": "",
+      "name": "q",
+      "scope_id": null,
+      "value": "q"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:11:7|reset",
+      "condition": "",
+      "name": "r",
+      "scope_id": null,
+      "value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:13:7|en",
+      "condition": "",
+      "name": "r",
+      "scope_id": null,
+      "value": "r"
+    }
+  ],
+  "breakpoint": [
+    {
+      "column_num": 7,
+      "condition": "reset",
+      "filename": "Counter.scala",
+      "instance_name": "Counter",
+      "line_num": 11,
+      "trigger": ""
+    },
+    {
+      "column_num": 7,
+      "condition": "en",
+      "filename": "Counter.scala",
+      "instance_name": "Counter",
+      "line_num": 13,
+      "trigger": ""
+    },
+    {
+      "column_num": 5,
+      "condition": "1",
+      "filename": "Counter.scala",
+      "instance_name": "Counter",
+      "line_num": 14,
+      "trigger": ""
+    },
+    {
+      "column_num": 5,
+      "condition": "1",
+      "filename": "Counter.scala",
+      "instance_name": "Counter",
+      "line_num": 9,
+      "trigger": ""
+    }
+  ],
+  "context_variable": [
+    {
+      "breakpoint_key": "Counter@Counter.scala:11:7|reset",
+      "name": "clock",
+      "type": 0,
+      "variable_value": "clock"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:13:7|en",
+      "name": "clock",
+      "type": 0,
+      "variable_value": "clock"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:14:5|1",
+      "name": "clock",
+      "type": 0,
+      "variable_value": "clock"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:9:5|1",
+      "name": "clock",
+      "type": 0,
+      "variable_value": "clock"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:11:7|reset",
+      "name": "en",
+      "type": 0,
+      "variable_value": "en"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:13:7|en",
+      "name": "en",
+      "type": 0,
+      "variable_value": "en"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:14:5|1",
+      "name": "en",
+      "type": 0,
+      "variable_value": "en"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:9:5|1",
+      "name": "en",
+      "type": 0,
+      "variable_value": "en"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:11:7|reset",
+      "name": "q",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:13:7|en",
+      "name": "q",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:14:5|1",
+      "name": "q",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:9:5|1",
+      "name": "q",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:11:7|reset",
+      "name": "r",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:13:7|en",
+      "name": "r",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:14:5|1",
+      "name": "r",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:9:5|1",
+      "name": "r",
+      "type": 0,
+      "variable_value": "r"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:11:7|reset",
+      "name": "reset",
+      "type": 0,
+      "variable_value": "reset"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:13:7|en",
+      "name": "reset",
+      "type": 0,
+      "variable_value": "reset"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:14:5|1",
+      "name": "reset",
+      "type": 0,
+      "variable_value": "reset"
+    },
+    {
+      "breakpoint_key": "Counter@Counter.scala:9:5|1",
+      "name": "reset",
+      "type": 0,
+      "variable_value": "reset"
+    }
+  ],
+  "event": [],
+  "generator_variable": [
+    {
+      "annotation": "",
+      "instance_name": "Counter",
+      "name": "clock",
+      "variable_value": "clock"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Counter",
+      "name": "en",
+      "variable_value": "en"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Counter",
+      "name": "q",
+      "variable_value": "r"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Counter",
+      "name": "r",
+      "variable_value": "r"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Counter",
+      "name": "reset",
+      "variable_value": "reset"
+    }
+  ],
+  "instance": [
+    {
+      "annotation": "",
+      "name": "Counter"
+    }
+  ],
+  "scope": [
+    {
+      "breakpoints": "1 2 3 4",
+      "scope": 1
+    }
+  ],
+  "variable": [
+    {
+      "is_rtl": 1,
+      "value": "clock"
+    },
+    {
+      "is_rtl": 1,
+      "value": "en"
+    },
+    {
+      "is_rtl": 1,
+      "value": "r"
+    },
+    {
+      "is_rtl": 1,
+      "value": "r"
+    },
+    {
+      "is_rtl": 1,
+      "value": "reset"
+    }
+  ]
+}

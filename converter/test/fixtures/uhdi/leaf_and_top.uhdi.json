@@ -1,0 +1,83 @@
+{
+  "format": {"name": "uhdi", "version": "1.0"},
+  "producer": {"name": "test-fixture", "version": "1.0"},
+  "representations": {
+    "chisel": {"kind": "source", "language": "Chisel", "files": ["LeafAndTop.scala"]},
+    "verilog": {"kind": "hdl", "language": "SystemVerilog", "files": ["LeafAndTop.sv"]}
+  },
+  "roles": {"authoring": "chisel", "simulation": "verilog", "canonical": "verilog"},
+  "top": ["Top"],
+  "types": {"u8": {"kind": "uint", "width": 8}},
+  "expressions": {},
+  "variables": {
+    "var_Leaf_x": {
+      "typeRef": "u8", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Leaf",
+      "representations": {
+        "chisel":  {"name": "x", "location": {"file": 0, "beginLine": 4, "beginColumn": 5}},
+        "verilog": {"name": "x", "value": {"sigName": "x"}, "location": {"file": 0, "beginLine": 4, "beginColumn": 5}}
+      }
+    },
+    "var_Leaf_y": {
+      "typeRef": "u8", "bindKind": "port", "direction": "output",
+      "ownerScopeRef": "Leaf",
+      "representations": {
+        "chisel":  {"name": "y", "location": {"file": 0, "beginLine": 5, "beginColumn": 5}},
+        "verilog": {"name": "y", "value": {"sigName": "y"}, "location": {"file": 0, "beginLine": 5, "beginColumn": 5}}
+      }
+    },
+    "var_Top_a": {
+      "typeRef": "u8", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Top",
+      "representations": {
+        "chisel":  {"name": "a", "location": {"file": 0, "beginLine": 12, "beginColumn": 5}},
+        "verilog": {"name": "a", "value": {"sigName": "a"}, "location": {"file": 0, "beginLine": 12, "beginColumn": 5}}
+      }
+    },
+    "var_Top_b": {
+      "typeRef": "u8", "bindKind": "port", "direction": "output",
+      "ownerScopeRef": "Top",
+      "representations": {
+        "chisel":  {"name": "b", "location": {"file": 0, "beginLine": 13, "beginColumn": 5}},
+        "verilog": {"name": "b", "value": {"sigName": "b"}, "location": {"file": 0, "beginLine": 13, "beginColumn": 5}}
+      }
+    }
+  },
+  "scopes": {
+    "Leaf": {
+      "name": "Leaf", "kind": "module",
+      "representations": {
+        "chisel":  {"name": "Leaf", "location": {"file": 0, "beginLine": 3, "beginColumn": 1}},
+        "verilog": {"name": "Leaf", "location": {"file": 0, "beginLine": 1, "beginColumn": 1}}
+      },
+      "variableRefs": ["var_Leaf_x", "var_Leaf_y"],
+      "body": [{
+        "kind": "connect", "varRef": "var_Leaf_y",
+        "valueRef": {"varRef": "var_Leaf_x"},
+        "locations": {"chisel": {"file": 0, "beginLine": 6, "beginColumn": 5}}
+      }]
+    },
+    "Top": {
+      "name": "Top", "kind": "module",
+      "representations": {
+        "chisel":  {"name": "Top", "location": {"file": 0, "beginLine": 11, "beginColumn": 1}},
+        "verilog": {"name": "Top", "location": {"file": 0, "beginLine": 10, "beginColumn": 1}}
+      },
+      "variableRefs": ["var_Top_a", "var_Top_b"],
+      "instantiates": [{
+        "as": "l", "scopeRef": "Leaf",
+        "representations": {
+          "chisel":  {"location": {"file": 0, "beginLine": 14, "beginColumn": 5}},
+          "verilog": {"location": {"file": 0, "beginLine": 14, "beginColumn": 5}}
+        }
+      }],
+      "body": [
+        {
+          "kind": "connect", "varRef": "var_Top_b",
+          "valueRef": {"varRef": "var_Top_a"},
+          "locations": {"chisel": {"file": 0, "beginLine": 15, "beginColumn": 5}}
+        }
+      ]
+    }
+  }
+}

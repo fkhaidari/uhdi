@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uhdi-bench"
+version = "0.1.0"
+description = "Integration harness: Scala/Chisel -> FIR -> UHDI -> projection vs native references."
+# `uhdi_bench.manifest` uses `tomllib` (stdlib, 3.11+).  Floor must
+# match -- a 3.9/3.10 install would crash on the unconditional
+# `import tomllib` before the package can announce a missing dep.
+requires-python = ">=3.11"
+# uhdi-converter ships the Backend registry + diff helpers bench
+# parametrises over.  Listed as a workspace-relative editable install
+# so a fresh `uv pip install -e ./bench` from the repo root pulls
+# both packages.
+dependencies = [
+    "uhdi-converter",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["test"]
+# Bench tests touch external toolchains (scala-cli, firtool, ...)
+# and announce skip-with-reason when one is missing.  Keep verbose so
+# CI logs show *which* fixture/cell the harness is on -- otherwise a
+# single hang in scala-cli looks indistinguishable from "still
+# downloading".
+addopts = "-v"
+markers = [
+    "scala_cli: cell needs scala-cli on PATH; conftest auto-skips when absent",
+]

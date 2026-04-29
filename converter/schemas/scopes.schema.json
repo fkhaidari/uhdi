@@ -1,0 +1,495 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/scopes.schema.json",
+  "$defs": {
+    "ScopeRef": {
+      "type": "string"
+    },
+    "VarRef": {
+      "type": "string"
+    },
+    "ExprRef": {
+      "type": "string"
+    },
+    "Location": {
+      "type": "object",
+      "required": [
+        "file"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "beginLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "beginColumn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endColumn": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "Parameter": {
+      "type": "object",
+      "required": [
+        "name",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {}
+      }
+    },
+    "Instantiation": {
+      "type": "object",
+      "required": [
+        "as",
+        "scopeRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "as": {
+          "type": "string"
+        },
+        "scopeRef": {
+          "$ref": "#/$defs/ScopeRef"
+        },
+        "representations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "location": {
+                "$ref": "#/$defs/Location"
+              }
+            }
+          }
+        }
+      }
+    },
+    "BreakpointMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "steppable": {
+          "type": "boolean",
+          "default": true
+        },
+        "enableRef": {
+          "$ref": "#/$defs/ExprRef"
+        },
+        "priority": {
+          "type": "integer",
+          "default": 0
+        },
+        "watchpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "change",
+                "rising",
+                "falling",
+                "value"
+              ]
+            },
+            "matchRef": {
+              "$ref": "#/$defs/ExprRef"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "throttle": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxHits": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "period": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "category": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "ScopeBreakpointMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stopOnEntry": {
+          "type": "boolean",
+          "default": false
+        },
+        "stopOnExit": {
+          "type": "boolean",
+          "default": false
+        },
+        "category": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ValueRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "varRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "varRef": {
+              "$ref": "#/$defs/VarRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "exprRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "exprRef": {
+              "$ref": "#/$defs/ExprRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "constant"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "constant": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "LocationMap": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Location"
+      }
+    },
+    "StmtDecl": {
+      "type": "object",
+      "required": [
+        "kind",
+        "varRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "decl"
+        },
+        "varRef": {
+          "$ref": "#/$defs/VarRef"
+        },
+        "locations": {
+          "$ref": "#/$defs/LocationMap"
+        },
+        "bp": {
+          "$ref": "#/$defs/BreakpointMeta"
+        }
+      }
+    },
+    "StmtConnect": {
+      "type": "object",
+      "required": [
+        "kind",
+        "varRef",
+        "valueRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "connect"
+        },
+        "varRef": {
+          "$ref": "#/$defs/VarRef"
+        },
+        "valueRef": {
+          "$ref": "#/$defs/ValueRef"
+        },
+        "locations": {
+          "$ref": "#/$defs/LocationMap"
+        },
+        "bp": {
+          "$ref": "#/$defs/BreakpointMeta"
+        }
+      }
+    },
+    "StmtBlock": {
+      "type": "object",
+      "required": [
+        "kind",
+        "body"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "block"
+        },
+        "guardRef": {
+          "$ref": "#/$defs/ExprRef"
+        },
+        "negated": {
+          "type": "boolean"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Statement"
+          }
+        },
+        "locations": {
+          "$ref": "#/$defs/LocationMap"
+        }
+      }
+    },
+    "StmtNone": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "none"
+        },
+        "locations": {
+          "$ref": "#/$defs/LocationMap"
+        },
+        "bp": {
+          "$ref": "#/$defs/BreakpointMeta"
+        }
+      }
+    },
+    "StmtAssert": {
+      "type": "object",
+      "required": [
+        "kind",
+        "condRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "assert"
+        },
+        "condRef": {
+          "$ref": "#/$defs/ExprRef"
+        },
+        "message": {
+          "type": "string"
+        },
+        "locations": {
+          "$ref": "#/$defs/LocationMap"
+        },
+        "bp": {
+          "$ref": "#/$defs/BreakpointMeta"
+        }
+      }
+    },
+    "StmtAssume": {
+      "type": "object",
+      "required": [
+        "kind",
+        "condRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "assume"
+        },
+        "condRef": {
+          "$ref": "#/$defs/ExprRef"
+        },
+        "message": {
+          "type": "string"
+        },
+        "locations": {
+          "$ref": "#/$defs/LocationMap"
+        },
+        "bp": {
+          "$ref": "#/$defs/BreakpointMeta"
+        }
+      }
+    },
+    "StmtCover": {
+      "type": "object",
+      "required": [
+        "kind",
+        "condRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "cover"
+        },
+        "condRef": {
+          "$ref": "#/$defs/ExprRef"
+        },
+        "message": {
+          "type": "string"
+        },
+        "locations": {
+          "$ref": "#/$defs/LocationMap"
+        },
+        "bp": {
+          "$ref": "#/$defs/BreakpointMeta"
+        }
+      }
+    },
+    "Statement": {
+      "description": "Tag-discriminated union over the seven Statement variants. Dispatches on `kind` so a typo in a body[] entry produces a single, focused error path instead of jsonschema's all-branches-failed report.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["decl", "connect", "block", "none",
+                   "assert", "assume", "cover"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "decl" } } },
+          "then": { "$ref": "#/$defs/StmtDecl" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "connect" } } },
+          "then": { "$ref": "#/$defs/StmtConnect" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "block" } } },
+          "then": { "$ref": "#/$defs/StmtBlock" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "none" } } },
+          "then": { "$ref": "#/$defs/StmtNone" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "assert" } } },
+          "then": { "$ref": "#/$defs/StmtAssert" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "assume" } } },
+          "then": { "$ref": "#/$defs/StmtAssume" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "cover" } } },
+          "then": { "$ref": "#/$defs/StmtCover" }
+        }
+      ]
+    },
+    "Scope": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "module",
+            "extmodule",
+            "inline",
+            "layer_block"
+          ],
+          "default": "module"
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Parameter"
+          }
+        },
+        "representations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "location": {
+                "$ref": "#/$defs/Location"
+              }
+            }
+          }
+        },
+        "variableRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VarRef"
+          }
+        },
+        "instantiates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Instantiation"
+          }
+        },
+        "containerScopeRef": {
+          "$ref": "#/$defs/ScopeRef"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Statement"
+          }
+        },
+        "bp": {
+          "$ref": "#/$defs/ScopeBreakpointMeta"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/Scope"
+  }
+}

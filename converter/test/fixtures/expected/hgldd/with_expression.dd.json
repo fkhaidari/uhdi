@@ -1,0 +1,151 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "Adder.scala",
+      "Adder.sv"
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "children": [],
+      "hdl_loc": {
+        "begin_column": 1,
+        "begin_line": 1,
+        "end_column": 1,
+        "end_line": 1,
+        "file": 2
+      },
+      "hgl_loc": {
+        "begin_column": 1,
+        "begin_line": 3,
+        "end_column": 1,
+        "end_line": 3,
+        "file": 1
+      },
+      "kind": "module",
+      "module_name": "Adder",
+      "obj_name": "Adder",
+      "port_vars": [
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "a"
+          },
+          "var_name": "a"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 5,
+            "end_column": 5,
+            "end_line": 5,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 5,
+            "end_column": 5,
+            "end_line": 5,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "b"
+          },
+          "var_name": "b"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 6,
+            "end_column": 5,
+            "end_line": 6,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 6,
+            "end_column": 5,
+            "end_line": 6,
+            "file": 1
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "en"
+          },
+          "var_name": "en"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 7,
+            "end_column": 5,
+            "end_line": 7,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 7,
+            "end_column": 5,
+            "end_line": 7,
+            "file": 1
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "force_in"
+          },
+          "var_name": "force"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 8,
+            "end_column": 5,
+            "end_line": 8,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 8,
+            "end_column": 5,
+            "end_line": 8,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "sum"
+          },
+          "var_name": "sum"
+        }
+      ]
+    }
+  ]
+}

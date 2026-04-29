@@ -1,0 +1,51 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# coverage.py runtime data (`coverage run` writes .coverage; --parallel
+# adds .coverage.<host>.<pid>.<rand>; coverage xml -o coverage.xml).
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Converter outputs.  Test fixtures live under
+# converter/test/fixtures/ and are meant to be tracked -- the
+# un-ignore lines below override the glob.
+*.uhdi.json
+*.hgldd
+*.db
+!converter/test/fixtures/**/*.uhdi.json
+!converter/test/fixtures/**/*.dd
+!converter/test/fixtures/**/*.db
+
+# bench scala-cli FIR cache.  Re-derivable from `bench/fixtures/*.scala`,
+# expensive to re-fetch (chisel deps), but per-machine.
+bench/.cache/
+
+# scala-cli BSP / build-server data.  scala-cli drops these next to
+# any source it compiles; they're machine-specific class files and
+# bloop session caches, not source-of-truth.
+bench/fixtures/.bsp/
+bench/fixtures/.scala-build/
+
+# demo.sh outputs
+demo-out-*/
+*.vcd
+
+# compare scripts' workdir
+.cmp/
+
+# Editor
+.idea/
+*.swp
+
+# VS Code: ignore everything except the checked-in launch.json
+.vscode/*
+!.vscode/launch.json

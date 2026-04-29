@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/provenance.schema.json",
+  "$defs": {
+    "VarRef": {
+      "type": "string"
+    },
+    "ExprRef": {
+      "type": "string"
+    },
+    "ScopeRef": {
+      "type": "string"
+    },
+    "TypeRef": {
+      "type": "string"
+    },
+    "EntityRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "varRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "varRef": {
+              "$ref": "#/$defs/VarRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "exprRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "exprRef": {
+              "$ref": "#/$defs/ExprRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "scopeRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "scopeRef": {
+              "$ref": "#/$defs/ScopeRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "typeRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "typeRef": {
+              "$ref": "#/$defs/TypeRef"
+            }
+          }
+        }
+      ]
+    },
+    "Origin": {
+      "description": "Where the entity came from. `pass:<name>` carries the lowering pass identifier; the other variants are full tokens. Anchored on both sides so values like `sourceXYZZY` (which used to slip through the unanchored prefix-only pattern) are rejected.",
+      "type": "string",
+      "pattern": "^(source|elab|external|inferred|pass:[A-Za-z0-9_]+)$"
+    },
+    "Transform": {
+      "enum": [
+        "rename",
+        "bundle_flatten",
+        "vec_unroll",
+        "inline",
+        "ssa_temp",
+        "cse",
+        "dce_preserve",
+        "const_fold",
+        "mux_lower",
+        "clock_lower",
+        "custom"
+      ]
+    },
+    "Record": {
+      "type": "object",
+      "required": [
+        "origin",
+        "derivedFrom",
+        "transform"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "origin": {
+          "$ref": "#/$defs/Origin"
+        },
+        "derivedFrom": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "transform": {
+          "$ref": "#/$defs/Transform"
+        },
+        "fieldPath": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hostInstance": {
+          "type": "string"
+        },
+        "iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "detail": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "passVersion": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "lossy": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "Provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Record"
+          }
+        },
+        "expressions": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Record"
+          }
+        },
+        "scopes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Record"
+          }
+        },
+        "types": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Record"
+          }
+        }
+      }
+    }
+  },
+  "$ref": "#/$defs/Provenance"
+}

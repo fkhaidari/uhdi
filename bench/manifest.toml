@@ -1,0 +1,68 @@
+# Bench manifest: per-fixture expected deltas + reasons.
+#
+# Each [[fixtures.<name>.expected.<target>]] entry is an ALLOWED
+# divergence between our converter's output and the native reference.
+# Cells without an `expected.<target>` block are strict (zero deltas
+# required to pass).
+#
+# Fields:
+#   path       -- exact JSON-pointer path, e.g. "/generator"
+#   path_regex -- re.fullmatch pattern, e.g. "/table/[0-9]+/scope/.*"
+#   kind       -- optional delta-kind filter ("value", "missing",
+#                 "extra", "type", "length")
+#   reason     -- human-readable thesis ch.5 note
+#
+# The bench harness:
+#   * fails with "unexpected delta" if any real delta has no matching
+#     expectation -> regression or genuine new format-design choice
+#   * fails with "manifest stale: gap closed" if an expectation
+#     matched zero real deltas -> a divergence we tracked has been
+#     resolved, drop the entry
+
+[fixtures.Counter]
+scala = "Counter.scala"
+
+# tywaves: expected exact-match.  No expected deltas listed.
+
+# hgdb_firrtl: legacy Scala-FIRRTL 1.x reference, runs on the
+# downgraded FIR.  Native operates pre-DCE, so the output port `q`
+# survives as a separate variable with sigName=q; our converter sees
+# the post-DCE UHDI where `q` has been folded into backing wire `r`.
+
+[[fixtures.Counter.expected.hgdb_firrtl]]
+# Index varies with sort order -- match by regex over the canonical
+# row position (every index in the list).  hgdb-firrtl native sees
+# output port `q` as a separate sigName=q variable; we operate
+# post-DCE where q is folded into backing wire `r`, so the row
+# `{name=q, variable_value=q}` doesn't exist on our side.
+path_regex = "/generator_variable/[0-9]+"
+kind = "missing"
+reason = "post-DCE: pre-DCE native sees output port `q` as a separate variable; our flow operates on post-DCE UHDI where q is folded into backing wire r"
+
+[[fixtures.Counter.expected.hgdb_firrtl]]
+path_regex = "/variable/[0-9]+"
+kind = "missing"
+reason = "post-DCE: pre-DCE native materialises a `q` variable row; we operate post-DCE so q's row carries value=r"
+
+# hgdb_circt: modern hgdb-circt firtool emits JSON.  Same post-DCE
+# divergence as hgdb_firrtl, plus a cosmetic generator-name field.
+
+[[fixtures.Counter.expected.hgdb_circt]]
+path = "/generator"
+kind = "value"
+reason = "informational: producer is `uhdi` (our converter), native is `circt` (hgdb-circt firtool pass).  Field is documentation, not consumed by hgdb runtime"
+
+[[fixtures.Counter.expected.hgdb_circt]]
+# Path uses regex because the diff harness reports the index from
+# the *native* list, which changes if hgdb-circt reorders its pool
+# emission.  Matching by the index pattern keeps the expectation
+# stable across ordering shuffles -- we care that q's value="q"
+# vs ours value="r", not which slot it lives in.
+path_regex = "/variables/[0-9]+"
+kind = "missing"
+reason = "post-DCE: native pool entry for q has value=q (pre-DCE port wire); ours has value=r (post-DCE backing wire), so the dict-level membership check rejects ours"
+
+[[fixtures.Counter.expected.hgdb_circt]]
+path_regex = "/table/[0-9]+"
+kind = "missing"
+reason = "post-DCE: module entry's nested body shape differs because hgdb-circt+legacy firtool walks pre-DCE FIRRTL with sparse dbg.* ops, while our walker emits one entry per UHDI body statement.  Same content, different structure"

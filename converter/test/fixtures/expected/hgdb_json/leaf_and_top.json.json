@@ -1,0 +1,56 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "instances": [
+        {
+          "module": "Leaf",
+          "name": "l"
+        }
+      ],
+      "name": "Top",
+      "scope": [
+        {
+          "filename": "LeafAndTop.scala",
+          "scope": [
+            {
+              "column": 5,
+              "line": 15,
+              "type": "assign",
+              "variable": "1"
+            }
+          ],
+          "type": "block"
+        }
+      ],
+      "type": "module",
+      "variables": [
+        {
+          "name": "a",
+          "rtl": true,
+          "value": "a"
+        },
+        {
+          "name": "b",
+          "rtl": true,
+          "value": "b"
+        }
+      ]
+    }
+  ],
+  "top": "Top",
+  "variables": [
+    {
+      "id": "0",
+      "name": "y",
+      "rtl": true,
+      "value": "y"
+    },
+    {
+      "id": "1",
+      "name": "b",
+      "rtl": true,
+      "value": "b"
+    }
+  ]
+}

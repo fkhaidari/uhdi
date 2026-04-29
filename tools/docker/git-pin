@@ -1,0 +1,20 @@
+#!/bin/sh
+# Clone a single commit by SHA, regardless of which branch it lives
+# on.  Used by tools/Dockerfile to fetch pinned fork revisions
+# without depending on the SHA being on the cloned default branch.
+#
+# `git clone --filter=blob:none $URL && git checkout $SHA` only sees
+# refs reachable from the default branch tip, so a SHA on
+# `fk-sc/uhdi-pool` (or any non-default branch) fails with
+# "fatal: remote error: upload-pack: not our ref".  GitHub enables
+# uploadpack.allowReachableSHA1InWant for public repos, so any
+# commit on any branch is fetchable directly by SHA.
+#
+# Usage:
+#   git-pin <dir> <url> <sha>
+set -e
+mkdir -p "$1" && cd "$1"
+git init -q
+git remote add origin "$2"
+git fetch --depth=1 origin "$3"
+git checkout -q FETCH_HEAD

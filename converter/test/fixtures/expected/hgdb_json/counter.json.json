@@ -1,0 +1,91 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "name": "Counter",
+      "scope": [
+        {
+          "filename": "Counter.scala",
+          "scope": [
+            {
+              "column": 5,
+              "line": 9,
+              "type": "decl",
+              "variable": "1"
+            },
+            {
+              "condition": "reset",
+              "scope": [
+                {
+                  "column": 7,
+                  "line": 11,
+                  "type": "assign",
+                  "variable": "1"
+                }
+              ],
+              "type": "block"
+            },
+            {
+              "condition": "en",
+              "scope": [
+                {
+                  "column": 7,
+                  "line": 13,
+                  "type": "assign",
+                  "variable": "1"
+                }
+              ],
+              "type": "block"
+            },
+            {
+              "column": 5,
+              "line": 14,
+              "type": "assign",
+              "variable": "0"
+            }
+          ],
+          "type": "block"
+        }
+      ],
+      "type": "module",
+      "variables": [
+        {
+          "name": "clock",
+          "rtl": true,
+          "value": "clock"
+        },
+        {
+          "name": "reset",
+          "rtl": true,
+          "value": "reset"
+        },
+        {
+          "name": "en",
+          "rtl": true,
+          "value": "en"
+        },
+        {
+          "name": "q",
+          "rtl": true,
+          "value": "r"
+        },
+        "1"
+      ]
+    }
+  ],
+  "top": "Counter",
+  "variables": [
+    {
+      "id": "0",
+      "name": "q",
+      "rtl": true,
+      "value": "r"
+    },
+    {
+      "id": "1",
+      "name": "r",
+      "rtl": true,
+      "value": "r"
+    }
+  ]
+}

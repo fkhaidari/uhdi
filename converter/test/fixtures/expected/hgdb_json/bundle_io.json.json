@@ -1,0 +1,44 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "name": "BundleTest",
+      "scope": [
+        {
+          "filename": "BundleTest.scala",
+          "scope": [
+            {
+              "column": 5,
+              "line": 7,
+              "type": "assign",
+              "variable": "0"
+            }
+          ],
+          "type": "block"
+        }
+      ],
+      "type": "module",
+      "variables": [
+        {
+          "name": "io.in",
+          "rtl": true,
+          "value": "io_in"
+        },
+        {
+          "name": "io.out",
+          "rtl": true,
+          "value": "io_out"
+        }
+      ]
+    }
+  ],
+  "top": "BundleTest",
+  "variables": [
+    {
+      "id": "0",
+      "name": "io.out",
+      "rtl": true,
+      "value": "io_out"
+    }
+  ]
+}

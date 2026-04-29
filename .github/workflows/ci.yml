@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  converter:
+    name: converter pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install converter + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e './converter[dev]'
+          pip install coverage[toml]
+
+      - name: Run pytest under coverage
+        # `coverage report` reads fail_under from pyproject.toml.
+        working-directory: converter
+        run: |
+          coverage run --branch --source=src -m pytest -v
+          coverage report
+          coverage xml -o coverage.xml
+
+      - name: Upload coverage XML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: converter-coverage-${{ matrix.python-version }}
+          path: converter/coverage.xml
+          if-no-files-found: ignore
+
+  bench:
+    name: bench pytest (in uhdi-tools container)
+    runs-on: ubuntu-latest
+    # Pulls the prebuilt toolchain image at tools/docker/image-tag.txt;
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image reference
+        id: img
+        # GHCR requires lowercase paths; `repository_owner` preserves casing.
+        run: |
+          owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
+          tag=$(cat tools/docker/image-tag.txt)
+          echo "ref=ghcr.io/${owner_lc}/uhdi-tools:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Pull uhdi-tools image
+        run: docker pull "${{ steps.img.outputs.ref }}"
+
+      - name: Run bench in container
+        run: |
+          docker run --rm \
+              -v "$PWD":/work -w /work \
+              -e PIP_DISABLE_PIP_VERSION_CHECK=1 \
+              "${{ steps.img.outputs.ref }}" \
+              bash -c '
+                  set -euo pipefail
+                  pip install --break-system-packages -e ./converter -e "./bench[dev]"
+                  cd bench && pytest -v
+              '
+
+  ruff:
+    name: ruff (lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint
+        run: ruff check converter/src converter/test bench/src bench/test
+
+  mypy:
+    name: mypy (type check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e './converter[dev]' -e './bench'
+          pip install mypy
+      - name: Type-check converter common surface
+        # Strict only on uhdi_common; emitter/bench glue keep Dict[str, Any].
+        run: mypy converter/src/uhdi_common
+
+  install-sh:
+    name: install.sh end-to-end (linux-x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax-check shell scripts
+        run: |
+          bash -n tools/install.sh
+          bash -n tools/test-install.sh
+          bash -n tools/release/release-firtool.sh
+          bash -n tools/release/release-chisel.sh
+          bash -n tools/release/release-hgdb-py.sh
+
+      - name: Run tools/test-install.sh
+        env:
+          # Authenticated request bumps the GitHub API rate limit from
+          # 60/hr (anon) to 1000/hr, which the matrix-of-3 install.sh
+          # calls in test-install.sh blow through otherwise.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: tools/test-install.sh
+

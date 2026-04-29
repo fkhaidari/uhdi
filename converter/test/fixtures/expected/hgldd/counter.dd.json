@@ -1,0 +1,147 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "Counter.scala",
+      "Counter.sv"
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "children": [],
+      "hdl_loc": {
+        "begin_column": 1,
+        "begin_line": 1,
+        "end_column": 1,
+        "end_line": 1,
+        "file": 2
+      },
+      "hgl_loc": {
+        "begin_column": 1,
+        "begin_line": 3,
+        "end_column": 1,
+        "end_line": 3,
+        "file": 1
+      },
+      "kind": "module",
+      "module_name": "Counter",
+      "obj_name": "Counter",
+      "port_vars": [
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 1
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 5,
+            "end_column": 5,
+            "end_line": 5,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 5,
+            "end_column": 5,
+            "end_line": 5,
+            "file": 1
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 6,
+            "end_column": 5,
+            "end_line": 6,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 6,
+            "end_column": 5,
+            "end_line": 6,
+            "file": 1
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "en"
+          },
+          "var_name": "en"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 7,
+            "end_column": 5,
+            "end_line": 7,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 7,
+            "end_column": 5,
+            "end_line": 7,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "r"
+          },
+          "var_name": "q"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 9,
+            "end_column": 5,
+            "end_line": 9,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 9,
+            "end_column": 5,
+            "end_line": 9,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "r"
+          },
+          "var_name": "r"
+        }
+      ]
+    }
+  ]
+}

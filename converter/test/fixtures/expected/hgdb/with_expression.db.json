@@ -1,0 +1,121 @@
+{
+  "annotation": [],
+  "assignment": [
+    {
+      "breakpoint_key": "Adder@Adder.scala:11:7|en || force_in",
+      "condition": "",
+      "name": "sum",
+      "scope_id": null,
+      "value": "sum"
+    }
+  ],
+  "breakpoint": [
+    {
+      "column_num": 7,
+      "condition": "en || force_in",
+      "filename": "Adder.scala",
+      "instance_name": "Adder",
+      "line_num": 11,
+      "trigger": ""
+    }
+  ],
+  "context_variable": [
+    {
+      "breakpoint_key": "Adder@Adder.scala:11:7|en || force_in",
+      "name": "a",
+      "type": 0,
+      "variable_value": "a"
+    },
+    {
+      "breakpoint_key": "Adder@Adder.scala:11:7|en || force_in",
+      "name": "b",
+      "type": 0,
+      "variable_value": "b"
+    },
+    {
+      "breakpoint_key": "Adder@Adder.scala:11:7|en || force_in",
+      "name": "en",
+      "type": 0,
+      "variable_value": "en"
+    },
+    {
+      "breakpoint_key": "Adder@Adder.scala:11:7|en || force_in",
+      "name": "force",
+      "type": 0,
+      "variable_value": "force_in"
+    },
+    {
+      "breakpoint_key": "Adder@Adder.scala:11:7|en || force_in",
+      "name": "sum",
+      "type": 0,
+      "variable_value": "sum"
+    }
+  ],
+  "event": [],
+  "generator_variable": [
+    {
+      "annotation": "",
+      "instance_name": "Adder",
+      "name": "a",
+      "variable_value": "a"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Adder",
+      "name": "b",
+      "variable_value": "b"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Adder",
+      "name": "en",
+      "variable_value": "en"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Adder",
+      "name": "force",
+      "variable_value": "force_in"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Adder",
+      "name": "sum",
+      "variable_value": "sum"
+    }
+  ],
+  "instance": [
+    {
+      "annotation": "",
+      "name": "Adder"
+    }
+  ],
+  "scope": [
+    {
+      "breakpoints": "1",
+      "scope": 1
+    }
+  ],
+  "variable": [
+    {
+      "is_rtl": 1,
+      "value": "a"
+    },
+    {
+      "is_rtl": 1,
+      "value": "b"
+    },
+    {
+      "is_rtl": 1,
+      "value": "en"
+    },
+    {
+      "is_rtl": 1,
+      "value": "force_in"
+    },
+    {
+      "is_rtl": 1,
+      "value": "sum"
+    }
+  ]
+}

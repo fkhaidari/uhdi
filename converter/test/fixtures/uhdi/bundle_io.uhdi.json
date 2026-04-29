@@ -1,0 +1,62 @@
+{
+  "format": {"name": "uhdi", "version": "1.0"},
+  "producer": {"name": "test-fixture", "version": "1.0"},
+  "representations": {
+    "chisel": {"kind": "source", "language": "Chisel", "files": ["BundleTest.scala"]},
+    "verilog": {"kind": "hdl", "language": "SystemVerilog", "files": ["BundleTest.sv"]}
+  },
+  "roles": {"authoring": "chisel", "simulation": "verilog", "canonical": "verilog"},
+  "top": ["BundleTest"],
+  "types": {
+    "u8": {"kind": "uint", "width": 8},
+    "InBundle": {
+      "kind": "struct",
+      "members": [
+        {"name": "a", "typeRef": "u8"},
+        {"name": "b", "typeRef": "u8"}
+      ]
+    }
+  },
+  "expressions": {
+    "io_pack": {
+      "opcode": "'{",
+      "operands": [
+        {"sigName": "io_in_a"},
+        {"sigName": "io_in_b"}
+      ]
+    }
+  },
+  "variables": {
+    "var_BundleTest_io_in": {
+      "typeRef": "InBundle", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "BundleTest",
+      "representations": {
+        "chisel":  {"name": "io.in", "location": {"file": 0, "beginLine": 4, "beginColumn": 5}},
+        "verilog": {"name": "io_in", "value": {"exprRef": "io_pack"}, "location": {"file": 0, "beginLine": 4, "beginColumn": 5}}
+      }
+    },
+    "var_BundleTest_io_out": {
+      "typeRef": "u8", "bindKind": "port", "direction": "output",
+      "ownerScopeRef": "BundleTest",
+      "representations": {
+        "chisel":  {"name": "io.out", "location": {"file": 0, "beginLine": 5, "beginColumn": 5}},
+        "verilog": {"name": "io_out", "value": {"sigName": "io_out"}, "location": {"file": 0, "beginLine": 5, "beginColumn": 5}}
+      }
+    }
+  },
+  "scopes": {
+    "BundleTest": {
+      "name": "BundleTest", "kind": "module",
+      "representations": {
+        "chisel":  {"name": "BundleTest", "location": {"file": 0, "beginLine": 3, "beginColumn": 1}},
+        "verilog": {"name": "BundleTest", "location": {"file": 0, "beginLine": 1, "beginColumn": 1}}
+      },
+      "variableRefs": ["var_BundleTest_io_in", "var_BundleTest_io_out"],
+      "body": [{
+        "kind": "connect", "varRef": "var_BundleTest_io_out",
+        "valueRef": {"varRef": "var_BundleTest_io_in"},
+        "locations": {"chisel": {"file": 0, "beginLine": 7, "beginColumn": 5}}
+      }]
+    }
+  }
+}

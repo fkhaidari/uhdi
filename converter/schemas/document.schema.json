@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/document.schema.json",
+  "$defs": {
+    "ScopeRef": {
+      "type": "string"
+    },
+    "Representation": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "source",
+            "ir",
+            "hdl"
+          ]
+        },
+        "language": {
+          "type": "string"
+        },
+        "dialect": {
+          "type": "string"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authoring": {
+          "type": "string"
+        },
+        "simulation": {
+          "type": "string"
+        },
+        "canonical": {
+          "type": "string"
+        }
+      }
+    },
+    "Format": {
+      "description": "UHDI format envelope. `version` is currently locked to '1.0' -- the regex previously allowed any major.minor (e.g. '2.7') with no compatibility check; until a 2.x exists, we enum-pin so a typo or a stale producer surfaces immediately.",
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "uhdi"
+        },
+        "version": {
+          "type": "string",
+          "enum": ["1.0"]
+        }
+      }
+    },
+    "Producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "required": [
+    "format",
+    "representations",
+    "top",
+    "scopes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "$ref": "#/$defs/Format"
+    },
+    "producer": {
+      "$ref": "#/$defs/Producer"
+    },
+    "representations": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/Representation"
+      }
+    },
+    "roles": {
+      "$ref": "#/$defs/Roles"
+    },
+    "top": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ScopeRef"
+      },
+      "minItems": 1
+    },
+    "types": {
+      "$ref": "https://uhdi/types.schema.json"
+    },
+    "expressions": {
+      "$ref": "https://uhdi/expressions.schema.json"
+    },
+    "variables": {
+      "$ref": "https://uhdi/variables.schema.json"
+    },
+    "scopes": {
+      "$ref": "https://uhdi/scopes.schema.json"
+    },
+    "dataflow": {
+      "$ref": "https://uhdi/dataflow.schema.json"
+    },
+    "dataflowChunks": {
+      "description": "Optional list of companion-file paths that hold dataflow content split out of the main document. Each entry is a relative path (relative to the directory of this document) to a JSON file conforming to https://uhdi/dataflow.schema.json. When present, consumers should read these files and merge their contents into the logical 'dataflow' pool. Today neither uhdi_to_hgldd nor uhdi_to_hgdb consumes this field; it is reserved for future chunked-dataflow support so producers can pre-emit the field without breaking schema validation.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "temporal": {
+      "$ref": "https://uhdi/temporal.schema.json"
+    },
+    "provenance": {
+      "$ref": "https://uhdi/provenance.schema.json"
+    },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

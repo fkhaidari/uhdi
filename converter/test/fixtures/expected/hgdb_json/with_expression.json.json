@@ -1,0 +1,64 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "name": "Adder",
+      "scope": [
+        {
+          "scope": [
+            {
+              "condition": "or_of_inputs",
+              "scope": [
+                {
+                  "column": 7,
+                  "line": 11,
+                  "type": "assign",
+                  "variable": "0"
+                }
+              ],
+              "type": "block"
+            }
+          ],
+          "type": "block"
+        }
+      ],
+      "type": "module",
+      "variables": [
+        {
+          "name": "a",
+          "rtl": true,
+          "value": "a"
+        },
+        {
+          "name": "b",
+          "rtl": true,
+          "value": "b"
+        },
+        {
+          "name": "en",
+          "rtl": true,
+          "value": "en"
+        },
+        {
+          "name": "force",
+          "rtl": true,
+          "value": "force_in"
+        },
+        {
+          "name": "sum",
+          "rtl": true,
+          "value": "sum"
+        }
+      ]
+    }
+  ],
+  "top": "Adder",
+  "variables": [
+    {
+      "id": "0",
+      "name": "sum",
+      "rtl": true,
+      "value": "sum"
+    }
+  ]
+}

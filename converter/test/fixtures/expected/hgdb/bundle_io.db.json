@@ -1,0 +1,57 @@
+{
+  "annotation": [],
+  "assignment": [
+    {
+      "breakpoint_key": "BundleTest@BundleTest.scala:7:5|1",
+      "condition": "",
+      "name": "io.out",
+      "scope_id": null,
+      "value": "io.out"
+    }
+  ],
+  "breakpoint": [
+    {
+      "column_num": 5,
+      "condition": "1",
+      "filename": "BundleTest.scala",
+      "instance_name": "BundleTest",
+      "line_num": 7,
+      "trigger": ""
+    }
+  ],
+  "context_variable": [
+    {
+      "breakpoint_key": "BundleTest@BundleTest.scala:7:5|1",
+      "name": "io.out",
+      "type": 0,
+      "variable_value": "io_out"
+    }
+  ],
+  "event": [],
+  "generator_variable": [
+    {
+      "annotation": "",
+      "instance_name": "BundleTest",
+      "name": "io.out",
+      "variable_value": "io_out"
+    }
+  ],
+  "instance": [
+    {
+      "annotation": "",
+      "name": "BundleTest"
+    }
+  ],
+  "scope": [
+    {
+      "breakpoints": "1",
+      "scope": 1
+    }
+  ],
+  "variable": [
+    {
+      "is_rtl": 1,
+      "value": "io_out"
+    }
+  ]
+}

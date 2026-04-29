@@ -1,0 +1,131 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "BundleTest.scala",
+      "BundleTest.sv"
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "hgl_loc": {
+        "begin_column": 5,
+        "begin_line": 4,
+        "end_column": 5,
+        "end_line": 4,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "InBundle",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "a"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "b"
+        }
+      ]
+    },
+    {
+      "children": [],
+      "hdl_loc": {
+        "begin_column": 1,
+        "begin_line": 1,
+        "end_column": 1,
+        "end_line": 1,
+        "file": 2
+      },
+      "hgl_loc": {
+        "begin_column": 1,
+        "begin_line": 3,
+        "end_column": 1,
+        "end_line": 3,
+        "file": 1
+      },
+      "kind": "module",
+      "module_name": "BundleTest",
+      "obj_name": "BundleTest",
+      "port_vars": [
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 4,
+            "end_column": 5,
+            "end_line": 4,
+            "file": 1
+          },
+          "type_name": "InBundle",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "io_in_a"
+              },
+              {
+                "sig_name": "io_in_b"
+              }
+            ]
+          },
+          "var_name": "io.in"
+        },
+        {
+          "hdl_loc": {
+            "begin_column": 5,
+            "begin_line": 5,
+            "end_column": 5,
+            "end_line": 5,
+            "file": 2
+          },
+          "hgl_loc": {
+            "begin_column": 5,
+            "begin_line": 5,
+            "end_column": 5,
+            "end_line": 5,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "io_out"
+          },
+          "var_name": "io.out"
+        }
+      ]
+    }
+  ]
+}
