@@ -143,7 +143,7 @@ if [[ "$from_docker" -eq 1 ]]; then
     docker pull "$image"
 
     echo "Extracting /opt/hgdb/bindings/python..."
-    mkdir -p "$stage"
+    mkdir -p "$stage/bindings"
     cid=$(docker create "$image")
     docker cp "$cid:/opt/hgdb/bindings/python" "$stage/bindings/"
     docker rm "$cid" > /dev/null
