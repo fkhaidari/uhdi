@@ -18,6 +18,74 @@ The image also has `python3` (3.12 on Ubuntu 24.04), `pip`,
 ships from the workspace via
 `pip install -e ./converter -e ./bench[dev]` per CI invocation.
 
+## Installing the toolchain in a downstream Chisel project
+
+`tools/install.sh` is the consumer-side installer. It pulls every
+binary from a GitHub Release (firtool + hgdb-py from `fkhaidari/uhdi`,
+tywaves from `rameloni/tywaves-surfer`) and prints the JitPack snippet
+for the chisel fork. **No Docker required on the consumer side.**
+
+```sh
+# from a checkout
+tools/install.sh all --prefix ~/.local/uhdi-tools
+
+# or curl-pipe (no checkout needed)
+curl -fsSL https://raw.githubusercontent.com/fkhaidari/uhdi/main/tools/install.sh \
+    | bash -s -- all
+```
+
+Subcommands: `firtool`, `hgdb-py`, `chisel` (prints snippet only),
+`tywaves`, `all`. Each accepts `--prefix DIR` (default
+`$HOME/.local/uhdi-tools`); pin a release with `--release-tag`,
+`--chisel-tag`, `--tywaves-tag`. Hint exports are printed at the end
+so the same install plugs into `bench/runner.py`'s env-var discovery.
+
+Caveats:
+
+- `firtool` ships for all four platforms (linux x86_64/aarch64,
+  macos x86_64/aarch64).
+- `hgdb-py` is **linux-x86_64-only** for now -- the C extension is
+  built against the uhdi-tools image's glibc. Other platforms fall
+  back to `tools/release/release-hgdb-py.sh build`.
+- `chisel` is JVM-only. `install.sh chisel` writes nothing; it just
+  prints the resolver + coord block to paste into `build.mill` /
+  `build.sbt` / `scala-cli`. The build tool fetches it from JitPack
+  on first compile.
+- `tywaves` follows whatever `rameloni/tywaves-surfer` ships per
+  release; if no asset matches the host platform the subcommand
+  fails with a printed list of available assets.
+
+## Running the image
+
+```sh
+TAG=$(cat tools/docker/image-tag.txt)
+docker run --rm -v "$PWD":/work -w /work \
+    ghcr.io/fkhaidari/uhdi-tools:$TAG \
+    bash -c 'pip install -e ./converter -e ./bench[dev] && cd bench && pytest -v'
+```
+
+For an interactive shell (debugging cell failures inside the image):
+
+```sh
+docker run --rm -it -v "$PWD":/work ghcr.io/fkhaidari/uhdi-tools:$(cat tools/docker/image-tag.txt)
+```
+
+## Local development without Docker
+
+The image is a *convenience*, not a requirement.  `bench/runner.py`
+still honours the `FIRTOOL`, `HGDB_CIRCT_FIRTOOL`, `HGDB_FIRRTL_JAR`,
+`HGDB_PY` env vars, and the sibling-checkout fallback layout
+(`../../circt/build/bin/firtool`, etc.) is preserved as the last
+resort. Hack on the forks natively, then point env vars at your
+local builds.
+
+---
+
+The remaining sections are for the repository owner: how the image
+tag is derived, when CI rebakes the image, and how to cut releases
+of firtool / hgdb-py / chisel. Day-to-day consumers don't need any
+of it.
+
 ## Pre-commit hook (recommended)
 
 Wire `tools/docker/git-hooks/pre-commit` into your clone so a commit that
@@ -91,76 +159,6 @@ Auth: GHCR accepts a personal access token with `write:packages` scope,
 or `gh auth token` (when the user has `gh` configured with that scope).
 First build is 30-60 minutes (CIRCT + LLVM compile from source).
 
-## Running the image
-
-```sh
-TAG=$(cat tools/docker/image-tag.txt)
-docker run --rm -v "$PWD":/work -w /work \
-    ghcr.io/fkhaidari/uhdi-tools:$TAG \
-    bash -c 'pip install -e ./converter -e ./bench[dev] && cd bench && pytest -v'
-```
-
-For an interactive shell (debugging cell failures inside the image):
-
-```sh
-docker run --rm -it -v "$PWD":/work ghcr.io/fkhaidari/uhdi-tools:$(cat tools/docker/image-tag.txt)
-```
-
-## Local development without Docker
-
-The image is a *convenience*, not a requirement.  `bench/runner.py`
-still honours the `FIRTOOL`, `HGDB_CIRCT_FIRTOOL`, `HGDB_FIRRTL_JAR`,
-`HGDB_PY` env vars, and the sibling-checkout fallback layout
-(`../../circt/build/bin/firtool`, etc.) is preserved as the last
-resort. Hack on the forks natively, then point env vars at your
-local builds.
-
-## Installing the toolchain in a downstream Chisel project
-
-`tools/install.sh` is the consumer-side installer. It pulls every
-binary from a GitHub Release (firtool + hgdb-py from `fkhaidari/uhdi`,
-tywaves from `rameloni/tywaves-surfer`) and prints the JitPack snippet
-for the chisel fork. **No Docker required on the consumer side.**
-
-```sh
-# from a checkout
-tools/install.sh all --prefix ~/.local/uhdi-tools
-
-# or curl-pipe (no checkout needed)
-curl -fsSL https://raw.githubusercontent.com/fkhaidari/uhdi/main/tools/install.sh \
-    | bash -s -- all
-```
-
-Subcommands: `firtool`, `hgdb-py`, `chisel` (prints snippet only),
-`tywaves`, `all`. Each accepts `--prefix DIR` (default
-`$HOME/.local/uhdi-tools`); pin a release with `--release-tag`,
-`--chisel-tag`, `--tywaves-tag`. Hint exports are printed at the end
-so the same install plugs into `bench/runner.py`'s env-var discovery.
-
-Caveats:
-- `firtool` ships for all four platforms (linux x86_64/aarch64,
-  macos x86_64/aarch64).
-- `hgdb-py` is **linux-x86_64-only** for now -- the C extension is
-  built against the uhdi-tools image's glibc. Other platforms fall
-  back to `tools/release/release-hgdb-py.sh build`.
-- `chisel` is JVM-only. `install.sh chisel` writes nothing; it just
-  prints the resolver + coord block to paste into `build.mill` /
-  `build.sbt` / `scala-cli`. The build tool fetches it from JitPack
-  on first compile.
-- `tywaves` follows whatever `rameloni/tywaves-surfer` ships per
-  release; if no asset matches the host platform the subcommand
-  fails with a printed list of available assets.
-
-`tools/test-install.sh` runs `install.sh all` against a throwaway
-prefix and asserts each component landed correctly. Use it as a
-post-release smoke test:
-
-```sh
-UHDI_TAG=firtool-v0.1.1 tools/test-install.sh
-# UHDI_E2E=1 also scaffolds a tiny mill project, resolves chisel from
-# JitPack, and runs firtool --emit-uhdi end-to-end (needs `mill`).
-```
-
 ## Maintainer release flow
 
 Per-component release scripts live in `tools/release/`. Each one
@@ -175,3 +173,13 @@ operates on its own artifact and tags so the workflow scales:
 `release-hgdb-py.sh` uses `gh release upload --clobber` if the tag
 already exists, so attaching the hgdb-py tarball to firtool's release
 is just running it with the same tag.
+
+`tools/test-install.sh` runs `install.sh all` against a throwaway
+prefix and asserts each component landed correctly. Use it as a
+post-release smoke test:
+
+```sh
+UHDI_TAG=firtool-v0.1.1 tools/test-install.sh
+# UHDI_E2E=1 also scaffolds a tiny mill project, resolves chisel from
+# JitPack, and runs firtool --emit-uhdi end-to-end (needs `mill`).
+```
