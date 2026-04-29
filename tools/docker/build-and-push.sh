@@ -42,6 +42,17 @@ set +a
 
 tag=$(cat tools/docker/image-tag.txt)
 ref="ghcr.io/${owner}/uhdi-tools:${tag}"
+cache_ref="ghcr.io/${owner}/uhdi-tools:latest"
+
+# Pull the previous :latest as a cache source so unchanged stages
+# (CIRCT compile, hgdb-circt compile, etc.) reuse layers from the
+# already-published image instead of rebuilding from scratch.
+# Silent no-op when the cache image is missing (first publish, or
+# locally before the first push).  BUILDKIT_INLINE_CACHE=1 below
+# embeds cache metadata in the new image so the next build can
+# pull it back via --cache-from.
+echo "Pulling cache source $cache_ref (skipped if not yet published)..."
+docker pull "$cache_ref" 2>/dev/null || echo "  (no cache image; cold build)"
 
 # Only keys declared as ARG in Dockerfile.
 build_args=(
@@ -69,6 +80,8 @@ echo "Building $ref"
 docker build \
     -f tools/docker/Dockerfile \
     -t "$ref" \
+    --cache-from "$cache_ref" \
+    --build-arg BUILDKIT_INLINE_CACHE=1 \
     "${build_args[@]}" \
     tools/docker/
 
