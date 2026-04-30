@@ -50,30 +50,131 @@ jobs:
           path: converter/coverage.xml
           if-no-files-found: ignore
 
-  bench:
-    name: bench pytest (in uhdi-tools container)
+  build-image:
+    name: build uhdi-tools image
+    # Bakes the bench toolchain image and pushes to ghcr.io/<owner>/uhdi-tools:<tag>
+    # where <tag> = sha256(versions.env + Dockerfile + entrypoint.sh)[:16].
+    # Short-circuits when the tag is already on GHCR (most PRs don't touch
+    # tools/**, so image-tag.txt is unchanged and the existing image is fine).
     runs-on: ubuntu-latest
-    # Pulls the prebuilt toolchain image at tools/docker/image-tag.txt;
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.tag.outputs.ref }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve image reference
-        id: img
-        # GHCR requires lowercase paths; `repository_owner` preserves casing.
+      - name: Compute deterministic tag
+        id: tag
+        # GHCR rejects mixed-case path segments; lowercase the owner once.
         run: |
+          tag=$(tools/docker/compute-tag.sh)
           owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
-          tag=$(cat tools/docker/image-tag.txt)
-          echo "ref=ghcr.io/${owner_lc}/uhdi-tools:${tag}" >> "$GITHUB_OUTPUT"
+          ref="ghcr.io/${owner_lc}/uhdi-tools:${tag}"
+          {
+              echo "tag=$tag"
+              echo "owner_lc=$owner_lc"
+              echo "ref=$ref"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify tools/docker/image-tag.txt is in sync
+        run: tools/docker/check-tag.sh
+
+      - name: Log in to GHCR
+        # Login (and push below) on PRs too: bench pulls the same tag, so
+        # the image has to be on GHCR before bench runs. Tags are content-
+        # addressed so PR images don't clash with main; :latest stays
+        # main-only via the conditional in `tags:` below.
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if image already exists on GHCR
+        id: check
+        run: |
+          if docker manifest inspect "${{ steps.tag.outputs.ref }}" >/dev/null 2>&1; then
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+              echo "Image already on GHCR; build will be skipped."
+          else
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker buildx
+        if: steps.check.outputs.exists != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve build args from versions.env
+        if: steps.check.outputs.exists != 'true'
+        id: args
+        run: |
+          # Only keys declared as ARG in Dockerfile.
+          set -a
+          # shellcheck disable=SC1091
+          . tools/versions.env
+          set +a
+          {
+              echo 'build-args<<EOF'
+              for key in \
+                  CIRCT_URL CIRCT_REV \
+                  LLVM_URL LLVM_REV \
+                  HGDB_CIRCT_URL HGDB_CIRCT_REV \
+                  HGDB_CIRCT_LLVM_URL HGDB_CIRCT_LLVM_REV \
+                  HGDB_FIRRTL_URL HGDB_FIRRTL_REV \
+                  HGDB_URL HGDB_REV \
+                  CHISEL_TYWAVES_URL CHISEL_TYWAVES_REV \
+                  CHISEL_UHDI_URL CHISEL_UHDI_REV \
+                  TYWAVES_URL TYWAVES_REV \
+                  CHISEL_STOCK_VERSION SCALA_CLI_VERSION; do
+                  printf '%s=%s\n' "$key" "${!key}"
+              done
+              echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        if: steps.check.outputs.exists != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: tools/docker
+          file: tools/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.ref }}
+            ${{ github.ref == 'refs/heads/main' && format('ghcr.io/{0}/uhdi-tools:latest', steps.tag.outputs.owner_lc) || '' }}
+          build-args: ${{ steps.args.outputs.build-args }}
+          # Two-layer cache: GHA (per-PR scope keeps mode=max for all stages)
+          # plus the registry image's inline metadata. The shared `main`-scoped
+          # GHA entry lets PRs read from the last main build; PRs write to their
+          # own scope so concurrent runs don't fight. The inline export embeds
+          # cache metadata into the pushed image itself, so a local
+          # tools/docker/build-and-push.sh --push can hit the same cache via
+          # --cache-from ghcr.io/<owner>/uhdi-tools.
+          cache-from: |
+            type=gha,scope=build-tools-${{ github.ref_name }}
+            type=gha,scope=build-tools-main
+            type=registry,ref=ghcr.io/${{ steps.tag.outputs.owner_lc }}/uhdi-tools:latest
+          cache-to: |
+            type=gha,mode=max,scope=build-tools-${{ github.ref_name }}
+            type=inline
+
+  bench:
+    name: bench pytest (in uhdi-tools container)
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Pull uhdi-tools image
-        run: docker pull "${{ steps.img.outputs.ref }}"
+        run: docker pull "${{ needs.build-image.outputs.ref }}"
 
       - name: Run bench in container
         run: |
           docker run --rm \
               -v "$PWD":/work -w /work \
               -e PIP_DISABLE_PIP_VERSION_CHECK=1 \
-              "${{ steps.img.outputs.ref }}" \
+              "${{ needs.build-image.outputs.ref }}" \
               bash -c '
                   set -euo pipefail
                   pip install --break-system-packages -e ./converter -e "./bench[dev]"
@@ -133,4 +234,3 @@ jobs:
           # calls in test-install.sh blow through otherwise.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: tools/test-install.sh
-
