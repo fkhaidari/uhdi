@@ -21,9 +21,9 @@ ships from the workspace via
 ## Installing the toolchain in a downstream Chisel project
 
 `tools/install.sh` is the consumer-side installer. It pulls every
-binary from a GitHub Release (firtool + hgdb-py from `fkhaidari/uhdi`,
-tywaves from `rameloni/tywaves-surfer`) and prints the JitPack snippet
-for the chisel fork. **No Docker required on the consumer side.**
+binary (firtool, hgdb-py, tywaves) from a single GitHub Release on
+`fkhaidari/uhdi` and prints the JitPack snippet for the chisel fork.
+**No Docker required on the consumer side.**
 
 ```sh
 # from a checkout
@@ -36,9 +36,11 @@ curl -fsSL https://raw.githubusercontent.com/fkhaidari/uhdi/main/tools/install.s
 
 Subcommands: `firtool`, `hgdb-py`, `chisel` (prints snippet only),
 `tywaves`, `all`. Each accepts `--prefix DIR` (default
-`$HOME/.local/uhdi-tools`); pin a release with `--release-tag`,
-`--chisel-tag`, `--tywaves-tag`. Hint exports are printed at the end
-so the same install plugs into `bench/runner.py`'s env-var discovery.
+`$HOME/.local/uhdi-tools`); pin a release with `--release-tag` (one
+release on `fkhaidari/uhdi` carries firtool, hgdb-py, and tywaves) or
+`--chisel-tag` (separate, JitPack tag on `fkhaidari/chisel`). Hint
+exports are printed at the end so the same install plugs into
+`bench/runner.py`'s env-var discovery.
 
 Caveats:
 
@@ -51,9 +53,12 @@ Caveats:
   prints the resolver + coord block to paste into `build.mill` /
   `build.sbt` / `scala-cli`. The build tool fetches it from JitPack
   on first compile.
-- `tywaves` follows whatever `rameloni/tywaves-surfer` ships per
-  release; if no asset matches the host platform the subcommand
-  fails with a printed list of available assets.
+- `tywaves` is the surfer waveform viewer with tywaves rendering
+  patches; built from a mirror of
+  `gitlab.com/rameloni/surfer-tywaves-demo` at
+  `fkhaidari/surfer-tywaves`. Currently linux-x86_64 only. Other
+  platforms fall back to `tools/release/release-tywaves.sh build`
+  (needs Rust 1.75+).
 
 ## Running the image
 
@@ -167,12 +172,14 @@ operates on its own artifact and tags so the workflow scales:
 | Script | Artifact | Tag convention |
 |--------|----------|----------------|
 | `release-firtool.sh build --from-docker --release <tag>` | `firtool-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | `firtool-vX.Y.Z` |
-| `release-hgdb-py.sh build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | `hgdb-py-vX.Y.Z` (or upload to firtool's tag for a unified release) |
+| `release-hgdb-py.sh build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
+| `release-tywaves.sh build --from-docker --release <tag>` | `tywaves-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
 | `release-chisel.sh <tag>` | JitPack build at `https://jitpack.io/#fkhaidari/chisel/<tag>` | `vX.Y.Z-uhdi` |
 
-`release-hgdb-py.sh` uses `gh release upload --clobber` if the tag
-already exists, so attaching the hgdb-py tarball to firtool's release
-is just running it with the same tag.
+`release-hgdb-py.sh` and `release-tywaves.sh` both use
+`gh release upload --clobber` if the tag exists, so attaching
+their tarballs to firtool's release is just running them with the
+same tag.
 
 `tools/test-install.sh` runs `install.sh all` against a throwaway
 prefix and asserts each component landed correctly. Use it as a

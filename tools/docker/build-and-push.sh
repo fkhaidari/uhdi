@@ -42,17 +42,11 @@ set +a
 
 tag=$(cat tools/docker/image-tag.txt)
 ref="ghcr.io/${owner}/uhdi-tools:${tag}"
-cache_ref="ghcr.io/${owner}/uhdi-tools:latest"
+# Bare repo name (no tag): podman's --cache-from rejects tagged refs.
+cache_repo="ghcr.io/${owner}/uhdi-tools"
 
-# Pull the previous :latest as a cache source so unchanged stages
-# (CIRCT compile, hgdb-circt compile, etc.) reuse layers from the
-# already-published image instead of rebuilding from scratch.
-# Silent no-op when the cache image is missing (first publish, or
-# locally before the first push).  BUILDKIT_INLINE_CACHE=1 below
-# embeds cache metadata in the new image so the next build can
-# pull it back via --cache-from.
-echo "Pulling cache source $cache_ref (skipped if not yet published)..."
-docker pull "$cache_ref" 2>/dev/null || echo "  (no cache image; cold build)"
+# Reuse layers from the previously published :latest. No-op on first publish.
+docker pull "${cache_repo}:latest" 2>/dev/null || echo "  (no cache image; cold build)"
 
 # Only keys declared as ARG in Dockerfile.
 build_args=(
@@ -72,15 +66,21 @@ build_args=(
     --build-arg "CHISEL_TYWAVES_REV=${CHISEL_TYWAVES_REV}"
     --build-arg "CHISEL_UHDI_URL=${CHISEL_UHDI_URL}"
     --build-arg "CHISEL_UHDI_REV=${CHISEL_UHDI_REV}"
+    --build-arg "TYWAVES_URL=${TYWAVES_URL}"
+    --build-arg "TYWAVES_REV=${TYWAVES_REV}"
     --build-arg "CHISEL_STOCK_VERSION=${CHISEL_STOCK_VERSION}"
     --build-arg "SCALA_CLI_VERSION=${SCALA_CLI_VERSION}"
 )
 
 echo "Building $ref"
+# --network=host fixes rootless podman bridge dropping some external hosts;
+# --http-proxy=false (podman-only) skips host-proxy injection -- drop for docker.
 docker build \
     -f tools/docker/Dockerfile \
     -t "$ref" \
-    --cache-from "$cache_ref" \
+    --network=host \
+    --http-proxy=false \
+    --cache-from "$cache_repo" \
     --build-arg BUILDKIT_INLINE_CACHE=1 \
     "${build_args[@]}" \
     tools/docker/

@@ -7,9 +7,10 @@
 # stays useful before the first hgdb-py release is published.
 #
 # Env vars:
-#   UHDI_TAG       fkhaidari/uhdi release tag (default: latest)
+#   UHDI_TAG       fkhaidari/uhdi release tag (default: latest) -- covers
+#                  firtool, hgdb-py, and tywaves (all three live on the
+#                  same release on the same repo).
 #   CHISEL_TAG     fkhaidari/chisel JitPack tag (default: latest *-uhdi)
-#   TYWAVES_TAG    rameloni/tywaves-surfer tag (default: latest)
 #   UHDI_E2E=1     also scaffold a tiny mill project, resolve chisel from
 #                  JitPack, and run firtool --emit-uhdi end-to-end (slow:
 #                  needs `mill` on PATH and network access to JitPack).
@@ -31,13 +32,11 @@ platform_os=$(uname -s)
 # ---- 1. install all components into a throwaway prefix --------------------
 section "install"
 install_args=(all --prefix "$prefix")
-[[ -n "${UHDI_TAG:-}" ]]    && install_args+=(--release-tag "$UHDI_TAG")
-[[ -n "${CHISEL_TAG:-}" ]]  && install_args+=(--chisel-tag "$CHISEL_TAG")
-[[ -n "${TYWAVES_TAG:-}" ]] && install_args+=(--tywaves-tag "$TYWAVES_TAG")
+[[ -n "${UHDI_TAG:-}" ]]   && install_args+=(--release-tag "$UHDI_TAG")
+[[ -n "${CHISEL_TAG:-}" ]] && install_args+=(--chisel-tag "$CHISEL_TAG")
 
-# `all` returns 0 even if hgdb-py / tywaves are missing on this platform
-# (release-not-yet-published or non-linux-x86_64 host), but firtool +
-# chisel must succeed.
+# `all` returns 0 even if hgdb-py is missing on this platform
+# (linux-x86_64 only), but firtool + chisel + tywaves must succeed.
 tools/install.sh "${install_args[@]}"
 
 # ---- 2. firtool ------------------------------------------------------------
@@ -90,25 +89,18 @@ ok "chisel snippet printed with jitpack repo + uhdi coord"
 
 # ---- 5. tywaves ------------------------------------------------------------
 section "tywaves"
-ty_bin=""
-for cand in "$prefix/bin/tywaves" "$prefix/bin/surfer"; do
-    [[ -x "$cand" ]] && { ty_bin="$cand"; break; }
-done
-if [[ -n "$ty_bin" ]]; then
-    if "$ty_bin" --help 2>&1 | grep -qiE 'surfer|wave|tywaves'; then
-        ok "tywaves installed at $ty_bin and runs --help"
+ty_bin="$prefix/bin/tywaves"
+if [[ -x "$ty_bin" ]]; then
+    # tywaves (surfer fork) is a GUI app; --help text varies between
+    # versions, so run-without-crash is the contract we assert here.
+    if "$ty_bin" --version > /dev/null 2>&1 \
+            || "$ty_bin" --help > /dev/null 2>&1; then
+        ok "tywaves installed at $ty_bin (version/help exits 0)"
     else
-        # Some surfer builds use a GUI-only mode where --help dumps
-        # less obvious text; treat run-without-crash as good enough.
-        if "$ty_bin" --version > /dev/null 2>&1 \
-                || "$ty_bin" --help > /dev/null 2>&1; then
-            ok "tywaves installed at $ty_bin (version/help exits 0)"
-        else
-            fail "tywaves at $ty_bin does not respond to --help/--version"
-        fi
+        fail "tywaves at $ty_bin does not respond to --help/--version"
     fi
 else
-    skip "tywaves not installed (no asset matched $platform_os/$platform_arch on this tag)"
+    fail "tywaves not installed at $ty_bin"
 fi
 
 # ---- 6. (optional) end-to-end JitPack -> firtool --------------------------

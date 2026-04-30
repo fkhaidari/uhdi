@@ -117,8 +117,12 @@ download_firtool
 # 2. Build Chisel → FIRRTL → UHDI + SV
 echo "Building Chisel → UHDI..."
 export CHISEL_FIRTOOL_PATH="$BIN_DIR"
-rm -f gcd.uhdi.json GCD.sv
+# Main writes gcd.uhdi.json + GCD.sv to its JVM cwd; mill is run from
+# $DEMO_ROOT, so the artifacts land there. Relocate them into $SCRIPT_DIR
+# so the converter steps (run from $SCRIPT_DIR) read them by relative name.
+rm -f gcd.uhdi.json GCD.sv "$DEMO_ROOT/gcd.uhdi.json" "$DEMO_ROOT/GCD.sv"
 (cd "$DEMO_ROOT" && ./millw gcd.runMain Main) > /dev/null
+mv "$DEMO_ROOT/gcd.uhdi.json" "$DEMO_ROOT/GCD.sv" "$SCRIPT_DIR/"
 
 # 3. Convert UHDI → HGLDD
 echo "Converting UHDI → HGLDD..."
