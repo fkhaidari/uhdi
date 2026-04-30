@@ -1,6 +1,6 @@
 # uhdi JSON Schemas
 
-Draft 2020-12 schemas extracted from [`docs/uhdi-spec.md`](../docs/uhdi-spec.md). Use `scripts/validate.py` to check a uhdi document against them.
+Draft 2020-12 schemas extracted from [`docs/uhdi-spec.md`](../docs/uhdi-spec.md). The converter CLIs (`uhdi-to-hgldd`, `uhdi-to-hgdb`) accept `--validate` to run an input document against these schemas before conversion; the validation logic lives in [`uhdi_common.validate`](../src/uhdi_common/validate.py).
 
 | File | Covers |
 |------|--------|
@@ -13,4 +13,4 @@ Draft 2020-12 schemas extracted from [`docs/uhdi-spec.md`](../docs/uhdi-spec.md)
 | `temporal.schema.json` | Optional temporal layer (sec.11). |
 | `provenance.schema.json` | Optional provenance layer (sec.12). |
 
-`$id` URLs use the non-routable `https://uhdi/...` prefix; cross-schema `$ref`s are resolved locally by pre-populating a schema store (see the validator script).
+`$id` URLs use the non-routable `https://uhdi/...` prefix; cross-schema `$ref`s are resolved locally by pre-populating a schema store (see `uhdi_common.validate`).

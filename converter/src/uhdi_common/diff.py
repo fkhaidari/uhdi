@@ -12,11 +12,9 @@ import json
 from collections import Counter
 from typing import Any, List, Tuple
 
-# Delta: (path, kind, actual, expected)
-#   path: JSON-pointer-like, e.g. /objects/0/port_vars/2/var_name
-#   kind: "type" | "extra" | "missing" | "length" | "value"
-#   actual: converter value (None when "missing")
-#   expected: golden value (None when "extra")
+# Delta: (path, kind, actual, expected). path is JSON-pointer-like;
+# kind in {"type","extra","missing","length","value"}; actual is None
+# for "missing", expected is None for "extra".
 Delta = Tuple[str, str, Any, Any]
 
 
