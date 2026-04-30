@@ -189,6 +189,36 @@ RUN cs fetch "org.chipsalliance::chisel:${CHISEL_STOCK_VERSION}" \
         "org.chipsalliance:::chisel-plugin:${CHISEL_STOCK_VERSION}" \
         --scala-version 2.13.14 || true
 
+# ---- surfer-tywaves (waveform viewer; binary renamed to `tywaves`) -------
+# Mirrored from gitlab.com/rameloni/surfer-tywaves-demo to fkhaidari/surfer-tywaves.
+FROM docker.io/rust:1.85-slim-bookworm AS tywaves-build
+ARG TYWAVES_URL
+ARG TYWAVES_REV
+# Use system git for cargo fetches: libgit2 chokes on non-default-branch SHAs.
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git pkg-config libssl-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+# spade's Cargo.lock pins tracing-tree at a deleted fork; the same SHA lives
+# on the upstream. Rewrite transparently so `cargo --locked` still resolves.
+RUN git config --global \
+        url."https://github.com/davidbarsky/tracing-tree".insteadOf \
+        "https://github.com/jonathanmorley/tracing-tree"
+COPY git-pin /usr/local/bin/git-pin
+RUN chmod +x /usr/local/bin/git-pin
+WORKDIR /src
+# 5 path-dep submodules (spade, fzcmd, f128, instruction-decoder, tywaves-rs);
+# git-pin's shallow fetch leaves them empty, init explicitly.
+RUN git-pin surfer-tywaves "$TYWAVES_URL" "$TYWAVES_REV" && \
+    cd surfer-tywaves && git submodule update --init --recursive
+# Cargo.toml package name is `surfer-tywaves`; rename to `tywaves` for users.
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cd /src/surfer-tywaves && \
+    cargo build --release --locked && \
+    mkdir -p /opt/tywaves/bin && \
+    cp target/release/surfer-tywaves /opt/tywaves/bin/tywaves && \
+    strip /opt/tywaves/bin/tywaves
+
 # ---- runtime image (what gets pushed) ------------------------------------
 FROM ubuntu:24.04 AS runtime
 ARG SCALA_CLI_VERSION
@@ -211,6 +241,7 @@ COPY --from=circt-build      /opt/circt        /opt/circt
 COPY --from=hgdb-circt-build /opt/hgdb-circt   /opt/hgdb-circt
 COPY --from=hgdb-firrtl-build /opt/hgdb-firrtl /opt/hgdb-firrtl
 COPY --from=hgdb-py-build    /opt/hgdb         /opt/hgdb
+COPY --from=tywaves-build    /opt/tywaves      /opt/tywaves
 COPY --from=chisel-publish   /root/.ivy2/local /opt/ivy2-local
 COPY --from=chisel-publish   /root/.cache/coursier /opt/coursier-cache
 
@@ -219,8 +250,9 @@ ENV FIRTOOL=/opt/circt/bin/firtool \
     HGDB_CIRCT_FIRTOOL=/opt/hgdb-circt/bin/firtool \
     HGDB_FIRRTL_JAR=/opt/hgdb-firrtl/bin/hgdb-firrtl.jar \
     HGDB_PY=/opt/hgdb/bindings/python \
+    TYWAVES=/opt/tywaves/bin/tywaves \
     COURSIER_CACHE=/opt/coursier-cache \
-    PATH=/opt/circt/bin:/opt/hgdb-circt/bin:/usr/local/bin:/usr/bin:/bin
+    PATH=/opt/circt/bin:/opt/hgdb-circt/bin:/opt/tywaves/bin:/usr/local/bin:/usr/bin:/bin
 
 # scala-cli reads ~/.ivy2/local; entrypoint symlinks /opt/ivy2-local
 # at container start so the host UID's $HOME doesn't matter.

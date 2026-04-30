@@ -14,14 +14,14 @@
 #                 (fkhaidari/uhdi GH Release, linux-x86_64 only)
 #   chisel        print build.mill / build.sbt snippet for the JitPack coord
 #                 (fkhaidari/chisel) -- writes nothing to disk
-#   tywaves       tywaves GUI binary (rameloni/tywaves-surfer GH Release)
+#   tywaves       tywaves waveform viewer (fkhaidari/uhdi GH Release)
 #   all           every component above
 #
 # Flags:
 #   --prefix DIR        install root (default: $HOME/.local/uhdi-tools)
-#   --release-tag TAG   fkhaidari/uhdi tag for firtool + hgdb-py (default: latest)
+#   --release-tag TAG   fkhaidari/uhdi tag for firtool + hgdb-py + tywaves
+#                       (default: latest)
 #   --chisel-tag TAG    fkhaidari/chisel JitPack tag (default: latest *-uhdi)
-#   --tywaves-tag TAG   rameloni/tywaves-surfer tag (default: latest)
 #   --force             overwrite existing files
 #   -h, --help          show this help
 #
@@ -41,7 +41,6 @@ esac
 prefix="${HOME}/.local/uhdi-tools"
 release_tag=""
 chisel_tag=""
-tywaves_tag=""
 force=0
 
 while [[ $# -gt 0 ]]; do
@@ -49,7 +48,6 @@ while [[ $# -gt 0 ]]; do
         --prefix)       prefix="$2";       shift 2 ;;
         --release-tag)  release_tag="$2";  shift 2 ;;
         --chisel-tag)   chisel_tag="$2";   shift 2 ;;
-        --tywaves-tag)  tywaves_tag="$2";  shift 2 ;;
         --force)        force=1;           shift ;;
         -h|--help)      sed -n '2,/^set -euo/p' "$0" | head -n -1; exit 0 ;;
         *) echo "unknown arg: $1" >&2; exit 2 ;;
@@ -58,7 +56,6 @@ done
 
 # Treat "latest" as the default (= use /releases/latest endpoint).
 [[ "$release_tag" == "latest" ]] && release_tag=""
-[[ "$tywaves_tag" == "latest" ]] && tywaves_tag=""
 
 # ---- platform ---------------------------------------------------------------
 detect_platform() {
@@ -107,19 +104,22 @@ resolve_tag() {
 }
 
 # Find the first asset URL whose name matches a glob in a release. Empty
-# stdout if no match.
+# stdout if no match or the endpoint 4xx's (no python traceback on failure).
 find_asset_url() {
     local repo="$1" tag="$2" pattern="$3"
     curl "${curl_args[@]}" \
-        "https://api.github.com/repos/${repo}/releases/tags/${tag}" \
+        "https://api.github.com/repos/${repo}/releases/tags/${tag}" 2>/dev/null \
         | python3 -c "
 import json, sys, fnmatch
-data = json.load(sys.stdin)
+try:
+    data = json.load(sys.stdin)
+except (json.JSONDecodeError, ValueError):
+    sys.exit(0)
 for asset in data.get('assets', []):
     if fnmatch.fnmatch(asset['name'], sys.argv[1]):
         print(asset['browser_download_url'])
         break
-" "$pattern"
+" "$pattern" || true
 }
 
 # Download a release asset to a directory. Picks the first asset whose name
@@ -253,73 +253,27 @@ libraryDependencies ++= Seq(
 MILL
 }
 
-# ---- tywaves (surfer) -------------------------------------------------------
+# ---- tywaves (surfer fork; binary distributed as `tywaves`) -----------------
 install_tywaves() {
     echo "=== tywaves ==="
-    local repo="rameloni/tywaves-surfer"
-    local tag; tag=$(resolve_tag "$repo" "$tywaves_tag")
+    local repo="fkhaidari/uhdi"
+    local tag; tag=$(resolve_tag "$repo" "$release_tag")
     echo "  Repo:       $repo"
     echo "  Tag:        $tag"
     echo "  Platform:   $platform"
 
+    local target="$prefix/bin/tywaves"
+    ensure_writable "$target" || return 1
+
     local tmp="$work_root/tywaves"
-    mkdir -p "$tmp"
-
-    # Try common asset name patterns in priority order. Naming has shifted
-    # over time; match anything that looks like a tarball or bare binary
-    # for our platform.
-    local patterns=(
-        "tywaves-*${platform}*.tar.gz"
-        "tywaves*${platform}*.tar.gz"
-        "surfer-*${platform}*.tar.gz"
-        "surfer*${platform}*.tar.gz"
-        "tywaves*${platform}*"
-        "surfer*${platform}*"
-    )
-    local url=""
-    for pat in "${patterns[@]}"; do
-        url=$(find_asset_url "$repo" "$tag" "$pat" || true)
-        [[ -n "$url" ]] && break
-    done
-    if [[ -z "$url" ]]; then
-        echo "  no tywaves/surfer asset for $platform in $repo@$tag" >&2
-        echo "  available assets:" >&2
-        curl "${curl_args[@]}" \
-            "https://api.github.com/repos/${repo}/releases/tags/${tag}" \
-            | grep '"name":' | sed 's/^/    /' >&2
-        return 1
-    fi
-    echo "  Download:   $url"
-
-    local filename; filename=$(basename "$url")
-    curl "${curl_args[@]}" -o "$tmp/$filename" "$url"
+    local tarball
+    tarball=$(dl_release_asset "$repo" "$tag" \
+        "tywaves-${platform}-*.tar.gz" "$tmp")
 
     mkdir -p "$prefix/bin"
-    if [[ "$filename" == *.tar.gz || "$filename" == *.tgz ]]; then
-        tar -xzf "$tmp/$filename" -C "$tmp"
-        local bin
-        bin=$(find "$tmp" -maxdepth 4 -type f \
-            \( -name tywaves -o -name surfer \) | head -1)
-        if [[ -z "$bin" ]]; then
-            echo "  could not find tywaves/surfer binary in $filename" >&2
-            return 1
-        fi
-        local target="$prefix/bin/$(basename "$bin")"
-        ensure_writable "$target" || return 1
-        cp "$bin" "$target"
-        chmod +x "$target"
-        echo "  Installed:  $target"
-    else
-        # Bare binary asset.
-        local target="$prefix/bin/tywaves"
-        case "$filename" in
-            *surfer*) target="$prefix/bin/surfer" ;;
-        esac
-        ensure_writable "$target" || return 1
-        cp "$tmp/$filename" "$target"
-        chmod +x "$target"
-        echo "  Installed:  $target"
-    fi
+    tar -xzf "$tarball" -C "$prefix/bin"
+    chmod +x "$prefix/bin/tywaves"
+    echo "  Installed:  $prefix/bin/tywaves"
 }
 
 # ---- end-of-run summary -----------------------------------------------------
@@ -332,6 +286,9 @@ print_env_hints() {
     fi
     if [[ "$did" == *hgdb-py* ]]; then
         echo "  export HGDB_PY=\"$prefix/lib/hgdb/bindings/python\""
+    fi
+    if [[ "$did" == *tywaves* ]]; then
+        echo "  export TYWAVES=\"$prefix/bin/tywaves\""
     fi
     if [[ "$did" == *firtool* || "$did" == *tywaves* ]]; then
         if [[ ":$PATH:" != *":$prefix/bin:"* ]]; then
