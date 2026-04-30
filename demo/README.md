@@ -60,21 +60,56 @@ ls design.vcd
 
 ## Open in tywaves
 
-tywaves takes the `.dd` (type info from UHDI) and a `.vcd` (raw signals
-from any simulator) and shows you the design **with Chisel-source-level
-types preserved**:
+tywaves is rameloni's surfer fork that consumes a `.vcd` plus a
+directory of HGLDD files (`.dd` here, written by `uhdi-to-hgldd`) and
+renders the design with Chisel source types preserved (or as close to
+that as the current debug-info pipeline gets — see
+[Known limitations](#known-limitations)).
+
+### Plain mode (recommended right now)
+
+The simplest invocation just opens the waveform with no HGLDD
+overlay. tywaves' built-in translators still give you signed /
+unsigned / hex / binary / IEEE-754 views per signal, and the full
+`TOP / tb / dut / ...` hierarchy is browsable.
 
 ```sh
-tywaves design.dd design.vcd
+# from the demo's directory after ./run.sh && ./run.sh --simulate
+tywaves design.vcd
 ```
 
-What you get that a flat waveform viewer can't show you:
-- `ChiselEnum` registers as `Red / Green / ...`, not raw bits
-  (try the `fsm/` demo).
-- `Decoupled[T]` and other `Bundle`s as collapsible structs with
-  `valid / ready / bits` grouped together (try `fifo/` and `bus/`).
-- `Module` hierarchy — `Pipeline / mul / add` instead of one flat
-  signal soup (try `pipeline/`).
+This works end-to-end today: scalar signals (`x`, `y`, `busy`,
+`io_a`, `io_b`, `io_q`, ...) update through the simulation as
+expected.
+
+### HGLDD-aware mode (partial today)
+
+The fully-typed mode loads the HGLDD directory and links it to the
+testbench-wrapped wave hierarchy:
+
+```sh
+tywaves --hgldd-dir . --top-module GCD --extra-scopes tb dut design.vcd
+```
+
+Caveat: tywaves currently expects the wave file to be named after the
+top module (`GCD.vcd` for the `GCD` module). Until that's fixed in
+either tywaves or our `uhdi-to-hgldd`, copy the artefact:
+
+```sh
+cp design.vcd GCD.vcd
+tywaves --hgldd-dir . --top-module GCD --extra-scopes tb dut GCD.vcd
+```
+
+What you get **today** in this mode:
+
+- The `Scopes` panel shows the HGLDD-aware `tb / dut` hierarchy.
+- The `Variables` panel collapses bundle ports as `GCD_io {a, b, en, q, rdy}`.
+
+What's **not yet working** in this mode (see
+[Known limitations](#known-limitations)):
+
+- Bundle field *values* read as `0`, even when the underlying flat
+  signals (`io_a`, `io_b`, ...) carry real data in the same wave.
 
 The same `design.dd` works regardless of which simulator produced the
 `.vcd`. Verilator, iverilog, VCS, Xcelium — UHDI was built so the type
@@ -173,10 +208,37 @@ Chisel build.
 - **`mill: Could not find or load main class Main`** — sources have
   to live at `app/src/`, not `src/`. Mill's `object app` convention.
 - **Verilator: `Cannot find include file: layers-…-Verification.sv`** —
-  firtool emits `\`include` directives for verification layers but
-  inlines the bodies. The demo `run.sh` already passes
-  `+define+layers_<Top>_Verification_*` to short-circuit the includes;
-  if you adapt the script, keep those defines.
+  firtool emits Verilog tick-include directives for verification
+  layers but inlines the bodies in the same file. The demo `run.sh`
+  already passes `+define+layers_GCD_Verification_Assert`,
+  `+define+layers_GCD_Verification_Assume`, and
+  `+define+layers_GCD_Verification_Cover` to short-circuit them; if
+  you adapt the script, keep those defines and substitute your own
+  top module name for `GCD`.
 - **`.dd` and `.db` differ between runs of the same source** — they
   shouldn't. Both are deterministic projections of `design.uhdi.json`.
   If you see drift, file an issue with the input UHDI document.
+
+## Known limitations
+
+- **tywaves wave-file naming.** tywaves' `--hgldd-dir` mode looks for
+  a wave file named after the top module (`GCD.vcd` for the `GCD`
+  module), not the actual file passed on the command line. Workaround:
+  `cp design.vcd <TopModule>.vcd` before launching tywaves. To be
+  fixed in either tywaves' CLI parsing or our `uhdi-to-hgldd`'s
+  `hdl_file_index` field (which is currently empty).
+- **Bundle field values render as `0` in tywaves.** tywaves shows the
+  bundle structure correctly (e.g. `GCD_io {a, b, en, q, rdy}`), but
+  every field reads as `0` even when the underlying flat signals
+  (`io_a`, `io_b`, ...) carry real data in the same wave. Root cause:
+  CIRCT's `EmitUHDI.cpp` emits the struct constructor expression with
+  empty `sigName` for every operand, so `uhdi-to-hgldd` propagates
+  empty `sig_name`s into the HGLDD `'{ ... }` operands. Until that's
+  fixed upstream, plain mode (`tywaves design.vcd` with no
+  `--hgldd-dir`) is the working path — tywaves' built-in translators
+  still give signed / unsigned / hex / IEEE-754 views per signal.
+- **`uhdi-to-hgdb` warning about unresolved guard `stable_id`.** Some
+  `when`-condition tokens (e.g. `io_en`) don't resolve to a Verilog
+  signal name and surface as raw tokens in `design.db`. Doesn't block
+  the pipeline; hgdb may show the raw token instead of the variable
+  in those guard contexts.
