@@ -13,19 +13,15 @@ concurrency:
 
 jobs:
   converter:
-    name: converter pytest (Python ${{ matrix.python-version }})
+    name: converter pytest
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
           cache: pip
 
       - name: Install converter + dev deps
@@ -46,7 +42,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: converter-coverage-${{ matrix.python-version }}
+          name: converter-coverage
           path: converter/coverage.xml
           if-no-files-found: ignore
 

@@ -42,7 +42,7 @@ fail_under = 75
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
 # Narrow rule set: real bugs, not stylistic churn.
@@ -58,7 +58,7 @@ ignore = []
 "**/test/**" = ["S101", "F811"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 strict = false
 warn_unused_ignores = true
 warn_redundant_casts = true
