@@ -53,6 +53,4 @@ demo-out-*/
 .idea/
 *.swp
 
-# VS Code: ignore everything except the checked-in launch.json
-.vscode/*
-!.vscode/launch.json
+.vscode/
