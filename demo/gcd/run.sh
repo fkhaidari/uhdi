@@ -77,11 +77,10 @@ simulate() {
     fi
     echo "Simulating $sv → gcd.vcd..."
 
-    # Testbench. Port names match firtool's chisel-flattened SV
-    # (clock, reset, io_a, io_b, io_en, io_q, io_rdy). The
-    # `wait(!io_rdy); wait(io_rdy)` pattern waits for a full busy
-    # cycle, dodging a verilator active-vs-NBA region race where a
-    # bare wait(io_rdy) would fire on the previous test's stale rdy=1.
+    # Testbench. Port names match firtool's chisel-flattened SV. The
+    # `wait(!io_rdy); wait(io_rdy)` pattern waits a full busy cycle so
+    # bare wait(io_rdy) doesn't fire on the previous test's stale rdy=1
+    # (verilator active-vs-NBA region race).
     cat > /tmp/gcd_tb.sv << 'TB'
 `timescale 1ns/1ps
 module gcd_tb;
@@ -118,10 +117,8 @@ module gcd_tb;
 endmodule
 TB
 
-    # +define+layers_*: short-circuit the `\`include "layers-*.sv"`
-    # blocks firtool emits for the verification layer; the layer
-    # bodies are inlined in GCD.sv with macro guards, so the includes
-    # are redundant but verilator still tries to resolve them.
+    # +define+layers_*: short-circuit firtool's redundant
+    # `\`include "layers-*.sv"` directives (bodies are already inlined).
     rm -rf /tmp/gcd_obj
     verilator --binary --trace -j 0 \
         -Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-STMTDLY -Wno-INITIALDLY \
@@ -177,5 +174,5 @@ echo "  gcd.dd          – HGLDD (for Tywaves)"
 echo "  gcd.db          – HGDB SQLite (for hgdb debugger)"
 echo "  GCD.sv          – SystemVerilog"
 echo
-echo "Simulate with:   ./run.sh --simulate  (needs iverilog)"
+echo "Simulate with:   ./run.sh --simulate  (needs verilator)"
 echo "Tywaves viewer:  tywaves GCD.fir gcd.dd gcd.vcd"

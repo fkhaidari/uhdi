@@ -107,10 +107,8 @@ ARG HGDB_REV
 WORKDIR /src
 RUN git-pin hgdb "$HGDB_URL" "$HGDB_REV" && \
     cd hgdb && git submodule update --init --recursive
-# Layout matches bench/runner.py expectations:
-#   /opt/hgdb/bindings/python/{hgdb/, build/lib.<plat>-cpython-XYZ/, scripts/toml2hgdb}
-# build/lib.* must be kept as a wrapper dir (not flattened) so
-# runner.py's `(build).glob("lib.*")` detection fires.
+# Layout: /opt/hgdb/bindings/python/{hgdb/, build/lib.<plat>-cpython-XYZ/,
+# scripts/toml2hgdb}. bench/runner.py globs build/lib.*, don't flatten it.
 RUN cd /src/hgdb/bindings/python && \
     pip install --break-system-packages --no-cache-dir \
         pybind11 setuptools wheel && \
@@ -145,13 +143,11 @@ COPY git-pin /usr/local/bin/git-pin
 RUN chmod +x /usr/local/bin/git-pin
 
 WORKDIR /src
-# rameloni/chisel publishes via sbt (not mill); pinned SHA carries the
-# git tag `v6.4.3-tywaves-SNAPSHOT` and emitVersion derives the publish
-# coord via `git describe`. git-pin's shallow fetch strips tags, so we
-# re-create the tag below.
-#
-# sbt repositories file overrides plugins.sbt's dead resolver; the
-# `-Dsbt.override.build.repos=true` flag makes sbt ignore project resolvers.
+# rameloni/chisel publishes via sbt; pinned SHA carries git tag
+# v6.4.3-tywaves-SNAPSHOT for emitVersion's `git describe`, but git-pin's
+# shallow fetch strips tags, so we re-create it below. The sbt
+# repositories file + -Dsbt.override.build.repos=true override
+# plugins.sbt's dead resolver.
 RUN mkdir -p /root/.sbt && \
     printf '%s\n' \
         '[repositories]' \
