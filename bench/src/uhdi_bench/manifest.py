@@ -8,9 +8,9 @@ from __future__ import annotations
 import dataclasses
 import pathlib
 import re
+import tomllib
 from typing import Any, Dict, List, Optional, Tuple
 
-import tomllib
 from uhdi_common.diff import Delta
 
 
