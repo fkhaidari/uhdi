@@ -2,7 +2,7 @@
 # Full UHDI pipeline for the GCD demo.
 #   ./run.sh          – download firtool, build, emit UHDI, convert to HGLDD/HGDB
 #   ./run.sh --download-only  – only download firtool
-#   ./run.sh --simulate       – simulate SV → VCD (requires iverilog)
+#   ./run.sh --simulate       – simulate SV → VCD (requires verilator)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -53,49 +53,67 @@ download_firtool() {
 
 simulate() {
     local sv="${1:-GCD.sv}"
-    if ! command -v iverilog &>/dev/null; then
-        echo "iverilog not found, skipping VCD generation" >&2
+    if ! command -v verilator &>/dev/null; then
+        echo "verilator not found, skipping VCD generation" >&2
         return
     fi
     echo "Simulating $sv → gcd.vcd..."
 
-    # Simple testbench
+    # Testbench. Port names match firtool's chisel-flattened SV
+    # (clock, reset, io_a, io_b, io_en, io_q, io_rdy). The
+    # `wait(!io_rdy); wait(io_rdy)` pattern waits for a full busy
+    # cycle, dodging a verilator active-vs-NBA region race where a
+    # bare wait(io_rdy) would fire on the previous test's stale rdy=1.
     cat > /tmp/gcd_tb.sv << 'TB'
 `timescale 1ns/1ps
 module gcd_tb;
-  reg clk = 0;
-  reg rst = 1;
-  reg [15:0] a, b;
-  reg en;
-  wire [15:0] q;
-  wire rdy;
+  reg clock = 0;
+  reg reset = 1;
+  reg [15:0] io_a, io_b;
+  reg io_en;
+  wire [15:0] io_q;
+  wire io_rdy;
 
-  GCD dut(.*);
+  GCD dut (
+    .clock  (clock), .reset  (reset),
+    .io_a   (io_a),  .io_b   (io_b),
+    .io_en  (io_en), .io_q   (io_q), .io_rdy (io_rdy)
+  );
 
-  always #5 clk = ~clk;
+  always #5 clock = ~clock;
 
   initial begin
     $dumpfile("gcd.vcd");
     $dumpvars(0, gcd_tb);
-    #2 rst = 0;
-    @(posedge clk);
-    a = 48; b = 18; en = 1;
-    @(posedge clk);
-    en = 0;
-    wait(rdy);
-    $display("GCD(48, 18) = %d", q);
-    a = 15; b = 45; en = 1;
-    @(posedge clk);
-    en = 0;
-    wait(rdy);
-    $display("GCD(15, 45) = %d", q);
+    #2 reset <= 0;
+    @(posedge clock);
+    io_a <= 48; io_b <= 18; io_en <= 1;
+    @(posedge clock); #1 io_en <= 0;
+    wait(!io_rdy); wait(io_rdy);
+    $display("GCD(48, 18) = %d", io_q);
+    io_a <= 15; io_b <= 45; io_en <= 1;
+    @(posedge clock); #1 io_en <= 0;
+    wait(!io_rdy); wait(io_rdy);
+    $display("GCD(15, 45) = %d", io_q);
     #20 $finish;
   end
 endmodule
 TB
-    iverilog -g2012 -o /tmp/gcd_sim "$SCRIPT_DIR/GCD.sv" /tmp/gcd_tb.sv
-    vvp /tmp/gcd_sim
-    rm -f /tmp/gcd_tb.sv /tmp/gcd_sim
+
+    # +define+layers_*: short-circuit the `\`include "layers-*.sv"`
+    # blocks firtool emits for the verification layer; the layer
+    # bodies are inlined in GCD.sv with macro guards, so the includes
+    # are redundant but verilator still tries to resolve them.
+    rm -rf /tmp/gcd_obj
+    verilator --binary --trace -j 0 \
+        -Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-STMTDLY -Wno-INITIALDLY \
+        +define+layers_GCD_Verification_Assert \
+        +define+layers_GCD_Verification_Assume \
+        +define+layers_GCD_Verification_Cover \
+        --top-module gcd_tb -Mdir /tmp/gcd_obj \
+        "$SCRIPT_DIR/$sv" /tmp/gcd_tb.sv > /dev/null 2>&1
+    /tmp/gcd_obj/Vgcd_tb
+    rm -rf /tmp/gcd_tb.sv /tmp/gcd_obj
     echo "Wrote: gcd.vcd"
 }
 
