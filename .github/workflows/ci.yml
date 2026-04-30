@@ -65,6 +65,23 @@ jobs:
           tag=$(cat tools/docker/image-tag.txt)
           echo "ref=ghcr.io/${owner_lc}/uhdi-tools:${tag}" >> "$GITHUB_OUTPUT"
 
+      - name: Wait for uhdi-tools image
+        # When a PR bumps tools/docker/image-tag.txt, build-tools.yml races
+        # this job; poll until the new tag is on GHCR before pulling.
+        # Public read is anonymous (no GITHUB_TOKEN needed).
+        run: |
+          ref="${{ steps.img.outputs.ref }}"
+          for i in $(seq 1 90); do
+              if docker manifest inspect "$ref" >/dev/null 2>&1; then
+                  echo "Image $ref available after $((i*20))s"
+                  exit 0
+              fi
+              echo "Waiting for $ref ... ($i/90)"
+              sleep 20
+          done
+          echo "Image $ref still missing after 30 min" >&2
+          exit 1
+
       - name: Pull uhdi-tools image
         run: docker pull "${{ steps.img.outputs.ref }}"
 
