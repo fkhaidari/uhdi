@@ -15,6 +15,37 @@ DEMO_ROOT="$SCRIPT_DIR/.."
 export COURSIER_REPOSITORIES="https://jitpack.io|https://repo1.maven.org/maven2"
 
 # ---- helpers -----------------------------------------------------------------
+try_docker_extract() {
+    command -v docker &>/dev/null || return 2
+    local image_tag owner image cid
+    image_tag=$(cat "$UHDI_ROOT/tools/docker/image-tag.txt")
+    owner=$(cd "$UHDI_ROOT" && git config --get remote.origin.url \
+        | sed -E 's#^(git@|https?://)([^/:]+)[:/]([^/]+)/.+$#\3#' \
+        | tr '[:upper:]' '[:lower:]')
+    image="ghcr.io/${owner}/uhdi-tools:${image_tag}"
+    docker pull "$image" >&2 || return 1
+    cid=$(docker create "$image") || return 1
+    if ! docker cp "$cid:/opt/circt/bin/firtool" "$FIRTOOL"; then
+        docker rm "$cid" > /dev/null 2>&1
+        return 1
+    fi
+    docker rm "$cid" > /dev/null
+    chmod +x "$FIRTOOL"
+}
+
+try_gh_extract() {
+    command -v gh &>/dev/null || return 2
+    gh auth status &>/dev/null || return 2
+    local tag
+    tag=$(gh release list -R fkhaidari/uhdi --limit 1 --json tagName -q '.[0].tagName') \
+        || return 1
+    gh release download "$tag" -R fkhaidari/uhdi -D /tmp/firtool-dl \
+        -p 'firtool-linux-*.tar.gz' || return 1
+    tar -xzf /tmp/firtool-dl/firtool-linux-*.tar.gz -C "$BIN_DIR"
+    rm -rf /tmp/firtool-dl
+    chmod +x "$FIRTOOL"
+}
+
 download_firtool() {
     if [[ -f "$FIRTOOL" ]]; then
         echo "firtool already at $FIRTOOL"
@@ -22,28 +53,15 @@ download_firtool() {
     fi
     mkdir -p "$BIN_DIR"
 
-    # Try Docker first, fall back to gh release download.
-    if command -v docker &>/dev/null; then
-        echo "Downloading firtool from Docker image..."
-        image_tag=$(cat "$UHDI_ROOT/tools/docker/image-tag.txt")
-        owner=$(cd "$UHDI_ROOT" && git config --get remote.origin.url \
-            | sed -E 's#^(git@|https?://)([^/:]+)[:/]([^/]+)/.+$#\3#' \
-            | tr '[:upper:]' '[:lower:]')
-        image="ghcr.io/${owner}/uhdi-tools:${image_tag}"
-        docker pull "$image" >&2
-        cid=$(docker create "$image")
-        docker cp "$cid:/opt/circt/bin/firtool" "$FIRTOOL"
-        docker rm "$cid" > /dev/null
-        chmod +x "$FIRTOOL"
-    elif command -v gh &>/dev/null && gh auth status &>/dev/null; then
-        echo "Downloading firtool from GitHub Releases..."
-        tag=$(gh release list -R fkhaidari/uhdi --limit 1 --json tagName -q '.[0].tagName')
-        gh release download "$tag" -R fkhaidari/uhdi -D /tmp/firtool-dl -p 'firtool-linux-*.tar.gz'
-        tar -xzf /tmp/firtool-dl/firtool-linux-*.tar.gz -C "$BIN_DIR"
-        rm -rf /tmp/firtool-dl
-        chmod +x "$FIRTOOL"
+    # Try docker first; fall back to gh release on failure (e.g. fork
+    # without GHCR access, missing image tag). Helpers use `|| return`
+    # so set -e doesn't abort the script before the fallback fires.
+    if try_docker_extract; then
+        echo "Downloaded firtool from Docker image"
+    elif try_gh_extract; then
+        echo "Downloaded firtool from GitHub Releases"
     else
-        echo "ERROR: need docker or gh CLI to download firtool" >&2
+        echo "ERROR: docker pull and gh release download both failed" >&2
         echo "  Install gh: https://cli.github.com/" >&2
         echo "  Or build manually: cd $UHDI_ROOT && tools/release/release-firtool.sh build" >&2
         exit 1
