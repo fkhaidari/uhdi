@@ -112,4 +112,4 @@ echo "  design.db          – HGDB SQLite (for hgdb)"
 printf "  %-18s – SystemVerilog\n" "${sv_file:-<TopModule>.sv}"
 echo
 echo "Simulate:        ./run.sh --simulate    (needs verilator + tb.sv)"
-echo "Open in tywaves: tywaves design.dd design.vcd"
+echo "Open in tywaves: tywaves --hgldd-dir . design.vcd"
