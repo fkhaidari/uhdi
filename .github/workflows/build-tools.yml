@@ -89,5 +89,17 @@ jobs:
             ghcr.io/${{ steps.tag.outputs.owner_lc }}/uhdi-tools:${{ steps.tag.outputs.tag }}
             ${{ github.ref == 'refs/heads/main' && format('ghcr.io/{0}/uhdi-tools:latest', steps.tag.outputs.owner_lc) || '' }}
           build-args: ${{ steps.args.outputs.build-args }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Two-layer cache: GHA (per-PR scope keeps mode=max for all stages)
+          # plus the registry image's inline metadata. The shared `main`-scoped
+          # GHA entry lets PRs read from the last main build; PRs write to their
+          # own scope so concurrent runs don't fight. The inline export embeds
+          # cache metadata into the pushed image itself, so a local
+          # tools/docker/build-and-push.sh --push can hit the same cache via
+          # --cache-from ghcr.io/<owner>/uhdi-tools.
+          cache-from: |
+            type=gha,scope=build-tools-${{ github.ref_name }}
+            type=gha,scope=build-tools-main
+            type=registry,ref=ghcr.io/${{ steps.tag.outputs.owner_lc }}/uhdi-tools:latest
+          cache-to: |
+            type=gha,mode=max,scope=build-tools-${{ github.ref_name }}
+            type=inline
