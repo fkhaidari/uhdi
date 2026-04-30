@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "uhdi-converter"
 version = "0.1.0"
 description = "Pool-based UHDI -> HGLDD / hgdb SQLite converters."
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = ["jsonschema>=4.18"]
 
 [project.optional-dependencies]
