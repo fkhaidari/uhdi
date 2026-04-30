@@ -19,11 +19,18 @@ htmlcov/
 # converter/test/fixtures/ and are meant to be tracked -- the
 # un-ignore lines below override the glob.
 *.uhdi.json
-*.hgldd
+*.dd
 *.db
+*.sv
 !converter/test/fixtures/**/*.uhdi.json
 !converter/test/fixtures/**/*.dd
 !converter/test/fixtures/**/*.db
+!demo/*/tb.sv
+
+# demo/<name>/.bin/firtool downloaded per-demo by run.sh; demo/<name>/out/
+# is mill's build output (per-machine, not source-of-truth).
+demo/*/.bin/
+demo/*/out/
 
 # bench scala-cli FIR cache.  Re-derivable from `bench/fixtures/*.scala`,
 # expensive to re-fetch (chisel deps), but per-machine.

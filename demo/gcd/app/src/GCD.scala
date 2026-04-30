@@ -31,7 +31,7 @@ class GCD(width: Int = 16) extends Module {
 }
 
 object Main extends App {
-  val uhdi = "gcd.uhdi.json"
+  val uhdi = "design.uhdi.json"
   ChiselStage.emitSystemVerilog(
     new GCD,
     args = Array("--with-debug-intrinsics"),

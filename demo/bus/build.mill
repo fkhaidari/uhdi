@@ -3,7 +3,7 @@
 import mill._
 import mill.scalalib._
 
-object gcd extends ScalaModule {
+object app extends ScalaModule {
   def scalaVersion = "2.13.18"
   def mainClass = Task { Some("Main") }
 
