@@ -1,8 +1,8 @@
 # UHDI demos
 
 Five small Chisel projects that exercise the UHDI debug stack end-to-end:
-Chisel design → FIRRTL → `firtool --emit-uhdi` → UHDI JSON →
-`uhdi-to-hgldd` / `uhdi-to-hgdb` → debug info that tywaves and hgdb consume.
+Chisel design -> FIRRTL -> `firtool --emit-uhdi` -> UHDI JSON ->
+`uhdi-to-hgldd` / `uhdi-to-hgdb` -> debug info that tywaves and hgdb consume.
 
 Each subdirectory is a **standalone Chisel project** with its own
 `build.mill`, `millw`, and `run.sh`. You can copy any one of them out of
@@ -15,14 +15,14 @@ starter template (see [Use this in your own project](#use-this-in-your-own-proje
 | `fsm/` | `TrafficLight` | `ChiselEnum` state. Tywaves should render the `state` register as `Red / RedYellow / Green / Yellow`, not as `2'b00 / 01 / 10 / 11`. |
 | `fifo/` | `Fifo` | `Decoupled<UInt>` ports + `SyncReadMem`. Tywaves groups `valid / ready / bits` as a struct; the SyncReadMem appears as its own scope. |
 | `pipeline/` | `Pipeline` | 3-stage MAC with `MulStage` / `AddStage` as separate `Module`s. Hierarchy navigation in tywaves; hgdb steps a value across the pipeline registers cycle by cycle. |
-| `bus/` | `MemController` | `Decoupled` carrying nested `Bundle`s (`Request{addr, data, write}` → `Response{data, ok}`). Flexes nested-record rendering and a single-in-flight handshake. |
+| `bus/` | `MemController` | `Decoupled` carrying nested `Bundle`s (`Request{addr, data, write}` -> `Response{data, ok}`). Flexes nested-record rendering and a single-in-flight handshake. |
 
 ## Quick start
 
 ### Prerequisites
 - Java 21+ (mill needs it)
 - Python 3 (for the UHDI converters)
-- Either Docker / podman (preferred — pulls a prebuilt image with firtool)
+- Either Docker / podman (preferred -- pulls a prebuilt image with firtool)
   or `gh` CLI authenticated with a token that can read public releases
 - Verilator (only for `./run.sh --simulate`)
 
@@ -48,8 +48,8 @@ converters produce HGLDD/HGDB). Output:
 | File | What it is |
 |------|-----------|
 | `design.uhdi.json` | UHDI debug-info document (single source of truth) |
-| `design.dd` | HGLDD projection — what tywaves reads |
-| `design.db` | HGDB SQLite projection — what the hgdb runtime reads |
+| `design.dd` | HGLDD projection -- what tywaves reads |
+| `design.db` | HGDB SQLite projection -- what the hgdb runtime reads |
 | `<TopModule>.sv` | SystemVerilog firtool emitted alongside |
 
 ### Generate a waveform
@@ -99,7 +99,7 @@ tywaves design.vcd
 ```
 
 The same `design.dd` works regardless of which simulator produced the
-`.vcd`. Verilator, iverilog, VCS, Xcelium — UHDI was built so the type
+`.vcd`. Verilator, iverilog, VCS, Xcelium -- UHDI was built so the type
 layer lives independently of the simulator.
 
 ## Open in hgdb
@@ -122,7 +122,7 @@ python -m hgdb design.db
 The exact "attach the debugger" command depends on your setup; see
 the [hgdb runtime documentation][hgdb-runtime] for the protocol details.
 What matters here is that **both tywaves and hgdb consume the same UHDI
-JSON** — it's projected to `.dd` for tywaves and to `.db` for hgdb.
+JSON** -- it's projected to `.dd` for tywaves and to `.db` for hgdb.
 You don't have to maintain two separate debug-info builds.
 
 [hgdb-runtime]: https://github.com/fkhaidari/hgdb
@@ -135,13 +135,13 @@ as the skeleton of your own Chisel project.
 
 ```text
 my-chisel-project/
-├── build.mill           # mill module + chisel JitPack dep
-├── millw                # mill bootstrap (4-line shell wrapper)
-├── .mill-version
-├── app/
-│   └── src/
-│       └── MyTop.scala  # your Chisel design + Main object
-└── run.sh               # build, emit UHDI, convert to HGLDD/HGDB
+|-- build.mill           # mill module + chisel JitPack dep
+|-- millw                # mill bootstrap (4-line shell wrapper)
+|-- .mill-version
+|-- app/
+|   `-- src/
+|       `-- MyTop.scala  # your Chisel design + Main object
+`-- run.sh               # build, emit UHDI, convert to HGLDD/HGDB
 ```
 
 Three things to adapt:
@@ -180,7 +180,7 @@ Three things to adapt:
    SystemVerilog because it's the most portable form for a one-shot
    demo (verilator builds it directly). For a real project you'll
    typically write tests in Chisel via `chisel3.simulator` or
-   `chiseltest` — both produce a `.vcd` that tywaves consumes
+   `chiseltest` -- both produce a `.vcd` that tywaves consumes
    together with the `design.dd` you just generated.
 
 That's it. The `firtool --emit-uhdi` flag and the two python
@@ -189,12 +189,12 @@ Chisel build.
 
 ## Troubleshooting
 
-- **`firtool: command not found`** — `run.sh` downloads it once into
+- **`firtool: command not found`** -- `run.sh` downloads it once into
   `.bin/firtool`. Re-run `./run.sh --download-only` or check that
   `docker` / `gh` is on `PATH`.
-- **`mill: Could not find or load main class Main`** — sources have
+- **`mill: Could not find or load main class Main`** -- sources have
   to live at `app/src/`, not `src/`. Mill's `object app` convention.
-- **Verilator: `Cannot find include file: layers-…-Verification.sv`** —
+- **Verilator: `Cannot find include file: layers-...-Verification.sv`** --
   firtool emits Verilog tick-include directives for verification
   layers but inlines the bodies in the same file. The demo `run.sh`
   already passes `+define+layers_GCD_Verification_Assert`,
@@ -202,7 +202,7 @@ Chisel build.
   `+define+layers_GCD_Verification_Cover` to short-circuit them; if
   you adapt the script, keep those defines and substitute your own
   top module name for `GCD`.
-- **`.dd` and `.db` differ between runs of the same source** — they
+- **`.dd` and `.db` differ between runs of the same source** -- they
   shouldn't. Both are deterministic projections of `design.uhdi.json`.
   If you see drift, file an issue with the input UHDI document.
 

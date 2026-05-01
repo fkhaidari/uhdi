@@ -1,0 +1,24 @@
+name: Set up Nushell
+description: Download a pinned nu binary and put it on PATH.
+
+inputs:
+  version:
+    description: Nushell version (matches GitHub Releases tag)
+    required: false
+    default: "0.112.2"
+
+runs:
+  using: composite
+  steps:
+    - name: Install nushell
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="${{ inputs.version }}"
+        url="https://github.com/nushell/nushell/releases/download/${version}/nu-${version}-x86_64-unknown-linux-gnu.tar.gz"
+        tmp=$(mktemp -d)
+        curl -fsSL -o "$tmp/nu.tar.gz" "$url"
+        tar -xzf "$tmp/nu.tar.gz" -C "$tmp"
+        sudo install -m 0755 "$tmp/nu-${version}-x86_64-unknown-linux-gnu/nu" /usr/local/bin/nu
+        rm -rf "$tmp"
+        nu --version
