@@ -178,22 +178,8 @@ jobs:
                   cd bench && pytest -v
               '
 
-  ruff:
-    name: ruff (lint)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-      - name: Install ruff
-        run: pip install ruff
-      - name: Lint
-        run: ruff check converter/src converter/test bench/src bench/test
-
-  mypy:
-    name: mypy (type check)
+  python-static:
+    name: ruff + mypy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -205,19 +191,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e './converter[dev]' -e './bench'
-          pip install mypy
-      - name: Type-check converter common surface
-        # Strict only on uhdi_common; emitter/bench glue keep Dict[str, Any].
+          pip install ruff mypy
+      - name: ruff (lint)
+        run: ruff check converter/src converter/test bench/src bench/test
+      - name: mypy (type check)
+        # Strict only on uhdi_common; emitter/bench glue keeps Dict[str, Any].
         run: mypy converter/src/uhdi_common
 
-  install-sh:
-    name: install.sh end-to-end (linux-x86_64)
+  nu-tests:
+    name: nu parse-check + unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-nu
 
-      - name: Parse-check nu scripts
+      - name: Parse-check nu and bash scripts
         # `nu --ide-check` emits JSON diagnostics; the command exits 0
         # even on parse errors, so we scan the stream for
         # `"severity":"Error"` ourselves. `git ls-files '*.nu'` picks
@@ -240,7 +228,7 @@ jobs:
           done < <(git ls-files '*.sh')
           exit "$fail"
 
-      - name: Run nu unit tests
+      - name: Run unit tests
         # Each *.test.nu has its own `def main`. New test files get
         # picked up automatically by the glob.
         run: |
@@ -249,6 +237,13 @@ jobs:
               echo "--- $f ---"
               nu "$f"
           done < <(git ls-files 'tools/test/*.test.nu')
+
+  install-sh:
+    name: install.sh end-to-end (linux-x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nu
 
       - name: Run tools/test-install.nu
         env:
