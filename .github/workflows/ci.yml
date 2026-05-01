@@ -60,12 +60,13 @@ jobs:
       ref: ${{ steps.tag.outputs.ref }}
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nu
 
       - name: Compute deterministic tag
         id: tag
         # GHCR rejects mixed-case path segments; lowercase the owner once.
         run: |
-          tag=$(tools/docker/compute-tag.sh)
+          tag=$(nu tools/docker/compute-tag.nu)
           owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
           ref="ghcr.io/${owner_lc}/uhdi-tools:${tag}"
           {
@@ -75,7 +76,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Verify tools/docker/image-tag.txt is in sync
-        run: tools/docker/check-tag.sh
+        run: nu tools/docker/check-tag.nu
 
       - name: Log in to GHCR
         # Login (and push below) on PRs too: bench pulls the same tag, so
@@ -145,8 +146,8 @@ jobs:
           # GHA entry lets PRs read from the last main build; PRs write to their
           # own scope so concurrent runs don't fight. The inline export embeds
           # cache metadata into the pushed image itself, so a local
-          # tools/docker/build-and-push.sh --push can hit the same cache via
-          # --cache-from ghcr.io/<owner>/uhdi-tools.
+          # `nu tools/docker/build-and-push.nu --push` can hit the same cache
+          # via --cache-from ghcr.io/<owner>/uhdi-tools.
           cache-from: |
             type=gha,scope=build-tools-${{ github.ref_name }}
             type=gha,scope=build-tools-main
@@ -214,19 +215,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nu
 
-      - name: Syntax-check shell scripts
+      - name: Parse-check nu scripts
+        # `nu --ide-check` emits JSON diagnostics; the command exits 0
+        # even on parse errors, so we scan the stream for
+        # `"severity":"Error"` ourselves. `git ls-files '*.nu'` picks
+        # up every tracked .nu (including any added later) and dodges
+        # untracked .venv contents.
         run: |
-          bash -n tools/install.sh
-          bash -n tools/test-install.sh
-          bash -n tools/release/release-firtool.sh
-          bash -n tools/release/release-chisel.sh
-          bash -n tools/release/release-hgdb-py.sh
+          set -euo pipefail
+          fail=0
+          while read -r f; do
+              if nu --ide-check 100 "$f" 2>&1 | grep -q '"severity":"Error"'; then
+                  echo "parse error in $f:"
+                  nu --ide-check 100 "$f" 2>&1 | grep '"severity":"Error"'
+                  fail=1
+              else
+                  echo "parse-check ok: $f"
+              fi
+          done < <(git ls-files '*.nu')
+          while read -r f; do
+              bash -n "$f"
+          done < <(git ls-files '*.sh')
+          exit "$fail"
 
-      - name: Run tools/test-install.sh
+      - name: Run nu unit tests
+        # Each *.test.nu has its own `def main`. New test files get
+        # picked up automatically by the glob.
+        run: |
+          set -euo pipefail
+          while read -r f; do
+              echo "--- $f ---"
+              nu "$f"
+          done < <(git ls-files 'tools/test/*.test.nu')
+
+      - name: Run tools/test-install.nu
         env:
           # Authenticated request bumps the GitHub API rate limit from
-          # 60/hr (anon) to 1000/hr, which the matrix-of-3 install.sh
-          # calls in test-install.sh blow through otherwise.
+          # 60/hr (anon) to 1000/hr, which test-install's install.sh
+          # calls would blow through otherwise.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: tools/test-install.sh
+        run: nu tools/test-install.nu

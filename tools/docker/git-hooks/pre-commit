@@ -35,7 +35,7 @@ if [ "$relevant" -eq 0 ]; then
     exit 0
 fi
 
-if ! tools/docker/check-tag.sh; then
+if ! nu tools/docker/check-tag.nu; then
     echo "(commit aborted by tools/git-hooks/pre-commit)" >&2
     exit 1
 fi

@@ -26,13 +26,16 @@ binary (firtool, hgdb-py, tywaves) from a single GitHub Release on
 **No Docker required on the consumer side.**
 
 ```sh
-# from a checkout
+git clone https://github.com/fkhaidari/uhdi
+cd uhdi
 tools/install.sh all --prefix ~/.local/uhdi-tools
-
-# or curl-pipe (no checkout needed)
-curl -fsSL https://raw.githubusercontent.com/fkhaidari/uhdi/main/tools/install.sh \
-    | bash -s -- all
 ```
+
+`tools/install.sh` is a thin bash bootstrap (~50 lines): it fetches a
+pinned `nu` (Nushell) binary on first run, then dispatches to
+`tools/install.nu` for the actual install logic. Run from a checkout;
+curl-pipe-bash is no longer supported (the install spans multiple
+`.nu` files).
 
 Subcommands: `firtool`, `hgdb-py`, `chisel` (prints snippet only),
 `tywaves`, `all`. Each accepts `--prefix DIR` (default
@@ -48,7 +51,7 @@ Caveats:
   macos x86_64/aarch64).
 - `hgdb-py` is **linux-x86_64-only** for now -- the C extension is
   built against the uhdi-tools image's glibc. Other platforms fall
-  back to `tools/release/release-hgdb-py.sh build`.
+  back to `tools/release/release-hgdb-py.nu build`.
 - `chisel` is JVM-only. `install.sh chisel` writes nothing; it just
   prints the resolver + coord block to paste into `build.mill` /
   `build.sbt` / `scala-cli`. The build tool fetches it from JitPack
@@ -57,7 +60,7 @@ Caveats:
   patches; built from a mirror of
   `gitlab.com/rameloni/surfer-tywaves-demo` at
   `fkhaidari/surfer-tywaves`. Currently linux-x86_64 only. Other
-  platforms fall back to `tools/release/release-tywaves.sh build`
+  platforms fall back to `tools/release/release-tywaves.nu build`
   (needs Rust 1.75+).
 
 ## Running the image
@@ -102,9 +105,9 @@ git config core.hooksPath tools/docker/git-hooks
 ```
 
 This sets the hooks dir at the repo level only -- nothing leaks into
-`~/.gitconfig`. The hook just calls `tools/docker/check-tag.sh`, which is
-the same script the `build-tools` workflow runs server-side, so a
-local pass means server-side will pass too.  Bypass for a single
+`~/.gitconfig`. The hook just calls `nu tools/docker/check-tag.nu`,
+which is the same check the CI's `build-image` job runs server-side,
+so a local pass means server-side will pass too. Bypass for a single
 commit with `git commit --no-verify`.
 
 ## Bumping a fork pin
@@ -117,7 +120,7 @@ commit with `git commit --no-verify`.
 3. Recompute the image tag:
 
    ```sh
-   tools/docker/compute-tag.sh > tools/docker/image-tag.txt
+   nu tools/docker/compute-tag.nu | save -f tools/docker/image-tag.txt
    ```
 
    (The pre-commit hook above forces this if you forget.)
@@ -152,12 +155,12 @@ build + push directly:
 
 ```sh
 # Build only -- no push, just verify the recipe compiles.
-tools/docker/build-and-push.sh
+nu tools/docker/build-and-push.nu
 
 # Build + push to ghcr.io/<owner>/uhdi-tools:<tag-from-image-tag.txt>.
 # `--owner` defaults to the lowercased basename of `git remote get-url origin`.
 echo $GHCR_TOKEN | docker login ghcr.io -u <username> --password-stdin
-tools/docker/build-and-push.sh --push
+nu tools/docker/build-and-push.nu --push
 ```
 
 Auth: GHCR accepts a personal access token with `write:packages` scope,
@@ -171,22 +174,22 @@ operates on its own artifact and tags so the workflow scales:
 
 | Script | Artifact | Tag convention |
 |--------|----------|----------------|
-| `release-firtool.sh build --from-docker --release <tag>` | `firtool-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | `firtool-vX.Y.Z` |
-| `release-hgdb-py.sh build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
-| `release-tywaves.sh build --from-docker --release <tag>` | `tywaves-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
-| `release-chisel.sh <tag>` | JitPack build at `https://jitpack.io/#fkhaidari/chisel/<tag>` | `vX.Y.Z-uhdi` |
+| `nu release-firtool.nu build --from-docker --release <tag>` | `firtool-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | `firtool-vX.Y.Z` |
+| `nu release-hgdb-py.nu build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
+| `nu release-tywaves.nu build --from-docker --release <tag>` | `tywaves-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
+| `nu release-chisel.nu <tag>` | JitPack build at `https://jitpack.io/#fkhaidari/chisel/<tag>` | `vX.Y.Z-uhdi` |
 
-`release-hgdb-py.sh` and `release-tywaves.sh` both use
+`release-hgdb-py.nu` and `release-tywaves.nu` both use
 `gh release upload --clobber` if the tag exists, so attaching
 their tarballs to firtool's release is just running them with the
 same tag.
 
-`tools/test-install.sh` runs `install.sh all` against a throwaway
+`tools/test-install.nu` runs `install.sh all` against a throwaway
 prefix and asserts each component landed correctly. Use it as a
 post-release smoke test:
 
 ```sh
-UHDI_TAG=firtool-v0.1.1 tools/test-install.sh
+UHDI_TAG=firtool-v0.1.1 nu tools/test-install.nu
 # UHDI_E2E=1 also scaffolds a tiny mill project, resolves chisel from
 # JitPack, and runs firtool --emit-uhdi end-to-end (needs `mill`).
 ```
