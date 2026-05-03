@@ -143,7 +143,7 @@ _SV_PRECEDENCE = {
 }
 
 
-def _render_operand(operand, parent_prec, ctx):
+def _render_operand(operand, parent_prec, ctx, seen=None):
     """Render operand with parentheses only when needed."""
     if not isinstance(operand, dict):
         return ""
@@ -152,7 +152,8 @@ def _render_operand(operand, parent_prec, ctx):
     if "constant" in operand:
         n = int(operand["constant"])
         if (w := int(operand.get("width", 0))) > 0:
-            return f"{w}'d{n}"
+            # SV forbids sign in sized literals; emit two's-complement.
+            return f"{w}'d{n & ((1 << w) - 1)}"
         return str(n)
     if "bitVector" in operand:
         bits = operand["bitVector"]
@@ -160,21 +161,27 @@ def _render_operand(operand, parent_prec, ctx):
     if "varRef" in operand:
         return _resolve_sig_name(operand["varRef"], ctx)
     if "exprRef" in operand:
-        expr = ctx.expressions.get(operand["exprRef"])
-        return _render_expression(expr, parent_prec, ctx) if expr else ""
+        ref = operand["exprRef"]
+        seen = set() if seen is None else seen
+        if ref in seen:
+            raise HGDBConversionError(
+                f"cycle in expression graph at exprRef {ref!r}")
+        expr = ctx.expressions.get(ref)
+        return (_render_expression(expr, parent_prec, ctx, seen | {ref})
+                if expr else "")
     if "opcode" in operand:
-        return _render_expression(operand, parent_prec, ctx)
+        return _render_expression(operand, parent_prec, ctx, seen)
     return ""
 
 
-def _render_expression(expr, parent_prec, ctx):
+def _render_expression(expr, parent_prec, ctx, seen=None):
     """Render expression with proper parentheses for precedence."""
     if not isinstance(expr, dict):
         return ""
     opcode = expr.get("opcode", "")
     operands = expr.get("operands") or []
     own = _SV_PRECEDENCE.get(opcode, 0)
-    rendered = [_render_operand(o, own, ctx) for o in operands]
+    rendered = [_render_operand(o, own, ctx, seen) for o in operands]
 
     fallback = False
     if opcode == "?:" and len(rendered) == 3:

@@ -114,6 +114,21 @@ def test_render_operand_constant_no_width_emits_decimal_int():
     assert _render_operand({"constant": 42}, 0, _ctx()) == "42"
 
 
+@pytest.mark.parametrize("const,width,expected", [
+    (-3, 4, "4'd13"),
+    (-1, 8, "8'd255"),
+    (16, 4, "4'd0"),
+    (-128, 8, "8'd128"),
+])
+def test_render_operand_constant_masks_to_width(const, width, expected):
+    assert (_render_operand({"constant": const, "width": width}, 0, _ctx())
+            == expected)
+
+
+def test_render_operand_negative_constant_no_width():
+    assert _render_operand({"constant": -3}, 0, _ctx()) == "-3"
+
+
 def test_render_operand_bitvector_emits_sv_b_literal():
     assert _render_operand({"bitVector": "1010"}, 0, _ctx()) == "4'b1010"
 
@@ -142,6 +157,15 @@ def test_render_operand_expr_ref_resolves_via_pool():
 
 def test_render_operand_unknown_expr_ref_returns_empty():
     assert _render_operand({"exprRef": "ghost"}, 0, _ctx()) == ""
+
+
+def test_render_operand_breaks_on_cyclic_expr_ref():
+    ctx = _ctx(expressions={
+        "a": {"opcode": "+", "operands": [{"exprRef": "b"}]},
+        "b": {"opcode": "-", "operands": [{"exprRef": "a"}]},
+    })
+    with pytest.raises(HGDBConversionError, match="cycle"):
+        _render_operand({"exprRef": "a"}, 0, ctx)
 
 
 def test_render_operand_inline_opcode_dispatches_to_render_expression():

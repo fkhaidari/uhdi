@@ -1,8 +1,11 @@
 """Unit tests for HGLDD converter internals."""
 from __future__ import annotations
 
+import pytest
+from uhdi_to_hgldd import HGLDDConversionError
 from uhdi_to_hgldd import convert as hgldd_convert
 from uhdi_to_hgldd.convert import (
+    _collect_aggregated_leaves,
     _Context,
     _expression_to_hgldd,
     _FileInfo,
@@ -182,6 +185,36 @@ def test_expression_to_hgldd_expr_ref_resolves_via_pool():
 
 def test_expression_to_hgldd_unknown_expr_ref_returns_empty():
     assert _expression_to_hgldd({"exprRef": "ghost"}, _expr_ctx()) == {}
+
+
+def test_expression_to_hgldd_breaks_on_cycle():
+    ctx = _expr_ctx(expressions={
+        "a": {"opcode": "+", "operands": [{"exprRef": "b"}]},
+        "b": {"opcode": "-", "operands": [{"exprRef": "a"}]},
+    })
+    with pytest.raises(HGLDDConversionError, match="cycle"):
+        _expression_to_hgldd({"exprRef": "a"}, ctx)
+
+
+def test_collect_aggregated_leaves_terminates_on_cycle():
+    ctx = _Context.from_uhdi({
+        "format": {"name": "uhdi"},
+        "representations": {
+            "chisel": {"files": []},
+            "verilog": {"files": []},
+        },
+        "variables": {
+            "v": {"representations": {
+                "verilog": {"value": {"exprRef": "a"}}}},
+        },
+        "expressions": {
+            "a": {"opcode": "+", "operands": [{"exprRef": "b"}]},
+            "b": {"opcode": "-", "operands": [{"exprRef": "a"}]},
+        },
+        "scopes": {},
+        "top": [],
+    })
+    assert _collect_aggregated_leaves(ctx) == set()
 
 
 def test_expression_to_hgldd_inline_opcode_renders_opnode():

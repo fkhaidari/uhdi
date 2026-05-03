@@ -5,6 +5,7 @@ import argparse
 import json
 import pathlib
 import sys
+import tempfile
 
 from . import compile as compile_mod
 from .runner import discover_toolchain, run_target
@@ -16,7 +17,7 @@ _TARGET_TO_PIPELINE = {
     "hgdb_firrtl": "hgdb",
 }
 
-_DEFAULT_OUT = pathlib.Path("/tmp/bench-diff")
+_DEFAULT_OUT = pathlib.Path(tempfile.gettempdir()) / "bench-diff"
 
 
 def main(argv: list[str] | None = None) -> int:

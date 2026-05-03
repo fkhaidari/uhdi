@@ -27,26 +27,30 @@ _REGRESET = re.compile(
     r'(@\[.*\])?\s*$')
 _CONNECT = re.compile(r'^(\s*)connect\s+(.+?)(\s*@\[.*\])?\s*$')
 _HEX_LITERAL = re.compile(r'(\b[US]Int(?:<\d+>)?\()0h([0-9a-fA-F]+)(\))')
+# Word-anchored so substrings (redefine, etc.) don't trip the guard.
+_BANNED = re.compile(r'\b(intrinsic|propassign|define|object)\b')
 
 
 def _rewrite_hex(line: str) -> str:
     return _HEX_LITERAL.sub(r'\1"h\2"\3', line)
 
 
-def downgrade(text: str, source_path: str | None = None) -> str:
+class DowngradeError(RuntimeError):
+    """Raised when a FIRRTL construct has no legacy equivalent."""
+
+
+def downgrade(text: str) -> str:
     """Translate modern .fir to legacy 1.4-parser-compatible form."""
-    del source_path
     out: list[str] = []
-    for raw in text.splitlines():
-        ln = raw.rstrip("\r")
+    for ln in text.splitlines():
         if ln.lstrip().startswith("FIRRTL version"):
             continue
         ln = re.sub(r'^(\s*)public\s+module\b', r'\1module', ln)
         ln = re.sub(r'^(\s*)public\s+extmodule\b', r'\1extmodule', ln)
-        for banned in ("intrinsic", "propassign", "define ", "object "):
-            if banned in ln:
-                raise SystemExit(
-                    f"unsupported in legacy FIRRTL: {ln.strip()!r}")
+        # Strip `;` comments before scanning so commentary doesn't trip.
+        if m := _BANNED.search(re.sub(r';.*$', '', ln)):
+            raise DowngradeError(
+                f"unsupported in legacy FIRRTL ({m.group(1)}): {ln.strip()!r}")
         ln = _rewrite_hex(ln)
         # regreset -> `reg ... with :` block; trailer moves to reset line.
         m = _REGRESET.match(ln)
