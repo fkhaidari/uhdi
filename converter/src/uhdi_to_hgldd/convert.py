@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
+from uhdi_common.expressions import walk as walk_expression
 from uhdi_common.refs import loc_file_path
 
 
@@ -97,15 +98,8 @@ def _type_description(type_ref, ctx):
     return {"type_name": "logic"}
 
 
-def _opnode_to_hgldd(opnode, ctx, seen=None):
-    """Convert opnode to HGLDD format."""
-    return {"opcode": opnode.get("opcode", ""),
-            "operands": [_expression_to_hgldd(o, ctx, seen)
-                         for o in opnode.get("operands", [])]}
-
-
-def _expression_to_hgldd(operand, ctx, seen=None):
-    """Convert expression operand to HGLDD format."""
+def _terminal_to_hgldd(operand, ctx):
+    """Render non-opnode operand shapes; structural dispatch lives in walk()."""
     if not isinstance(operand, dict):
         return {}
     if "sigName" in operand:
@@ -122,17 +116,23 @@ def _expression_to_hgldd(operand, ctx, seen=None):
         name = (target.get("representations", {})
                 .get(ctx.simulation_repr, {}).get("name"))
         return {"sig_name": name} if name else {}
-    if "exprRef" in operand:
-        ref = operand["exprRef"]
-        seen = set() if seen is None else seen
-        if ref in seen:
-            raise HGLDDConversionError(
-                f"cycle in expression graph at exprRef {ref!r}")
-        expr = ctx.expressions.get(ref)
-        return _opnode_to_hgldd(expr, ctx, seen | {ref}) if expr is not None else {}
-    if "opcode" in operand:
-        return _opnode_to_hgldd(operand, ctx, seen)
     return {}
+
+
+def _opnode_to_hgldd(opnode, ctx, seen):
+    return {"opcode": opnode.get("opcode", ""),
+            "operands": [_expression_to_hgldd(o, ctx, seen)
+                         for o in opnode.get("operands", [])]}
+
+
+def _expression_to_hgldd(operand, ctx, seen=None):
+    """Convert expression operand to HGLDD format."""
+    return walk_expression(
+        operand, ctx,
+        on_terminal=lambda op: _terminal_to_hgldd(op, ctx),
+        on_opnode=lambda op, s: _opnode_to_hgldd(op, ctx, s),
+        exc_type=HGLDDConversionError,
+        seen=seen)
 
 
 def _topo_sorted_struct_ids(ctx):

@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
+from uhdi_common.expressions import walk as walk_expression
 from uhdi_common.refs import (
     loc_column,
     loc_file_path,
@@ -143,8 +144,8 @@ _SV_PRECEDENCE = {
 }
 
 
-def _render_operand(operand, parent_prec, ctx, seen=None):
-    """Render operand with parentheses only when needed."""
+def _terminal_to_sv(operand, ctx):
+    """Render non-opnode operand shapes; structural dispatch lives in walk()."""
     if not isinstance(operand, dict):
         return ""
     if "sigName" in operand:
@@ -160,18 +161,17 @@ def _render_operand(operand, parent_prec, ctx, seen=None):
         return f"{len(bits)}'b{bits}"
     if "varRef" in operand:
         return _resolve_sig_name(operand["varRef"], ctx)
-    if "exprRef" in operand:
-        ref = operand["exprRef"]
-        seen = set() if seen is None else seen
-        if ref in seen:
-            raise HGDBConversionError(
-                f"cycle in expression graph at exprRef {ref!r}")
-        expr = ctx.expressions.get(ref)
-        return (_render_expression(expr, parent_prec, ctx, seen | {ref})
-                if expr else "")
-    if "opcode" in operand:
-        return _render_expression(operand, parent_prec, ctx, seen)
     return ""
+
+
+def _render_operand(operand, parent_prec, ctx, seen=None):
+    """Render operand with parentheses only when needed."""
+    return walk_expression(
+        operand, ctx,
+        on_terminal=lambda op: _terminal_to_sv(op, ctx),
+        on_opnode=lambda op, s: _render_expression(op, parent_prec, ctx, s),
+        exc_type=HGDBConversionError,
+        seen=seen)
 
 
 def _render_expression(expr, parent_prec, ctx, seen=None):
