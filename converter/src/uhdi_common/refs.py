@@ -7,7 +7,7 @@ Pure functions over `BaseContext` (requires pool accessors). Two categories:
              hgdb stores as separate columns)"""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from .context import BaseContext
 
@@ -49,9 +49,9 @@ def resolve_var_by_ref(ref: str, ctx: BaseContext) -> Dict[str, Any]:
     if not ref:
         return {}
     if (direct := ctx.variables.get(ref)) is not None:
-        return direct
+        return cast(Dict[str, Any], direct)
     if (vid := ctx._var_id_by_authoring_name.get(ref)) is not None:
-        return ctx.variables[vid]
+        return cast(Dict[str, Any], ctx.variables[vid])
     return {}
 
 
