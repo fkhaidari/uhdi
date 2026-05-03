@@ -120,3 +120,52 @@ def test_validate_or_exit_propagates_import_error(monkeypatch):
     with pytest.raises(ImportError):
         validate.validate_or_exit({}, pathlib.Path("d"))
     assert callable(real_make)
+
+
+# ---- referential_errors ---------------------------------------------------
+
+
+def test_referential_errors_empty_for_clean_doc():
+    assert validate.referential_errors(_minimal_valid_doc()) == []
+
+
+def test_referential_errors_flags_dangling_type_ref():
+    doc = _minimal_valid_doc()
+    doc["variables"] = {
+        "v": {"typeRef": "ghost_type", "ownerScopeRef": "Counter"},
+    }
+    errs = validate.referential_errors(doc)
+    assert any("typeRef" in e and "ghost_type" in e for e in errs)
+
+
+def test_referential_errors_flags_dangling_top_scope():
+    doc = _minimal_valid_doc()
+    doc["top"] = ["nope"]
+    errs = validate.referential_errors(doc)
+    assert any("top[0]" in e and "nope" in e for e in errs)
+
+
+def test_referential_errors_finds_nested_expr_ref():
+    doc = _minimal_valid_doc()
+    doc["expressions"] = {
+        "a": {"opcode": "+", "operands": [{"exprRef": "missing"}]},
+    }
+    errs = validate.referential_errors(doc)
+    assert any("exprRef" in e and "missing" in e for e in errs)
+
+
+def test_referential_errors_does_not_flag_attributes():
+    """`attributes` is user-defined; refs there shouldn't trigger."""
+    doc = _minimal_valid_doc()
+    doc["attributes"] = {"varRef": "irrelevant_user_data"}
+    assert validate.referential_errors(doc) == []
+
+
+def test_validate_or_exit_warns_on_dangling_refs_without_failing(capsys):
+    doc = _minimal_valid_doc()
+    doc["top"].append("ghost_scope")
+    rc = validate.validate_or_exit(doc, pathlib.Path("d.uhdi.json"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "warning" in captured.err
+    assert "ghost_scope" in captured.err

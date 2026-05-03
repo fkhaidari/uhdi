@@ -46,6 +46,17 @@ jobs:
           path: converter/coverage.xml
           if-no-files-found: ignore
 
+      - name: Wheel install smoke (schemas reachable from a real install)
+        # Fresh venv so the editable install above can't mask missing wheel assets.
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel --outdir /tmp/wheels converter
+          python -m venv /tmp/wenv
+          /tmp/wenv/bin/pip install /tmp/wheels/uhdi_converter-*.whl
+          /tmp/wenv/bin/uhdi-to-hgldd --validate \
+              converter/test/fixtures/uhdi/counter.uhdi.json \
+              -o /tmp/smoke.dd
+
   build-image:
     name: build uhdi-tools image
     # Bakes the bench toolchain image and pushes to ghcr.io/<owner>/uhdi-tools:<tag>
