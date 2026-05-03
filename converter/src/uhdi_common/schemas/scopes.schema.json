@@ -11,6 +11,10 @@
     "ExprRef": {
       "type": "string"
     },
+    "ExprOrVarRef": {
+      "description": "Polymorphic id: resolves first against the expressions pool, then variables. Used for control-flow breakpoint metadata (enable/match/guard) where producers commonly emit a bare variable id when the predicate is a single-signal sample, and an expression id when it's a compound boolean.",
+      "type": "string"
+    },
     "Location": {
       "type": "object",
       "required": [
@@ -94,7 +98,7 @@
           "default": true
         },
         "enableRef": {
-          "$ref": "#/$defs/ExprRef"
+          "$ref": "#/$defs/ExprOrVarRef"
         },
         "priority": {
           "type": "integer",
@@ -113,7 +117,7 @@
               ]
             },
             "matchRef": {
-              "$ref": "#/$defs/ExprRef"
+              "$ref": "#/$defs/ExprOrVarRef"
             }
           },
           "required": [
@@ -271,7 +275,7 @@
           "const": "block"
         },
         "guardRef": {
-          "$ref": "#/$defs/ExprRef"
+          "$ref": "#/$defs/ExprOrVarRef"
         },
         "negated": {
           "type": "boolean"
