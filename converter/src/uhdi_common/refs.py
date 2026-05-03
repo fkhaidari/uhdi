@@ -16,7 +16,7 @@ def resolve_sig_name(stable_id: str, ctx: BaseContext) -> Optional[str]:
     """Map stable_id to simulation-side sig_name.
 
     Lookup chain: representations[<sim>].value.sigName, then .name (DCE'd ports).
-    Returns None on miss (caller chooses fallback策略)."""
+    Returns None on miss (caller chooses fallback)."""
     var = ctx.variables.get(stable_id)
     if var is None:
         return None
@@ -48,14 +48,10 @@ def resolve_var_by_ref(ref: str, ctx: BaseContext) -> Dict[str, Any]:
     Returns variable dict or {} if unresolved."""
     if not ref:
         return {}
-    direct = ctx.variables.get(ref)
-    if direct is not None:
-        return dict(direct)
-    for v in ctx.variables.values():
-        chisel = (v.get("representations", {}) or {}).get(
-            ctx.authoring_repr, {}) or {}
-        if chisel.get("name") == ref:
-            return dict(v)
+    if (direct := ctx.variables.get(ref)) is not None:
+        return direct
+    if (vid := ctx._var_id_by_authoring_name.get(ref)) is not None:
+        return ctx.variables[vid]
     return {}
 
 
@@ -70,7 +66,7 @@ def loc_file_path(loc: Optional[Dict[str, Any]], repr_key: str,
         return None
     files = (ctx.representations.get(repr_key, {}) or {}).get("files") or []
     idx = loc.get("file", 0)
-    if idx >= len(files):
+    if not (0 <= idx < len(files)):
         return None
     return str(files[idx])
 

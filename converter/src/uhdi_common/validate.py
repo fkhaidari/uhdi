@@ -6,9 +6,8 @@ import pathlib
 import sys
 from typing import Any, Dict, Iterator
 
-# uhdi_common/validate.py -> project root (three parents up)
-_REPO = pathlib.Path(__file__).resolve().parent.parent.parent
-_SCHEMA_DIR = _REPO / "schemas"
+# Sibling so package-data ships them in the wheel.
+_SCHEMA_DIR = pathlib.Path(__file__).resolve().parent / "schemas"
 _ROOT_SCHEMA_ID = "https://uhdi/document.schema.json"
 
 
@@ -22,7 +21,7 @@ def make_document_validator() -> Any:
     if not _SCHEMA_DIR.is_dir():
         raise FileNotFoundError(
             f"schema directory not found at {_SCHEMA_DIR}; "
-            f"expected uhdi_common to be a sibling of schemas/")
+            f"expected schemas/ alongside uhdi_common/validate.py")
 
     store: Dict[str, Dict[str, Any]] = {}
     for path in _SCHEMA_DIR.glob("*.schema.json"):

@@ -97,14 +97,14 @@ def _type_description(type_ref, ctx):
     return {"type_name": "logic"}
 
 
-def _opnode_to_hgldd(opnode, ctx):
+def _opnode_to_hgldd(opnode, ctx, seen=None):
     """Convert opnode to HGLDD format."""
     return {"opcode": opnode.get("opcode", ""),
-            "operands": [_expression_to_hgldd(o, ctx)
+            "operands": [_expression_to_hgldd(o, ctx, seen)
                          for o in opnode.get("operands", [])]}
 
 
-def _expression_to_hgldd(operand, ctx):
+def _expression_to_hgldd(operand, ctx, seen=None):
     """Convert expression operand to HGLDD format."""
     if not isinstance(operand, dict):
         return {}
@@ -123,10 +123,15 @@ def _expression_to_hgldd(operand, ctx):
                 .get(ctx.simulation_repr, {}).get("name"))
         return {"sig_name": name} if name else {}
     if "exprRef" in operand:
-        expr = ctx.expressions.get(operand["exprRef"])
-        return _opnode_to_hgldd(expr, ctx) if expr is not None else {}
+        ref = operand["exprRef"]
+        seen = set() if seen is None else seen
+        if ref in seen:
+            raise HGLDDConversionError(
+                f"cycle in expression graph at exprRef {ref!r}")
+        expr = ctx.expressions.get(ref)
+        return _opnode_to_hgldd(expr, ctx, seen | {ref}) if expr is not None else {}
     if "opcode" in operand:
-        return _opnode_to_hgldd(operand, ctx)
+        return _opnode_to_hgldd(operand, ctx, seen)
     return {}
 
 
@@ -292,14 +297,16 @@ def _collect_aggregated_leaves(ctx) -> set:
 
     These leaves are already represented via the parent."""
     leaves: set = set()
+    seen: set = set()
 
     def walk(node):
         if isinstance(node, dict):
             if "sigName" in node:
                 leaves.add(node["sigName"])
-            if (ref := node.get("exprRef")) and (
-                    expr := ctx.expressions.get(ref)):
-                walk(expr)
+            if (ref := node.get("exprRef")) and ref not in seen:
+                seen.add(ref)
+                if (expr := ctx.expressions.get(ref)) is not None:
+                    walk(expr)
             for k, v in node.items():
                 if k in ("sigName", "exprRef"):
                     continue
@@ -441,7 +448,10 @@ def convert(uhdi):
                    for sid, s in ctx.scopes.items()
                    if s.get("kind") in ("module", "extmodule"))
 
-    hdl_start = ctx.files.hdl_start or 0
+    # No HDL files: point past end (else 1 would tag first source as HDL).
+    hdl_start = (ctx.files.hdl_start
+                 if ctx.files.hdl_start is not None
+                 else len(ctx.files.ordered))
     return {"HGLDD": {"version": "1.0",
                       "file_info": list(ctx.files.ordered),
                       "hdl_file_index": hdl_start + 1},

@@ -168,12 +168,10 @@ def _emit_native_hgdb_firrtl(fir: pathlib.Path, workdir: pathlib.Path,
     """Native hgdb SQLite via Scala-FIRRTL 1.x (downgrade -> jar -> toml2hgdb)."""
     from . import _downgrade_fir
 
-    # Stage 1: downgrade. source_path embeds into @[..] trailers; use
-    # the original .fir basename so a hand-set breakpoint matches.
+    # Stage 1: downgrade 4.x -> 1.x.
     legacy = workdir / f"{fir.stem}.legacy.fir"
     legacy.write_text(
-        _downgrade_fir.downgrade(fir.read_text(encoding="utf-8"),
-                                 source_path=fir.name),
+        _downgrade_fir.downgrade(fir.read_text(encoding="utf-8")),
         encoding="utf-8")
 
     # Stage 2: hgdb-firrtl jar -> toml.

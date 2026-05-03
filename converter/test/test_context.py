@@ -24,10 +24,17 @@ def _doc(**overrides):
 
 
 def test_from_uhdi_extracts_roles_from_document():
-    ctx = BaseContext.from_uhdi(_doc(roles={"authoring": "scala",
-                                            "simulation": "vhdl"}))
+    ctx = BaseContext.from_uhdi(_doc(
+        representations={"scala": {}, "vhdl": {}},
+        roles={"authoring": "scala", "simulation": "vhdl"}))
     assert ctx.authoring_repr == "scala"
     assert ctx.simulation_repr == "vhdl"
+
+
+def test_from_uhdi_rejects_role_not_in_representations():
+    with pytest.raises(ConversionError, match="schisel"):
+        BaseContext.from_uhdi(_doc(roles={"authoring": "schisel",
+                                          "simulation": "verilog"}))
 
 
 def test_from_uhdi_falls_back_to_defaults_when_roles_missing():
@@ -49,13 +56,15 @@ def test_from_uhdi_rejects_missing_format_block():
 
 def test_pool_accessors_default_to_empty_dict():
     """Getters never return None; callers iterate without a None-guard."""
-    ctx = BaseContext.from_uhdi({"format": {"name": "uhdi"},
-                                 "roles": {}})
+    ctx = BaseContext.from_uhdi({
+        "format": {"name": "uhdi"},
+        "representations": {"chisel": {}, "verilog": {}},
+        "roles": {},
+    })
     assert ctx.types == {}
     assert ctx.variables == {}
     assert ctx.scopes == {}
     assert ctx.expressions == {}
-    assert ctx.representations == {}
 
 
 def test_pool_accessor_treats_explicit_null_as_empty():

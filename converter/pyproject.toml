@@ -22,6 +22,9 @@ where = ["src"]
 [tool.setuptools.package-dir]
 "" = "src"
 
+[tool.setuptools.package-data]
+uhdi_common = ["schemas/*.schema.json"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["test"]

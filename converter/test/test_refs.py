@@ -155,6 +155,12 @@ def test_loc_file_path_none_when_index_out_of_range():
     assert loc_file_path({"file": 5}, "chisel", ctx) is None
 
 
+def test_loc_file_path_none_when_index_negative():
+    # Python's negative indexing would silently wrap to the last file.
+    ctx = _ctx(representations={"chisel": {"files": ["a.scala", "b.scala"]}})
+    assert loc_file_path({"file": -1}, "chisel", ctx) is None
+
+
 def test_loc_file_path_none_when_repr_missing():
     """Undeclared repr yields None, not KeyError."""
     ctx = _ctx(representations={"chisel": {"files": ["a.scala"]}})

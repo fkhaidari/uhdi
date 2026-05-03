@@ -3,6 +3,7 @@ Drops auto-increment ids, resolves FKs to readable names, sorts by
 identity tuple -- two equivalent DBs compare `==`."""
 from __future__ import annotations
 
+import contextlib
 import sqlite3
 from typing import Any, Dict, List
 
@@ -50,43 +51,43 @@ def _row_to_dict(cursor: sqlite3.Cursor, row: tuple) -> Dict[str, Any]:
 def canonical_dump(db_path) -> Dict[str, List[Dict[str, Any]]]:
     """Read `db_path` and return `{table: [row_dict, ...]}` with FKs
     resolved to readable names and rows sorted by identity tuple."""
-    conn = sqlite3.connect(str(db_path))
-    cur = conn.cursor()
+    # closing(): sqlite3's own __exit__ commits but doesn't close.
+    with contextlib.closing(sqlite3.connect(str(db_path))) as conn:
+        cur = conn.cursor()
 
-    inst_id_to_name: Dict[int, str] = {}
-    for row in cur.execute("SELECT id, name FROM instance").fetchall():
-        inst_id_to_name[row[0]] = row[1]
-    var_id_to_value: Dict[int, str] = {}
-    for row in cur.execute("SELECT id, value FROM variable").fetchall():
-        var_id_to_value[row[0]] = row[1]
-    bp_id_to_key: Dict[int, str] = {}
-    for row in cur.execute(
-            "SELECT id, instance_id, filename, line_num, column_num, "
-            "condition FROM breakpoint").fetchall():
-        bp_id, inst_id, fn, ln, col, cond = row
-        bp_id_to_key[bp_id] = (
-            f"{inst_id_to_name.get(inst_id, '?')}@{fn}:{ln}:{col}"
-            f"|{cond}")
+        inst_id_to_name: Dict[int, str] = {}
+        for row in cur.execute("SELECT id, name FROM instance").fetchall():
+            inst_id_to_name[row[0]] = row[1]
+        var_id_to_value: Dict[int, str] = {}
+        for row in cur.execute("SELECT id, value FROM variable").fetchall():
+            var_id_to_value[row[0]] = row[1]
+        bp_id_to_key: Dict[int, str] = {}
+        for row in cur.execute(
+                "SELECT id, instance_id, filename, line_num, column_num, "
+                "condition FROM breakpoint").fetchall():
+            bp_id, inst_id, fn, ln, col, cond = row
+            bp_id_to_key[bp_id] = (
+                f"{inst_id_to_name.get(inst_id, '?')}@{fn}:{ln}:{col}"
+                f"|{cond}")
 
-    out: Dict[str, List[Dict[str, Any]]] = {}
-    for table, sort_key in _SORT_KEYS.items():
-        rows = cur.execute(
-            f"SELECT * FROM {_check_table_name(table)}").fetchall()
-        rendered: List[Dict[str, Any]] = []
-        for raw in rows:
-            d = _row_to_dict(cur, raw)
-            if "instance_id" in d:
-                d["instance_name"] = inst_id_to_name.get(d["instance_id"])
-            if "variable_id" in d:
-                d["variable_value"] = var_id_to_value.get(d["variable_id"])
-            if "breakpoint_id" in d:
-                d["breakpoint_key"] = bp_id_to_key.get(d["breakpoint_id"])
-            for c in _DROP_COLS.get(table, []):
-                d.pop(c, None)
-            rendered.append(d)
-        rendered.sort(key=lambda r: tuple(
-            "" if r.get(k) is None else str(r.get(k)) for k in sort_key))
-        out[table] = rendered
+        out: Dict[str, List[Dict[str, Any]]] = {}
+        for table, sort_key in _SORT_KEYS.items():
+            rows = cur.execute(
+                f"SELECT * FROM {_check_table_name(table)}").fetchall()
+            rendered: List[Dict[str, Any]] = []
+            for raw in rows:
+                d = _row_to_dict(cur, raw)
+                if "instance_id" in d:
+                    d["instance_name"] = inst_id_to_name.get(d["instance_id"])
+                if "variable_id" in d:
+                    d["variable_value"] = var_id_to_value.get(d["variable_id"])
+                if "breakpoint_id" in d:
+                    d["breakpoint_key"] = bp_id_to_key.get(d["breakpoint_id"])
+                for c in _DROP_COLS.get(table, []):
+                    d.pop(c, None)
+                rendered.append(d)
+            rendered.sort(key=lambda r: tuple(
+                "" if r.get(k) is None else str(r.get(k)) for k in sort_key))
+            out[table] = rendered
 
-    conn.close()
     return out
