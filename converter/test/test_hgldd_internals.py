@@ -291,6 +291,17 @@ def test_topo_sort_walks_through_vector_to_inner_struct():
     assert order.index("Inner") < order.index("Outer")
 
 
+def test_topo_sort_detects_vector_only_cycle():
+    """Without seeding from vector roots, V1 -> V2 -> V1 cycles past
+    detection and crashes _type_description with RecursionError."""
+    ctx = _ctx_with_types({
+        "V1": {"kind": "vector", "elementRef": "V2", "size": 4},
+        "V2": {"kind": "vector", "elementRef": "V1", "size": 4},
+    })
+    with pytest.raises(HGLDDConversionError, match="cycle"):
+        _topo_sorted_struct_ids(ctx)
+
+
 # ---- _first_vector_element_sig -----------------------------------------
 
 
