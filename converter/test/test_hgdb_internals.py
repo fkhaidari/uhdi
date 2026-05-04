@@ -290,6 +290,30 @@ def test_serialize_enable_negated_var_token():
     assert _serialize_enable("!v", ctx) == "!reset"
 
 
+def test_serialize_enable_resolves_authoring_name_token(capsys):
+    """Issue #21: post-DCE CIRCT EmitUHDI can write enableRef tokens
+    using the authoring name (`io_en`), not the stable_id
+    (`var_GCD_io_en`). Resolver hops to the right var via authoring
+    fallback -- no `unresolved_sig_refs` entry, no warning."""
+    ctx = _ctx(variables={"var_GCD_io_en": {
+        "representations": {"chisel": {"name": "io_en"},
+                            "verilog": {"name": "io_en",
+                                        "value": {"sigName": "io_en"}}},
+    }})
+    assert _serialize_enable("io_en", ctx) == "io_en"
+    assert ctx.unresolved_sig_refs == set()
+
+
+def test_serialize_enable_truly_missing_token_falls_back_and_warns():
+    """A token that's neither a stable_id nor an authoring name in
+    the pool stays as the raw token AND surfaces in the warning
+    set -- the converter never silently swallows references it
+    couldn't resolve."""
+    ctx = _ctx()
+    assert _serialize_enable("ghost", ctx) == "ghost"
+    assert "ghost" in ctx.unresolved_sig_refs
+
+
 def test_serialize_enable_expression_token_renders_op_tree():
     ctx = _ctx(expressions={
         "e": {"opcode": "&&",

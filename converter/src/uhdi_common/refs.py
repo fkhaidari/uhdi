@@ -12,13 +12,15 @@ from typing import Any, Dict, Optional, cast
 from .context import BaseContext
 
 
-def resolve_sig_name(stable_id: str, ctx: BaseContext) -> Optional[str]:
-    """Map stable_id to simulation-side sig_name.
+def resolve_sig_name(ref: str, ctx: BaseContext) -> Optional[str]:
+    """Map stable_id (or authoring name) to simulation-side sig_name.
 
     Lookup chain: representations[<sim>].value.sigName, then .name (DCE'd ports).
+    `ref` may be a stable_id or an authoring name -- post-DCE CIRCT EmitUHDI
+    can leave guardRef/enableRef as authoring names (issue #21).
     Returns None on miss (caller chooses fallback)."""
-    var = ctx.variables.get(stable_id)
-    if var is None:
+    var = resolve_var_by_ref(ref, ctx)
+    if not var:
         return None
     sim_repr = (var.get("representations", {}) or {}).get(
         ctx.simulation_repr, {}) or {}
@@ -29,12 +31,13 @@ def resolve_sig_name(stable_id: str, ctx: BaseContext) -> Optional[str]:
     return str(resolved) if resolved is not None else None
 
 
-def resolve_authoring_name(stable_id: str, ctx: BaseContext) -> Optional[str]:
+def resolve_authoring_name(ref: str, ctx: BaseContext) -> Optional[str]:
     """Authoring-repr name (visible in user's HDL source).
 
-    Used by hgdb for generator_variable.name (Generator pane in hgdb-VSCode)."""
-    var = ctx.variables.get(stable_id)
-    if var is None:
+    `ref` may be a stable_id or an authoring name. Used by hgdb for
+    generator_variable.name (Generator pane in hgdb-VSCode)."""
+    var = resolve_var_by_ref(ref, ctx)
+    if not var:
         return None
     name = ((var.get("representations", {}) or {})
             .get(ctx.authoring_repr, {}) or {}).get("name") or None
