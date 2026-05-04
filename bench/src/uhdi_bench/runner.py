@@ -29,6 +29,17 @@ def _bench_repo() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parent.parent.parent
 
 
+def _prepend_pythonpath(*entries: pathlib.Path) -> str:
+    """Build PYTHONPATH with our entries first, user's existing prefix kept.
+
+    native_lib (built `hgdb` w/ _hgdb.so) must precede source-only
+    `hgdb_python/hgdb/`; the toml-shim before either."""
+    parts = [str(e) for e in entries]
+    if existing := os.environ.get("PYTHONPATH"):
+        parts.append(existing)
+    return os.pathsep.join(parts)
+
+
 def discover_toolchain() -> Toolchain:
     """Resolve env var -> /opt baked path -> sibling-checkout path.
 
@@ -210,11 +221,8 @@ def _emit_native_hgdb_firrtl(fir: pathlib.Path, workdir: pathlib.Path,
         raise RuntimeError(
             f"hgdb python bindings present but no lib.* under "
             f"{hgdb_python / 'build'} -- did `python setup.py build_ext` run?")
-    # PYTHONPATH order: native_lib first (built `hgdb` w/ _hgdb.so)
-    # before source-only `hgdb_python/hgdb/`.
     env = dict(os.environ,
-               PYTHONPATH=os.pathsep.join([
-                   str(shim), str(native_lib), str(hgdb_python)]))
+               PYTHONPATH=_prepend_pythonpath(shim, native_lib, hgdb_python))
     # Use pytest's interpreter -- _hgdb.so is ABI-tagged for one minor
     # version; system /usr/bin/python3 may not match.
     proc = subprocess.run(
