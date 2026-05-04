@@ -82,15 +82,6 @@ hierarchy:
 tywaves --hgldd-dir . --top-module GCD --extra-scopes tb dut design.vcd
 ```
 
-Caveat: tywaves currently expects the wave file to be named after the
-top module (`GCD.vcd` for the `GCD` module). Until that's fixed in
-either tywaves or our `uhdi-to-hgldd`, copy the artefact:
-
-```sh
-cp design.vcd GCD.vcd
-tywaves --hgldd-dir . --top-module GCD --extra-scopes tb dut GCD.vcd
-```
-
 In this mode the `Scopes` panel shows the HGLDD-aware `tb / dut`
 hierarchy and the `Variables` panel collapses bundle ports as
 `GCD_io {a, b, en, q, rdy}` with each field carrying its real value
@@ -293,12 +284,6 @@ Chisel build.
 
 ## Known limitations
 
-- **tywaves wave-file naming.** tywaves' `--hgldd-dir` mode looks for
-  a wave file named after the top module (`GCD.vcd` for the `GCD`
-  module), not the actual file passed on the command line. Workaround:
-  `cp design.vcd <TopModule>.vcd` before launching tywaves. To be
-  fixed in either tywaves' CLI parsing or our `uhdi-to-hgldd`'s
-  `hdl_file_index` field (which is currently empty).
 - **`uhdi-to-hgdb` warning about unresolved guard `stable_id`.** Some
   `when`-condition tokens (e.g. `io_en`) don't resolve to a Verilog
   signal name and surface as raw tokens in `design.db`. Doesn't block

@@ -56,6 +56,35 @@ class _FileInfo:
 class _Context(BaseContext):
     files: _FileInfo = field(default_factory=_FileInfo)
     aggregated_leaves: set = field(default_factory=set)
+    hdl_file_path: Optional[str] = None
+
+
+# Map UHDI `language` -> file extension used to synthesize a missing
+# HDL filename. firtool's --emit-uhdi leaves `verilog.files` blank;
+# `language` is the only remaining hint about the surface syntax.
+_HDL_LANGUAGE_EXTENSIONS = {"SystemVerilog": ".sv", "Verilog": ".v"}
+
+
+def _resolve_hdl_file_path(ctx) -> Optional[str]:
+    """Pick a usable HDL filename for `hdl_file_index`.
+
+    Prefer the first non-empty entry in simulation_repr.files. Fall
+    back to `<top.hdl_name>.<ext>` when firtool's --emit-uhdi has left
+    those entries blank. Tywaves uses this filename to find the wave
+    file (`<base>.vcd`); an empty string blocks --hgldd-dir mode."""
+    sim_repr = ctx.representations.get(ctx.simulation_repr, {}) or {}
+    for f in sim_repr.get("files") or []:
+        if f:
+            return str(f)
+    top_ids = ctx.uhdi.get("top") or []
+    if not top_ids:
+        return None
+    top_scope = ctx.scopes.get(top_ids[0], {}) or {}
+    sim = (top_scope.get("representations", {}) or {}).get(
+        ctx.simulation_repr, {}) or {}
+    hdl_name = sim.get("name") or top_scope.get("name") or top_ids[0]
+    ext = _HDL_LANGUAGE_EXTENSIONS.get(sim_repr.get("language", ""), ".sv")
+    return f"{hdl_name}{ext}"
 
 
 def _loc_to_hgldd(loc, repr_key, ctx):
@@ -66,7 +95,10 @@ def _loc_to_hgldd(loc, repr_key, ctx):
     if raw_path is None:
         return None
     repr_info = ctx.representations.get(repr_key, {})
-    add = ctx.files.add_hdl if repr_info.get("kind") == "hdl" else ctx.files.add_source
+    is_hdl = repr_info.get("kind") == "hdl"
+    if is_hdl and not raw_path and ctx.hdl_file_path:
+        raw_path = ctx.hdl_file_path
+    add = ctx.files.add_hdl if is_hdl else ctx.files.add_source
     out = {"file": add(raw_path) + 1}  # HGLDD is 1-indexed.
     if "beginLine" in loc:
         out["begin_line"] = loc["beginLine"]
@@ -446,6 +478,13 @@ def convert(uhdi):
             if sid not in ctx.scopes:
                 raise HGLDDConversionError(
                     f"top references unknown scope '{sid}'")
+
+        # Reserve the HDL slot up front so `hdl_file_index` lands on a
+        # non-empty filename even when no scope carries an HDL location
+        # (or when firtool left `verilog.files` empty).
+        ctx.hdl_file_path = _resolve_hdl_file_path(ctx)
+        if ctx.hdl_file_path:
+            ctx.files.add_hdl(ctx.hdl_file_path)
 
         # Structs first so type_name lookups resolve.
         objects = list(_struct_objects(ctx))
