@@ -6,17 +6,20 @@
 use ../tools/lib/common.nu *
 
 def main [demo: string] {
-  main pipeline $demo
+  main build $demo
 }
 
 # Build chisel -> firtool -> UHDI -> HGLDD/HGDB.
-def "main pipeline" [demo: string] {
+def "main build" [demo: string] {
   let dir = (demo-dir $demo)
   cd $dir
   download-firtool $dir
 
   print "Building Chisel -> UHDI..."
   rm -f design.uhdi.json design.dd design.db
+  # Drop any previously-emitted top-module .sv so a renamed Main can't
+  # leave a stale sibling next to the fresh one.
+  glob $"($dir)/*.sv" | where {|p| ($p | path basename) != "tb.sv" } | each { rm $in } | ignore
   with-env {CHISEL_FIRTOOL_PATH: ($dir | path join ".bin")} {
     ^./millw app.runMain Main o> /dev/null
   }

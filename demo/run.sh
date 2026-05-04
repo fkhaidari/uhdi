@@ -16,11 +16,9 @@ else
     exit 1
 fi
 
-# Subcommand (if any) goes ahead of demo name -- run.nu dispatches on it.
+# Always pass an explicit subcommand so a demo whose name happens to
+# match a `main <sub>` definition in run.nu can't shadow it.
 demo=$(basename "$SCRIPT_DIR")
-if [[ $# -gt 0 ]]; then
-    sub="$1"; shift
-    exec "$NU" "$UHDI_ROOT/demo/run.nu" "$sub" "$demo" "$@"
-else
-    exec "$NU" "$UHDI_ROOT/demo/run.nu" "$demo"
-fi
+sub="${1:-build}"
+[[ $# -gt 0 ]] && shift
+exec "$NU" "$UHDI_ROOT/demo/run.nu" "$sub" "$demo" "$@"
