@@ -79,7 +79,7 @@ Load the HGLDD directory and link it to the testbench-wrapped wave
 hierarchy:
 
 ```sh
-tywaves --hgldd-dir . --top-module GCD --extra-scopes tb dut design.vcd
+tywaves design.vcd --hgldd-dir . --top-module GCD --extra-scopes TOP tb dut
 ```
 
 In this mode the `Scopes` panel shows the HGLDD-aware `tb / dut`
@@ -281,4 +281,23 @@ Chisel build.
 - **`.dd` and `.db` differ between runs of the same source** -- they
   shouldn't. Both are deterministic projections of `design.uhdi.json`.
   If you see drift, file an issue with the input UHDI document.
+- **tywaves shows the right variables but every value is `0`** -- two
+  causes, both in the launch command:
+  1. Verilator wraps the DUT in an extra `TOP` scope
+     (`TOP/tb/dut/...`). `--extra-scopes` must list it, so use
+     `--extra-scopes TOP tb dut`, not `--extra-scopes tb dut`.
+  2. `--top-module FOO` triggers an internal bundle-pass that reads
+     the positional `WAVE_FILE`, repacks Chisel struct ports back into
+     their original shape, and writes a derived `<top>.vcd` next to
+     it (e.g. `GCD.vcd`). That's the file actually rendered -- the
+     log line `Applying startup command: LoadWaveformFile("GCD.vcd")`
+     confirms it. The pass needs the scope path right (see #1) to
+     copy values across; if you got #1 wrong, the derived file has
+     the right hierarchy/widths but every value pinned at `0`.
+
+  The known-good incantation for a Verilator-driven demo is the one
+  in [Open in tywaves](#hgldd-aware-mode) above:
+  ```sh
+  tywaves design.vcd --hgldd-dir . --top-module GCD --extra-scopes TOP tb dut
+  ```
 
