@@ -35,10 +35,10 @@ omit = [
 ]
 skip_empty = true
 show_missing = true
-# Floor, not target.  Current actual ~79% on the converter; bench has
-# its own surface and is allowed to lag while it's still a smoke
-# harness.  Drop only with explicit sign-off in a PR.
-fail_under = 75
+# Floor, not target.  Converter is at ~98% line/branch; bench has its
+# own surface and is allowed to lag while it's still a smoke harness.
+# Drop only with explicit sign-off in a PR.
+fail_under = 95
 
 [tool.ruff]
 line-length = 100
