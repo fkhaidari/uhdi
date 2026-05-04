@@ -9,6 +9,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import List, Optional
 
 
@@ -79,12 +80,19 @@ def _scala_cli() -> Optional[str]:
     return shutil.which("scala-cli")
 
 
+_EMPTY_COURSIER_DIR: Optional[pathlib.Path] = None
+
+
 def _bypass_coursier_mirror_env() -> dict:
     """Empty COURSIER_CONFIG_DIR -- avoids user-side mirrors that block
-    offline resolution; forces fallback to cached Central artifacts."""
-    empty = pathlib.Path("/tmp/uhdi-bench-empty-coursier-config")
-    empty.mkdir(parents=True, exist_ok=True)
-    return {"COURSIER_CONFIG_DIR": str(empty)}
+    offline resolution; forces fallback to cached Central artifacts.
+    Unique tmpdir (not predictable /tmp/...) blocks symlink-planting on
+    shared hosts."""
+    global _EMPTY_COURSIER_DIR
+    if _EMPTY_COURSIER_DIR is None:
+        _EMPTY_COURSIER_DIR = pathlib.Path(
+            tempfile.mkdtemp(prefix="uhdi-bench-coursier-"))
+    return {"COURSIER_CONFIG_DIR": str(_EMPTY_COURSIER_DIR)}
 
 
 def _cache_key(scala: pathlib.Path, pipeline: Pipeline) -> str:
