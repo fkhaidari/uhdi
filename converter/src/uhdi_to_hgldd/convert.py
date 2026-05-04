@@ -168,8 +168,11 @@ def _topo_sorted_struct_ids(ctx):
             visiting.discard(tid)
             visited.add(tid)
 
+    # Seed from struct AND vector roots: a vector-only cycle (V1 -> V2
+    # -> V1) is unreachable from any struct and would otherwise blow the
+    # stack later in _type_description.
     for tid, d in ctx.types.items():
-        if d.get("kind") == "struct":
+        if d.get("kind") in ("struct", "vector"):
             visit(tid)
     return order
 
