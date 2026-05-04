@@ -16,19 +16,14 @@ def "main all" [
 ] {
   let p = (resolve-prefix $prefix)
   let work_root = (mktemp -d | str trim)
-  try {
-    let did = (
-      ["firtool" "hgdb-py" "chisel" "tywaves"]
-      | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
-      | flatten
-      | uniq
-    )
-    rm -rf $work_root
-    print-env-hints $p $did
-  } catch {|e|
-    rm -rf $work_root
-    error make {msg: $e.msg}
-  }
+  let did = (
+    ["firtool" "hgdb-py" "chisel" "tywaves"]
+    | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
+    | flatten
+    | uniq
+  )
+  rm -rf $work_root
+  print-env-hints $p $did
 }
 
 # Install firtool only.
@@ -46,21 +41,15 @@ def "main tywaves" [--prefix: path = "" --release-tag: string = "" --force] {
   run-single "tywaves" $prefix $release_tag $force
 }
 
-# Single-component variant of `main all`. Matches the shape of `dispatch`
-# but exits 1 on failure instead of swallowing -- a lone `firtool`
-# subcommand has no fallback, so failure should surface.
+# Single-component variant of `main all`. Errors surface as nu does them
+# -- a lone `firtool` subcommand has no fallback to silently skip to.
 def run-single [component: string prefix: path release_tag: string force: bool] {
   let p = (resolve-prefix $prefix)
   let work_root = (mktemp -d | str trim)
-  try {
-    match $component {
-      "firtool" => { install-firtool $p $release_tag $force $work_root }
-      "hgdb-py" => { install-hgdb-py $p $release_tag $force $work_root }
-      "tywaves" => { install-tywaves $p $release_tag $force $work_root }
-    }
-  } catch {|e|
-    rm -rf $work_root
-    error make {msg: $e.msg}
+  match $component {
+    "firtool" => { install-firtool $p $release_tag $force $work_root }
+    "hgdb-py" => { install-hgdb-py $p $release_tag $force $work_root }
+    "tywaves" => { install-tywaves $p $release_tag $force $work_root }
   }
   rm -rf $work_root
   print-env-hints $p [$component]
@@ -120,11 +109,16 @@ def dispatch [
   }
 }
 
-export def ensure-writable [target: path force: bool] {
+# Idempotent: returns false (and prints a notice) if the target already
+# exists without --force, so callers can short-circuit without erroring.
+# `install.sh all` should be safely re-runnable.
+export def ensure-writable [target: path force: bool]: nothing -> bool {
   if ($target | path exists) and (not $force) {
-    error make {msg: $"exists: ($target) \(use --force to overwrite\)"}
+    print $"  Already installed: ($target) \(use --force to reinstall\)"
+    return false
   }
   rm -rf $target
+  true
 }
 
 def asset-url-or-fail [
@@ -202,7 +196,7 @@ def install-tarball-component [
   print $"  Platform:   ($platform)"
 
   let target = ($p | path join $spec.target_rel)
-  ensure-writable $target $force
+  if not (ensure-writable $target $force) { return }
 
   let pattern = (apply-platform-pattern $spec.pattern $platform)
   let tmp = ($work_root | path join $spec.name)

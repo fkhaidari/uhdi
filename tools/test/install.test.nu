@@ -27,27 +27,29 @@ def main [] {
 
     # ---- ensure-writable ---------------------------------------
     {
-      name: "ensure-writable noop on missing"
+      name: "ensure-writable proceeds when target missing"
       body: {||
         let target = $"/tmp/test-(random int 100000..999999)"
-        ensure-writable $target false
-        # No error -> pass; nothing to clean up.
+        assert equal (ensure-writable $target false) true
       }
     }
     {
-      name: "ensure-writable refuses without --force"
+      name: "ensure-writable skips existing target without --force"
       body: {||
         let target = (mktemp -t ew.XXXXXX | str trim)
-        let raised = (try { ensure-writable $target false; false } catch { true })
+        let proceed = (ensure-writable $target false)
+        let still_there = ($target | path exists)
         rm -f $target
-        assert equal $raised true
+        assert equal $proceed false
+        assert equal $still_there true
       }
     }
     {
-      name: "ensure-writable removes with --force"
+      name: "ensure-writable removes existing target with --force"
       body: {||
         let target = (mktemp -t ew.XXXXXX | str trim)
-        ensure-writable $target true
+        let proceed = (ensure-writable $target true)
+        assert equal $proceed true
         assert equal ($target | path exists) false
       }
     }
