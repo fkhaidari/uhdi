@@ -17,7 +17,8 @@ def "main all" [
   let p = (resolve-prefix $prefix)
   let work_root = (mktemp -d | str trim)
   let did = (
-    ["firtool" "hgdb-py" "chisel" "tywaves"]
+    # hgdb-cli runs after hgdb-py because it symlinks the bindings.
+    ["firtool" "hgdb-py" "chisel" "tywaves" "hgdb-cli"]
     | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
     | flatten
     | uniq
@@ -41,6 +42,15 @@ def "main tywaves" [--prefix: path = "" --release-tag: string = "" --force] {
   run-single "tywaves" $prefix $release_tag $force
 }
 
+# Install the upstream `hgdb` console debugger (Kuree/hgdb-debugger).
+# Builds a 3.12 venv, pip-installs hgdb-debugger + deps, links the
+# uhdi-tools hgdb python bindings into it, exposes `bin/hgdb` on the
+# install prefix.  Requires `hgdb-py` already installed (provides the
+# bindings and _hgdb.so this links against).
+def "main hgdb-cli" [--prefix: path = "" --force] {
+  run-single "hgdb-cli" $prefix "" $force
+}
+
 # Single-component variant of `main all`. Errors surface as nu does them
 # -- a lone `firtool` subcommand has no fallback to silently skip to.
 def run-single [component: string prefix: path release_tag: string force: bool] {
@@ -50,6 +60,7 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
     "firtool" => { install-firtool $p $release_tag $force $work_root }
     "hgdb-py" => { install-hgdb-py $p $release_tag $force $work_root }
     "tywaves" => { install-tywaves $p $release_tag $force $work_root }
+    "hgdb-cli" => { install-hgdb-cli $p $force }
   }
   rm -rf $work_root
   print-env-hints $p [$component]
@@ -105,6 +116,9 @@ def dispatch [
     }
     "tywaves" => {
       try { install-tywaves $p $release_tag $force $work_root; ["tywaves"] } catch { [] }
+    }
+    "hgdb-cli" => {
+      try { install-hgdb-cli $p $force; ["hgdb-cli"] } catch { [] }
     }
   }
 }
@@ -320,6 +334,48 @@ def install-tywaves [p: path release_tag: string force: bool work_root: path] {
   } $p $release_tag $force $work_root
 }
 
+# ---- hgdb-cli (upstream `hgdb` console debugger) ---------------------------
+
+def install-hgdb-cli [p: path force: bool] {
+  print "=== hgdb-cli ==="
+  let hgdb_bin = ($p | path join "bin/hgdb")
+  let venv = ($p | path join "cli-venv")
+  let bindings = ($p | path join "lib/hgdb/bindings/python")
+  let so = ($bindings | path join "build/lib.linux-x86_64-cpython-312/_hgdb.cpython-312-x86_64-linux-gnu.so")
+
+  # ABI: shipped _hgdb.so is built for cpython-3.12; venv must match.
+  let py_ver = (^python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" | str trim)
+  if $py_ver != "3.12" {
+    print -e $"  python3 is ($py_ver) but _hgdb.so is cpython-3.12; install python3.12 and re-run. Skipping."
+    error make {msg: $"python version mismatch: ($py_ver)"}
+  }
+
+  if (not ($bindings | path join "hgdb" | path exists)) or (not ($so | path exists)) {
+    print -e "  hgdb python bindings not found. Run install.sh hgdb-py first."
+    error make {msg: "missing hgdb-py bindings"}
+  }
+
+  if not (ensure-writable $hgdb_bin $force) { return }
+  rm -rf $venv
+
+  print "  Building 3.12 venv + hgdb-debugger..."
+  ^python3 -m venv $venv
+  let pip = ($venv | path join "bin/pip")
+  # PIP_CONFIG_FILE override sidesteps any site-wide artifactory proxy.
+  # `--no-deps` on hgdb-debugger because it declares a `hgdb[client]`
+  # extra that doesn't exist on PyPI -- the symlinks below provide it.
+  with-env {PIP_CONFIG_FILE: "/dev/null"} {
+    ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" "websockets<11" prompt-toolkit pygments
+    ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" --no-deps hgdb-debugger
+  }
+
+  let sp = ($venv | path join "lib/python3.12/site-packages")
+  ^ln -sfn ($bindings | path join "hgdb") ($sp | path join "hgdb")
+  ^ln -sfn $so ($sp | path join ($so | path basename))
+  ^ln -sfn ($venv | path join "bin/hgdb") $hgdb_bin
+  print $"  Installed:  ($hgdb_bin)"
+}
+
 # ---- end-of-run summary ----------------------------------------------------
 
 def print-env-hints [p: path did: list<string>] {
@@ -344,12 +400,13 @@ export def env-hint-lines [
         "firtool" => $"  export FIRTOOL=\"($p)/bin/firtool\""
         "hgdb-py" => $"  export HGDB_PY=\"($p)/lib/hgdb/bindings/python\""
         "tywaves" => $"  export TYWAVES=\"($p)/bin/tywaves\""
+        "hgdb-cli" => $"  export HGDB_DEBUGGER=\"($p)/bin/hgdb\""
         _ => null
       }
     }
     | where {|x| $x != null }
   )
-  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) {
+  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) or ("hgdb-cli" in $did) {
     let bin = ($p | path join "bin" | into string)
     if ($bin not-in $path_segments) {
       [$"  export PATH=\"($bin):$PATH\""]

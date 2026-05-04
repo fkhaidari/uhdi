@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "comment": "hgdb-debug VS Code configs for the UHDI demos. Open this folder (uhdi/demo/) as the workspace, start `./run.sh debug-server` in <demo>/, then F5 -> pick the matching config.",
+  "configurations": [
+    {
+      "type": "hgdb",
+      "request": "launch",
+      "name": "hgdb: gcd",
+      "program": "${workspaceFolder}/gcd/design.db",
+      "runtimeIP": "127.0.0.1",
+      "runtimePort": 8888
+    },
+    {
+      "type": "hgdb",
+      "request": "launch",
+      "name": "hgdb: fsm",
+      "program": "${workspaceFolder}/fsm/design.db",
+      "runtimeIP": "127.0.0.1",
+      "runtimePort": 8888
+    },
+    {
+      "type": "hgdb",
+      "request": "launch",
+      "name": "hgdb: fifo",
+      "program": "${workspaceFolder}/fifo/design.db",
+      "runtimeIP": "127.0.0.1",
+      "runtimePort": 8888
+    },
+    {
+      "type": "hgdb",
+      "request": "launch",
+      "name": "hgdb: pipeline",
+      "program": "${workspaceFolder}/pipeline/design.db",
+      "runtimeIP": "127.0.0.1",
+      "runtimePort": 8888
+    },
+    {
+      "type": "hgdb",
+      "request": "launch",
+      "name": "hgdb: bus",
+      "program": "${workspaceFolder}/bus/design.db",
+      "runtimeIP": "127.0.0.1",
+      "runtimePort": 8888
+    }
+  ]
+}
