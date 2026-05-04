@@ -1,6 +1,7 @@
 """JSON Schema validation against schemas/*.schema.json."""
 from __future__ import annotations
 
+import functools
 import json
 import pathlib
 import sys
@@ -13,19 +14,29 @@ _ROOT_SCHEMA_ID = "https://uhdi/document.schema.json"
 
 def make_document_validator() -> Any:
     """Build Draft202012Validator with sibling schemas pre-registered.
-    Imports lazily to keep uhdi_common import-cheap."""
+    Imports lazily to keep uhdi_common import-cheap. Schema parsing is
+    cached; the validator itself is built fresh on each call."""
     from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
+    registry, root_schema = _load_schemas(_SCHEMA_DIR, _ROOT_SCHEMA_ID)
+    return Draft202012Validator(root_schema, registry=registry)
+
+
+@functools.lru_cache(maxsize=4)
+def _load_schemas(schema_dir: pathlib.Path,
+                  root_id: str) -> Tuple[Any, Dict[str, Any]]:
+    # schema_dir is part of the cache key so monkey-patching `_SCHEMA_DIR`
+    # in tests bypasses the cache.
     from referencing import Registry, Resource
     from referencing.jsonschema import DRAFT202012
 
-    if not _SCHEMA_DIR.is_dir():
+    if not schema_dir.is_dir():
         raise FileNotFoundError(
-            f"schema directory not found at {_SCHEMA_DIR}; "
+            f"schema directory not found at {schema_dir}; "
             f"expected schemas/ alongside uhdi_common/validate.py")
 
     store: Dict[str, Dict[str, Any]] = {}
     seen: Dict[str, pathlib.Path] = {}
-    for path in _SCHEMA_DIR.glob("*.schema.json"):
+    for path in schema_dir.glob("*.schema.json"):
         with path.open(encoding="utf-8") as f:
             schema = json.load(f)
         if "$id" not in schema:
@@ -37,15 +48,15 @@ def make_document_validator() -> Any:
         seen[sid] = path
         store[sid] = schema
 
-    if _ROOT_SCHEMA_ID not in store:
+    if root_id not in store:
         raise FileNotFoundError(
-            f"root schema {_ROOT_SCHEMA_ID!r} not found under {_SCHEMA_DIR}")
+            f"root schema {root_id!r} not found under {schema_dir}")
 
     registry = Registry().with_resources(
         (uri, Resource(contents=schema, specification=DRAFT202012))
         for uri, schema in store.items()
     )
-    return Draft202012Validator(store[_ROOT_SCHEMA_ID], registry=registry)
+    return registry, store[root_id]
 
 
 def iter_errors(uhdi: Dict[str, Any]) -> Iterator[Any]:
