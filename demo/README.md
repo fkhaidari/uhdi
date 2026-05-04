@@ -18,13 +18,19 @@ a demo out of the repo as a starter, replace the symlink with a
 self-contained build script (mill + the converter CLIs) — the
 in-repo shim only works under this checkout.
 
-| Demo | Top module | What it exercises |
-|------|-----------|-------------------|
-| `gcd/` | `GCD` | Plain UInt arithmetic, single module. The simplest end-to-end. Ships a testbench (`tb.sv`) for `./run.sh simulate`. |
-| `fsm/` | `TrafficLight` | `ChiselEnum` state. Tywaves should render the `state` register as `Red / RedYellow / Green / Yellow`, not as `2'b00 / 01 / 10 / 11`. |
-| `fifo/` | `Fifo` | `Decoupled<UInt>` ports + `SyncReadMem`. Tywaves groups `valid / ready / bits` as a struct; the SyncReadMem appears as its own scope. |
-| `pipeline/` | `Pipeline` | 3-stage MAC with `MulStage` / `AddStage` as separate `Module`s. Hierarchy navigation in tywaves; hgdb steps a value across the pipeline registers cycle by cycle. |
-| `bus/` | `MemController` | `Decoupled` carrying nested `Bundle`s (`Request{addr, data, write}` -> `Response{data, ok}`). Flexes nested-record rendering and a single-in-flight handshake. |
+Each demo ships a Chisel testbench (`app/src/<Top>Sim.scala`) built on
+[`chisel3.simulator`][chisel-sim] -- peek/poke from Scala, no hand-written
+SystemVerilog harness. `./run.sh simulate` runs it end-to-end.
+
+[chisel-sim]: https://www.chisel-lang.org/api/latest/chisel3/simulator/index.html
+
+| Demo | Top module | Sim entrypoint | What it exercises |
+|------|-----------|----------------|-------------------|
+| `gcd/` | `GCD` | `GCDSim` | Plain UInt arithmetic, single module. The simplest end-to-end. |
+| `fsm/` | `TrafficLight` | `TrafficLightSim` | `ChiselEnum` state. Tywaves should render the `state` register as `Red / RedYellow / Green / Yellow`, not as `2'b00 / 01 / 10 / 11`. |
+| `fifo/` | `Fifo` | `FifoSim` | `Decoupled<UInt>` ports + `SyncReadMem`. Tywaves groups `valid / ready / bits` as a struct; the SyncReadMem appears as its own scope. |
+| `pipeline/` | `Pipeline` | `PipelineSim` | 3-stage MAC with `MulStage` / `AddStage` as separate `Module`s. Hierarchy navigation in tywaves; hgdb steps a value across the pipeline registers cycle by cycle. |
+| `bus/` | `MemController` | `MemControllerSim` | `Decoupled` carrying nested `Bundle`s (`Request{addr, data, write}` -> `Response{data, ok}`). Flexes nested-record rendering and a single-in-flight handshake. |
 
 ## Quick start
 
@@ -33,7 +39,8 @@ in-repo shim only works under this checkout.
 - Python 3 (for the UHDI converters)
 - Either Docker / podman (preferred -- pulls a prebuilt image with firtool)
   or `gh` CLI authenticated with a token that can read public releases
-- Verilator (only for `./run.sh simulate`)
+- Verilator (only for `./run.sh simulate` -- chisel3.simulator builds
+  with it under the hood)
 
 ### Clone and install
 ```sh
@@ -63,9 +70,17 @@ converters produce HGLDD/HGDB). Output:
 
 ### Generate a waveform
 ```sh
-./run.sh simulate             # gcd only out of the box; see TBs below
+./run.sh simulate
 ls design.vcd
 ```
+This invokes the demo's `<Top>Sim` entrypoint (e.g. `GCDSim`) -- a Scala
+program built on `chisel3.simulator` that elaborates the DUT, runs
+firtool with `--emit-uhdi --split-verilog`, drives Verilator with
+peek/poke stimulus, and writes both `design.vcd` (waveform) and
+`design.uhdi.json` (debug info, then re-projected to `.dd`/`.db`) into
+the demo directory. The Chisel sim and `Main` go through the same
+firtool, so the SystemVerilog signals in the VCD line up with the
+HGLDD/HGDB symbols by construction.
 
 ## Open in tywaves
 
@@ -76,23 +91,25 @@ renders the design with Chisel source types preserved.
 ### HGLDD-aware mode
 
 Load the HGLDD directory and link it to the testbench-wrapped wave
-hierarchy:
+hierarchy. `chisel3.simulator` wraps the DUT in a module called
+`svsimTestbench`, so the `--extra-scopes` chain is `TOP svsimTestbench dut`:
 
 ```sh
-tywaves design.vcd --hgldd-dir . --top-module GCD --extra-scopes TOP tb dut
+tywaves design.vcd --hgldd-dir . --top-module GCD --extra-scopes TOP svsimTestbench dut
 ```
 
-In this mode the `Scopes` panel shows the HGLDD-aware `tb / dut`
+In this mode the `Scopes` panel shows `TOP / svsimTestbench / dut`
 hierarchy and the `Variables` panel collapses bundle ports as
 `GCD_io {a, b, en, q, rdy}` with each field carrying its real value
-through the simulation.
+through the simulation. `./run.sh simulate` prints the exact command
+for the demo's top module at the end of its output.
 
 ### Plain mode
 
 If you don't need the type overlay, just open the waveform directly.
 tywaves' built-in translators still give you signed / unsigned / hex /
-binary / IEEE-754 views per signal, and the full `TOP / tb / dut / ...`
-hierarchy is browsable:
+binary / IEEE-754 views per signal, and the full
+`TOP / svsimTestbench / dut / ...` hierarchy is browsable:
 
 ```sh
 tywaves design.vcd
@@ -252,12 +269,15 @@ Three things to adapt:
      `uhdi-to-hgldd design.uhdi.json -o design.dd`.
    - Or keep `PYTHONPATH=` and point `UHDI_ROOT` at the cloned repo.
 
-3. **Bring your own testbench.** Each demo's `tb.sv` is hand-written
-   SystemVerilog because it's the most portable form for a one-shot
-   demo (verilator builds it directly). For a real project you'll
-   typically write tests in Chisel via `chisel3.simulator` or
-   `chiseltest` -- both produce a `.vcd` that tywaves consumes
-   together with the `design.dd` you just generated.
+3. **Bring your own testbench.** Each demo ships an
+   `app/src/<Top>Sim.scala` entrypoint -- a `chisel3.simulator`-based
+   driver that elaborates the DUT, peeks/pokes Scala-side, and writes
+   `design.vcd`. Clone the file structure (declare `HasTestingDirectory`
+   and `HasSimulator` implicits, pass `firtoolOpts` with `--emit-uhdi`,
+   call `simulate(new MyTop, settings = ...)` with your stimulus, then
+   copy `out/sim/workdir-verilator/trace.vcd` to `design.vcd`). The
+   single firtool invocation gives you UHDI and SV that match the VCD's
+   signal names by construction.
 
 That's it. The `firtool --emit-uhdi` flag and the two python
 converters are the only thing the UHDI stack adds on top of a normal
@@ -283,9 +303,10 @@ Chisel build.
   If you see drift, file an issue with the input UHDI document.
 - **tywaves shows the right variables but every value is `0`** -- two
   causes, both in the launch command:
-  1. Verilator wraps the DUT in an extra `TOP` scope
-     (`TOP/tb/dut/...`). `--extra-scopes` must list it, so use
-     `--extra-scopes TOP tb dut`, not `--extra-scopes tb dut`.
+  1. Verilator wraps the DUT in an extra `TOP` scope, and
+     `chisel3.simulator` adds a further `svsimTestbench` wrapper, so
+     the full path is `TOP/svsimTestbench/dut/...`. `--extra-scopes`
+     must list all three: `--extra-scopes TOP svsimTestbench dut`.
   2. `--top-module FOO` triggers an internal bundle-pass that reads
      the positional `WAVE_FILE`, repacks Chisel struct ports back into
      their original shape, and writes a derived `<top>.vcd` next to
@@ -295,9 +316,6 @@ Chisel build.
      copy values across; if you got #1 wrong, the derived file has
      the right hierarchy/widths but every value pinned at `0`.
 
-  The known-good incantation for a Verilator-driven demo is the one
-  in [Open in tywaves](#hgldd-aware-mode) above:
-  ```sh
-  tywaves design.vcd --hgldd-dir . --top-module GCD --extra-scopes TOP tb dut
-  ```
+  `./run.sh simulate` prints the right command verbatim at the end of
+  its output -- copy that, don't hand-roll the flags.
 

@@ -19,7 +19,7 @@ def "main build" [demo: string] {
   rm -f design.uhdi.json design.dd design.db
   # Drop any previously-emitted top-module .sv so a renamed Main can't
   # leave a stale sibling next to the fresh one.
-  glob $"($dir)/*.sv" | where {|p| ($p | path basename) != "tb.sv" } | each { rm $in } | ignore
+  glob $"($dir)/*.sv" | each { rm $in } | ignore
   with-env {CHISEL_FIRTOOL_PATH: ($dir | path join ".bin")} {
     ^./millw app.runMain Main o> /dev/null
   }
@@ -34,12 +34,7 @@ def "main build" [demo: string] {
     ^python3 -m uhdi_to_hgdb design.uhdi.json -o design.db
   }
 
-  # Demo dirs may have a hand-written tb.sv next to firtool's emitted
-  # top-module .sv; filter it out so we report the real top.
-  let sv_files = (
-    glob $"($dir)/*.sv"
-    | where {|p| ($p | path basename) != "tb.sv" }
-  )
+  let sv_files = (glob $"($dir)/*.sv")
   let sv_name = if ($sv_files | is-empty) { "<TopModule>.sv" } else { $sv_files.0 | path basename }
   let top = ($sv_name | path parse | get stem)
 
@@ -50,8 +45,8 @@ def "main build" [demo: string] {
   print "  design.db          - HGDB SQLite (for hgdb)"
   print $"  ($sv_name | fill -a left -w 18) - SystemVerilog"
   print ""
-  print "Simulate:        ./run.sh simulate    (needs verilator + tb.sv)"
-  print $"Open in tywaves: tywaves design.vcd --hgldd-dir . --top-module ($top) --extra-scopes TOP tb dut"
+  print "Simulate (Chisel testbench): ./run.sh simulate"
+  print $"  -> writes design.vcd and prints the tywaves command for ($top)"
 }
 
 # Just fetch firtool into <demo>/.bin/.
@@ -60,56 +55,35 @@ def "main download-only" [demo: string] {
   download-firtool $dir
 }
 
-# Run verilator against tb.sv, write design.vcd. Only gcd ships a TB.
+# Drive the design with a Chisel testbench (chisel3.simulator). Each demo
+# ships an `app/src/<Top>Sim.scala`. The Chisel sim emits
+# design.uhdi.json + design.vcd in one firtool invocation, so the
+# converters are re-run here too -- they bind to the freshly-emitted UHDI
+# rather than whatever `Main` produced earlier.
 def "main simulate" [demo: string] {
   let dir = (demo-dir $demo)
-  if (which verilator | is-empty) {
-    print -e "verilator not found, skipping VCD generation"
+
+  let chisel_sim_files = (glob $"($dir)/app/src/*Sim.scala")
+  if ($chisel_sim_files | is-empty) {
+    print -e $"no app/src/*Sim.scala in ($dir); nothing to simulate"
     return
   }
-  let sv_files = (
-    glob $"($dir)/*.sv"
-    | where {|p| ($p | path basename) != "tb.sv" }
-  )
-  if ($sv_files | is-empty) {
-    print -e $"no .sv in ($dir) \(run ./run.sh first\)"
-    return
-  }
-  let sv = ($sv_files | first)
-  let top = ($sv | path basename | str replace ".sv" "")
-  let tb = ($dir | path join "tb.sv")
-  if not ($tb | path exists) {
-    print -e $"no testbench at ($tb); simulate is a no-op for this demo"
-    print -e "  (only the gcd demo ships a TB out of the box)"
-    return
-  }
-  print $"Simulating ($top) + tb.sv -> design.vcd..."
-  rm -rf /tmp/demo_obj
+  let sim_main = ($chisel_sim_files | first | path basename | str replace ".scala" "")
+  let top = ($sim_main | str replace -r "Sim$" "")
+
+  print $"Simulating via Chisel testbench \(($sim_main)) -> design.vcd..."
+  download-firtool $dir
   cd $dir
-  let v_args = [
-    "--binary"
-    "--trace"
-    "-j"
-    "0"
-    "-Wno-fatal"
-    "-Wno-WIDTH"
-    "-Wno-CASEINCOMPLETE"
-    "-Wno-STMTDLY"
-    "-Wno-INITIALDLY"
-    $"+define+layers_($top)_Verification_Assert"
-    $"+define+layers_($top)_Verification_Assume"
-    $"+define+layers_($top)_Verification_Cover"
-    "--top-module"
-    "tb"
-    "-Mdir"
-    "/tmp/demo_obj"
-    $sv
-    $tb
-  ]
-  ^verilator ...$v_args o> /dev/null e> /dev/null
-  ^/tmp/demo_obj/Vtb
-  rm -rf /tmp/demo_obj
-  print "Wrote: design.vcd"
+  with-env {CHISEL_FIRTOOL_PATH: ($dir | path join ".bin")} {
+    ^./millw app.runMain $sim_main
+  }
+  print "Re-running UHDI converters against sim-emitted UHDI..."
+  with-env {PYTHONPATH: ($REPO_ROOT | path join "converter/src")} {
+    ^python3 -m uhdi_to_hgldd design.uhdi.json -o design.dd
+    ^python3 -m uhdi_to_hgdb  design.uhdi.json -o design.db
+  }
+  print ""
+  print $"Open in tywaves: tywaves design.vcd --hgldd-dir . --top-module ($top) --extra-scopes TOP svsimTestbench dut"
 }
 
 # Start the hgdb-replay debug server. Reads design.vcd, exposes a hgdb
