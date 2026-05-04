@@ -196,30 +196,33 @@ def convert(uhdi: Dict[str, Any]) -> Dict[str, Any]:
     except ConversionError as e:
         raise HGDBJsonConversionError(str(e)) from None
 
-    top_names = list(uhdi.get("top") or [])
-    for sid in top_names:
-        if sid not in ctx.scopes:
-            raise HGDBJsonConversionError(
-                f"top references unknown scope {sid!r}")
+    try:
+        top_names = list(uhdi.get("top") or [])
+        for sid in top_names:
+            if sid not in ctx.scopes:
+                raise HGDBJsonConversionError(
+                    f"top references unknown scope {sid!r}")
 
-    pool, id_for = _build_global_pool(ctx)
+        pool, id_for = _build_global_pool(ctx)
 
-    table: List[Dict[str, Any]] = []
-    for top in top_names:
-        scope = ctx.scopes.get(top)
-        if scope is None:  # pragma: no cover
-            continue
-        table.append(_module_entry(top, scope, ctx, id_for))
+        table: List[Dict[str, Any]] = []
+        for top in top_names:
+            scope = ctx.scopes.get(top)
+            if scope is None:  # pragma: no cover
+                continue
+            table.append(_module_entry(top, scope, ctx, id_for))
 
-    top_field: Any = (top_names[0] if len(top_names) == 1
-                      else list(top_names))
+        top_field: Any = (top_names[0] if len(top_names) == 1
+                          else list(top_names))
 
-    return {
-        "generator": "uhdi",
-        "top": top_field,
-        "variables": pool,
-        "table": table,
-    }
+        return {
+            "generator": "uhdi",
+            "top": top_field,
+            "variables": pool,
+            "table": table,
+        }
+    except RecursionError:
+        raise HGDBJsonConversionError("input too deeply nested") from None
 
 
 @register

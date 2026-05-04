@@ -440,25 +440,29 @@ def convert(uhdi):
     except ConversionError as e:
         raise HGLDDConversionError(str(e)) from None
 
-    ctx.aggregated_leaves = _collect_aggregated_leaves(ctx)
-    for sid in uhdi.get("top", []):
-        if sid not in ctx.scopes:
-            raise HGLDDConversionError(f"top references unknown scope '{sid}'")
+    try:
+        ctx.aggregated_leaves = _collect_aggregated_leaves(ctx)
+        for sid in uhdi.get("top", []):
+            if sid not in ctx.scopes:
+                raise HGLDDConversionError(
+                    f"top references unknown scope '{sid}'")
 
-    # Structs first so type_name lookups resolve.
-    objects = list(_struct_objects(ctx))
-    objects.extend(_scope_object(sid, s, ctx)
-                   for sid, s in ctx.scopes.items()
-                   if s.get("kind") in ("module", "extmodule"))
+        # Structs first so type_name lookups resolve.
+        objects = list(_struct_objects(ctx))
+        objects.extend(_scope_object(sid, s, ctx)
+                       for sid, s in ctx.scopes.items()
+                       if s.get("kind") in ("module", "extmodule"))
 
-    # No HDL files: point past end (else 1 would tag first source as HDL).
-    hdl_start = (ctx.files.hdl_start
-                 if ctx.files.hdl_start is not None
-                 else len(ctx.files.ordered))
-    return {"HGLDD": {"version": "1.0",
-                      "file_info": list(ctx.files.ordered),
-                      "hdl_file_index": hdl_start + 1},
-            "objects": objects}
+        # No HDL files: point past end (else 1 would tag first source as HDL).
+        hdl_start = (ctx.files.hdl_start
+                     if ctx.files.hdl_start is not None
+                     else len(ctx.files.ordered))
+        return {"HGLDD": {"version": "1.0",
+                          "file_info": list(ctx.files.ordered),
+                          "hdl_file_index": hdl_start + 1},
+                "objects": objects}
+    except RecursionError:
+        raise HGLDDConversionError("input too deeply nested") from None
 
 
 @register
