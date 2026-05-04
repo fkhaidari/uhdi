@@ -41,6 +41,7 @@ def "main build" [demo: string] {
     | where {|p| ($p | path basename) != "tb.sv" }
   )
   let sv_name = if ($sv_files | is-empty) { "<TopModule>.sv" } else { $sv_files.0 | path basename }
+  let top = ($sv_name | path parse | get stem)
 
   print ""
   print "=== Done ==="
@@ -50,7 +51,7 @@ def "main build" [demo: string] {
   print $"  ($sv_name | fill -a left -w 18) - SystemVerilog"
   print ""
   print "Simulate:        ./run.sh simulate    (needs verilator + tb.sv)"
-  print "Open in tywaves: tywaves --hgldd-dir . design.vcd"
+  print $"Open in tywaves: tywaves design.vcd --hgldd-dir . --top-module ($top) --extra-scopes TOP tb dut"
 }
 
 # Just fetch firtool into <demo>/.bin/.
