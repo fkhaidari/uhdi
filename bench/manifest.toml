@@ -22,7 +22,16 @@
 [fixtures.Counter]
 scala = "Counter.scala"
 
-# tywaves: expected exact-match.  No expected deltas listed.
+# tywaves: one intentional divergence from native firtool's
+# --emit-hgldd: we synthesize `<top>.sv` for the HDL slot in
+# `file_info` rather than echoing native's empty string.  Tywaves'
+# --hgldd-dir mode uses that filename to locate the wave; an empty
+# entry forces a `cp design.vcd <Top>.vcd` workaround (issue #20).
+
+[[fixtures.Counter.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native firtool leaves the HDL slot empty (`\"\"`); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
 
 # hgdb_firrtl: legacy Scala-FIRRTL 1.x reference, runs on the
 # downgraded FIR.  Native operates pre-DCE, so the output port `q`

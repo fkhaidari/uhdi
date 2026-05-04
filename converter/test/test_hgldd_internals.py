@@ -10,6 +10,7 @@ from uhdi_to_hgldd.convert import (
     _expression_to_hgldd,
     _FileInfo,
     _first_vector_element_sig,
+    _resolve_hdl_file_path,
     _topo_sorted_struct_ids,
     _type_description,
 )
@@ -1004,3 +1005,138 @@ def test_scope_picks_up_vars_via_ownerscoperef_fallback():
     top_obj = next(o for o in out["objects"] if o.get("obj_name") == "Top")
     names = [pv["var_name"] for pv in top_obj["port_vars"]]
     assert "orphan" in names
+
+
+# ---- hdl_file_index synthesis (issue #20) -----------------------------
+
+
+def test_resolve_hdl_file_path_prefers_first_non_empty_simulation_file():
+    ctx = _Context.from_uhdi({
+        "format": {"name": "uhdi"},
+        "representations": {
+            "chisel": {"kind": "source", "files": ["X.scala"]},
+            "verilog": {"kind": "hdl", "language": "SystemVerilog",
+                        "files": ["X.sv", "Y.sv"]},
+        },
+        "scopes": {}, "top": [],
+    })
+    assert _resolve_hdl_file_path(ctx) == "X.sv"
+
+
+def test_resolve_hdl_file_path_synthesizes_from_top_scope_when_files_blank():
+    """firtool's --emit-uhdi can leave verilog.files=[''] -- the
+    synthesized fallback uses the top scope's HDL name + .sv so
+    Tywaves can derive `<top>.vcd` from it."""
+    ctx = _Context.from_uhdi({
+        "format": {"name": "uhdi"},
+        "representations": {
+            "chisel": {"kind": "source", "files": ["GCD.scala"]},
+            "verilog": {"kind": "hdl", "language": "SystemVerilog",
+                        "files": [""]},
+        },
+        "scopes": {"GCD": {
+            "name": "GCD", "kind": "module",
+            "representations": {"chisel": {"name": "GCD"},
+                                "verilog": {"name": "GCD"}},
+        }},
+        "top": ["GCD"],
+    })
+    assert _resolve_hdl_file_path(ctx) == "GCD.sv"
+
+
+def test_resolve_hdl_file_path_uses_verilog_extension_for_plain_verilog():
+    ctx = _Context.from_uhdi({
+        "format": {"name": "uhdi"},
+        "representations": {
+            "chisel": {"kind": "source", "files": ["Top.scala"]},
+            "verilog": {"kind": "hdl", "language": "Verilog", "files": [""]},
+        },
+        "scopes": {"Top": {
+            "name": "Top", "kind": "module",
+            "representations": {"chisel": {"name": "Top"},
+                                "verilog": {"name": "Top"}},
+        }},
+        "top": ["Top"],
+    })
+    assert _resolve_hdl_file_path(ctx) == "Top.v"
+
+
+def test_resolve_hdl_file_path_returns_none_when_no_top_and_no_files():
+    ctx = _Context.from_uhdi({
+        "format": {"name": "uhdi"},
+        "representations": {
+            "chisel": {"kind": "source", "files": []},
+            "verilog": {"kind": "hdl", "files": []},
+        },
+        "scopes": {}, "top": [],
+    })
+    assert _resolve_hdl_file_path(ctx) is None
+
+
+def test_convert_hdl_file_index_points_at_synthesized_filename():
+    """End-to-end shape of issue #20: a UHDI doc that mirrors
+    firtool's --emit-uhdi output (verilog.files=['']) still produces
+    a `file_info` entry that tywaves can use to find `<top>.vcd`."""
+    doc = {
+        "format": {"name": "uhdi"},
+        "representations": {
+            "chisel": {"kind": "source", "files": ["GCD.scala"]},
+            "verilog": {"kind": "hdl", "language": "SystemVerilog",
+                        "files": [""]},
+        },
+        "top": ["GCD"],
+        "types": {"u8": {"kind": "uint", "width": 8}},
+        "expressions": {},
+        "variables": {
+            "v_q": {
+                "typeRef": "u8", "bindKind": "port", "direction": "output",
+                "ownerScopeRef": "GCD",
+                "representations": {
+                    "chisel": {"name": "q"},
+                    "verilog": {"name": "q", "value": {"sigName": "q"}},
+                },
+            },
+        },
+        "scopes": {"GCD": {
+            "name": "GCD", "kind": "module",
+            "representations": {
+                "chisel": {"name": "GCD",
+                           "location": {"file": 0, "beginLine": 1}},
+                "verilog": {"name": "GCD",
+                            "location": {"file": 0, "beginLine": 1}},
+            },
+            "variableRefs": ["v_q"],
+        }},
+    }
+    out = hgldd_convert(doc)
+    header = out["HGLDD"]
+    # hdl_file_index is 1-indexed; the entry it points at is non-empty.
+    hdl_idx = header["hdl_file_index"] - 1
+    assert 0 <= hdl_idx < len(header["file_info"])
+    assert header["file_info"][hdl_idx] == "GCD.sv"
+
+
+def test_convert_hdl_file_index_kept_when_no_locations_at_all():
+    """No scope carries any location, but the doc still has a top
+    module -- `hdl_file_index` must point at a synthesized HDL filename
+    rather than past-the-end. Tywaves reads this even when scopes lack
+    individual `hdl_loc` entries."""
+    doc = {
+        "format": {"name": "uhdi"},
+        "representations": {
+            "chisel": {"kind": "source", "files": [""]},
+            "verilog": {"kind": "hdl", "language": "SystemVerilog",
+                        "files": [""]},
+        },
+        "top": ["Bare"],
+        "types": {}, "expressions": {}, "variables": {},
+        "scopes": {"Bare": {
+            "name": "Bare", "kind": "module",
+            "representations": {"chisel": {"name": "Bare"},
+                                "verilog": {"name": "Bare"}},
+        }},
+    }
+    out = hgldd_convert(doc)
+    header = out["HGLDD"]
+    hdl_idx = header["hdl_file_index"] - 1
+    assert header["file_info"][hdl_idx] == "Bare.sv"
