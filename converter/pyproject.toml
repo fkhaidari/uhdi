@@ -7,7 +7,9 @@ name = "uhdi-converter"
 version = "0.1.0"
 description = "Pool-based UHDI -> HGLDD / hgdb SQLite converters."
 requires-python = ">=3.11"
-dependencies = ["jsonschema>=4.18"]
+# `referencing` is imported directly in uhdi_common.validate; pin it
+# instead of relying on jsonschema's transitive dep.
+dependencies = ["jsonschema>=4.18", "referencing>=0.30"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
