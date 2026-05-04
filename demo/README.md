@@ -282,10 +282,3 @@ Chisel build.
   shouldn't. Both are deterministic projections of `design.uhdi.json`.
   If you see drift, file an issue with the input UHDI document.
 
-## Known limitations
-
-- **`uhdi-to-hgdb` warning about unresolved guard `stable_id`.** Some
-  `when`-condition tokens (e.g. `io_en`) don't resolve to a Verilog
-  signal name and surface as raw tokens in `design.db`. Doesn't block
-  the pipeline; hgdb may show the raw token instead of the variable
-  in those guard contexts.

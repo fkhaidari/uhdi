@@ -54,6 +54,30 @@ def test_resolve_sig_name_returns_none_for_missing_var():
     assert resolve_sig_name("nope", ctx) is None
 
 
+def test_resolve_sig_name_falls_back_to_authoring_name(capsys=None):
+    """Issue #21: post-DCE CIRCT EmitUHDI may emit guardRefs as authoring
+    names rather than stable_ids. resolver must hop through `chisel.name`
+    to land on the verilog sig_name without the caller knowing."""
+    ctx = _ctx(variables={"var_GCD_io_en": {
+        "representations": {"chisel": {"name": "io_en"},
+                            "verilog": {"name": "io_en",
+                                        "value": {"sigName": "io_en"}}},
+    }})
+    assert resolve_sig_name("io_en", ctx) == "io_en"
+
+
+def test_resolve_sig_name_authoring_fallback_returns_dce_rewritten_sig():
+    """When the authoring name maps to a var whose verilog sig was
+    rewired by DCE (e.g. `q -> r`), the fallback returns the rewired
+    sig, not the authoring token verbatim."""
+    ctx = _ctx(variables={"var_q": {
+        "representations": {"chisel": {"name": "q"},
+                            "verilog": {"name": "q",
+                                        "value": {"sigName": "r"}}},
+    }})
+    assert resolve_sig_name("q", ctx) == "r"
+
+
 def test_resolve_sig_name_returns_none_when_no_verilog_repr():
     """Variable with only chisel repr (lost in MaterializeDebugInfo DCE) has no sim-side name."""
     ctx = _ctx(variables={"v": {
@@ -91,6 +115,16 @@ def test_resolve_authoring_name_none_when_no_authoring_repr():
         "representations": {"verilog": {"name": "io_in_a"}},
     }})
     assert resolve_authoring_name("v", ctx) is None
+
+
+def test_resolve_authoring_name_falls_back_to_authoring_name():
+    """Symmetric with resolve_sig_name's fallback: passing an authoring
+    name resolves to itself when the pool has the matching variable."""
+    ctx = _ctx(variables={"var_GCD_io_en": {
+        "representations": {"chisel": {"name": "io_en"},
+                            "verilog": {"name": "io_en"}},
+    }})
+    assert resolve_authoring_name("io_en", ctx) == "io_en"
 
 
 # ---- resolve_var_by_ref ---------------------------------------------------
