@@ -9,9 +9,18 @@ Each subdirectory is a **standalone Chisel project** with its own
 this repository, drop it next to your own circuit, and use it as a
 starter template (see [Use this in your own project](#use-this-in-your-own-project)).
 
+Inside the repo, each demo's `run.sh` is a thin symlink to
+[`demo/run.sh`](run.sh), a bash shim that locates `nu` (Nushell) and
+dispatches to [`demo/run.nu`](run.nu) — the actual build / simulate /
+download logic. Subcommands are positional: `./run.sh` (defaults to
+`build`), `./run.sh simulate`, `./run.sh download-only`. When you copy
+a demo out of the repo as a starter, replace the symlink with a
+self-contained build script (mill + the converter CLIs) — the
+in-repo shim only works under this checkout.
+
 | Demo | Top module | What it exercises |
 |------|-----------|-------------------|
-| `gcd/` | `GCD` | Plain UInt arithmetic, single module. The simplest end-to-end. Ships a testbench (`tb.sv`) for `--simulate`. |
+| `gcd/` | `GCD` | Plain UInt arithmetic, single module. The simplest end-to-end. Ships a testbench (`tb.sv`) for `./run.sh simulate`. |
 | `fsm/` | `TrafficLight` | `ChiselEnum` state. Tywaves should render the `state` register as `Red / RedYellow / Green / Yellow`, not as `2'b00 / 01 / 10 / 11`. |
 | `fifo/` | `Fifo` | `Decoupled<UInt>` ports + `SyncReadMem`. Tywaves groups `valid / ready / bits` as a struct; the SyncReadMem appears as its own scope. |
 | `pipeline/` | `Pipeline` | 3-stage MAC with `MulStage` / `AddStage` as separate `Module`s. Hierarchy navigation in tywaves; hgdb steps a value across the pipeline registers cycle by cycle. |
@@ -24,7 +33,7 @@ starter template (see [Use this in your own project](#use-this-in-your-own-proje
 - Python 3 (for the UHDI converters)
 - Either Docker / podman (preferred -- pulls a prebuilt image with firtool)
   or `gh` CLI authenticated with a token that can read public releases
-- Verilator (only for `./run.sh --simulate`)
+- Verilator (only for `./run.sh simulate`)
 
 ### Clone and install
 ```sh
@@ -54,7 +63,7 @@ converters produce HGLDD/HGDB). Output:
 
 ### Generate a waveform
 ```sh
-./run.sh --simulate           # gcd only out of the box; see TBs below
+./run.sh simulate             # gcd only out of the box; see TBs below
 ls design.vcd
 ```
 
@@ -190,7 +199,7 @@ Chisel build.
 ## Troubleshooting
 
 - **`firtool: command not found`** -- `run.sh` downloads it once into
-  `.bin/firtool`. Re-run `./run.sh --download-only` or check that
+  `.bin/firtool`. Re-run `./run.sh download-only` or check that
   `docker` / `gh` is on `PATH`.
 - **`mill: Could not find or load main class Main`** -- sources have
   to live at `app/src/`, not `src/`. Mill's `object app` convention.

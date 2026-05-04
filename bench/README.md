@@ -7,6 +7,16 @@ This is the chapter-5 deliverable for the thesis: a numeric matrix
 showing where the uhdi-derived projections converge with native
 firtool / hgdb-circt outputs and where they diverge (with reasons).
 
+## Targets
+
+Three reference emitters are diffed against the UHDI projections:
+
+| Target | Native reference | UHDI-side projection (Backend) |
+|--------|------------------|--------------------------------|
+| `tywaves` | `firtool --emit-hgldd` (uhdi-side firtool) | `uhdi_to_hgldd` (HGLDD dict) |
+| `hgdb_circt` | hgdb-circt `firtool --hgdb=<file>` (JSON) | `uhdi_to_hgdb_json` (JSON dict) |
+| `hgdb_firrtl` | legacy Scala FIRRTL 1.x `hgdb-firrtl.jar` + `toml2hgdb` (SQLite) | `uhdi_to_hgdb` (SQLite, `canonical_dump` for diff) |
+
 ## What runs
 
 For each `(fixture × target)` cell:
@@ -17,14 +27,14 @@ For each `(fixture × target)` cell:
    cached under `bench/.cache/scala-fir/<stem>-<pipeline>-<digest>.fir`.
 2. **FIR → UHDI** -- the cached `.fir` is fed to `firtool --emit-uhdi`.
 3. **UHDI → projection** -- the matching `uhdi_common` Backend
-   converts the UHDI document to its target format (HGLDD dict for
-   tywaves, SQLite for hgdb).
-4. **FIR → native reference** -- `firtool --emit-hgldd` (tywaves)
-   or hgdb-circt's `firtool --hgdb=<file>` (hgdb) produces the
-   reference output from the same `.fir`.
+   converts the UHDI document to its target format (see table above).
+4. **FIR → native reference** -- the matching native emitter runs on
+   the same `.fir` (or its FIRRTL-1.x downgrade for `hgdb_firrtl`).
 5. **Structural diff** -- `uhdi_common.diff_dicts` walks both sides
-   element-by-element; any mismatch fails the cell with the exact
-   JSON-pointer path that drifted.
+   element-by-element; `manifest.toml` lists per-cell allowed deltas
+   (post-DCE divergences, etc.). Any unexpected delta fails the cell
+   with the exact JSON-pointer path that drifted; an expectation that
+   matched zero real deltas fails as "manifest stale: gap closed".
 
 ## Toolchains
 
