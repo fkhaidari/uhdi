@@ -72,7 +72,10 @@ def discover() -> List[Backend]:
     for pkg in _KNOWN_PACKAGES:
         try:
             importlib.import_module(pkg)
-        except ImportError:
-            # Slim installs may omit a backend package; skip silently.
-            continue
+        except ModuleNotFoundError as e:
+            # Only swallow "this top-level package isn't installed";
+            # surface broken imports inside the package as bugs.
+            if e.name == pkg:
+                continue
+            raise
     return all_backends()
