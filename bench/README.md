@@ -105,8 +105,8 @@ fresh checkout, `pytest` is green-by-default and only flips to
    directives: `compile.py` injects the dep set per pipeline.
 2. `pytest -k <Name>` to confirm the new fixture compiles and the
    cells run end-to-end.
-3. Adjust expectations in `manifest.toml` (TODO -- not yet wired)
-   if specific (fixture × target) cells are expected to diverge.
+3. Adjust expectations in `manifest.toml` if specific (fixture × target)
+   cells are expected to diverge.
 
 ## Adding a target
 
