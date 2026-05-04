@@ -24,12 +24,18 @@ def make_document_validator() -> Any:
             f"expected schemas/ alongside uhdi_common/validate.py")
 
     store: Dict[str, Dict[str, Any]] = {}
+    seen: Dict[str, pathlib.Path] = {}
     for path in _SCHEMA_DIR.glob("*.schema.json"):
         with path.open(encoding="utf-8") as f:
             schema = json.load(f)
         if "$id" not in schema:
             raise ValueError(f"{path}: missing required $id field")
-        store[schema["$id"]] = schema
+        sid = schema["$id"]
+        if sid in seen:
+            raise ValueError(
+                f"duplicate $id {sid!r}: {path} vs {seen[sid]}")
+        seen[sid] = path
+        store[sid] = schema
 
     if _ROOT_SCHEMA_ID not in store:
         raise FileNotFoundError(

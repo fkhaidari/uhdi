@@ -59,6 +59,18 @@ def test_make_document_validator_rejects_missing_root_schema(monkeypatch, tmp_pa
         validate.make_document_validator()
 
 
+def test_make_document_validator_rejects_duplicate_id(monkeypatch, tmp_path):
+    """A copy-paste with the same $id would otherwise silently overwrite."""
+    sib = tmp_path / "schemas"
+    sib.mkdir()
+    payload = '{"$id": "https://uhdi/dup.schema.json", "type": "object"}'
+    (sib / "a.schema.json").write_text(payload, encoding="utf-8")
+    (sib / "b.schema.json").write_text(payload, encoding="utf-8")
+    monkeypatch.setattr(validate, "_SCHEMA_DIR", sib)
+    with pytest.raises(ValueError, match="duplicate \\$id"):
+        validate.make_document_validator()
+
+
 # ---- iter_errors ----------------------------------------------------------
 
 
