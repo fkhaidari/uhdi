@@ -113,28 +113,104 @@ layer lives independently of the simulator.
 
 ## Open in hgdb
 
-The hgdb runtime reads `design.db` (UHDI's HGDB projection) plus your
-simulator's trace and lets you set breakpoints, step, and inspect by
-**Chisel source line**, not Verilog signal name.
+`design.db` is UHDI's HGDB projection -- a SQLite symbol table that the
+hgdb runtime consumes so you can set breakpoints, step, and inspect by
+**Chisel source line**, not by Verilog signal name. Three workflows from
+weakest to strongest, all reading the same `design.db`:
+
+### A. Offline inspection -- `hgdb-db`
+
+Upstream's CLI for poking at a symbol table without running anything.
+Useful to confirm UHDI's projection looks the way `hgdb-firrtl`'s does.
 
 ```sh
-# Add the bundled python bindings to your shell:
-export HGDB_PY="$HOME/.local/uhdi-tools/lib/hgdb/bindings/python"
-export PYTHONPATH="$HGDB_PY:$HGDB_PY/build/lib.linux-x86_64-cpython-312:$PYTHONPATH"
-
-# In one terminal: launch your simulation with the hgdb VPI shim
-#   (verilator: run with --vpi and pre-load libhgdb_vpi)
-# In another terminal: attach the debugger to design.db.
-python -m hgdb design.db
+hgdb-db design.db
+hgdb> instance list
+# [0]: GCD
+hgdb> breakpoint where /abs/path/GCD.scala
+# [0]: - id: 1  - filename: .../GCD.scala  - line: 17  - condition: 1
+# [1]: - id: 2  - filename: .../GCD.scala  - line: 18  - condition: io_en
+# ...
+hgdb> exit
 ```
 
-The exact "attach the debugger" command depends on your setup; see
-the [hgdb runtime documentation][hgdb-runtime] for the protocol details.
-What matters here is that **both tywaves and hgdb consume the same UHDI
-JSON** -- it's projected to `.dd` for tywaves and to `.db` for hgdb.
-You don't have to maintain two separate debug-info builds.
+### B. Console session -- `hgdb-debugger`
 
-[hgdb-runtime]: https://github.com/fkhaidari/hgdb
+Upstream's gdb-style console client ([Kuree/hgdb-debugger][hgdb-cli-repo]).
+Connects to a running hgdb runtime over WebSocket. Replay-style works
+without rebuilding the simulator: `hgdb-replay` reads `design.vcd` back
+into a virtual simulator that hosts the debug server.
+
+`tools/install.sh all` (or `tools/install.sh hgdb-cli`) handles setup:
+it builds a CPython 3.12 venv at `<prefix>/cli-venv`, pip-installs
+`hgdb-debugger` + deps, links the hgdb python bindings into it, and
+exposes `<prefix>/bin/hgdb` alongside `firtool` and `tywaves`.  The
+3.12 split is needed because the shipped `_hgdb.so` is built for
+cpython-3.12 -- the workspace `.venv` is 3.11 and can't load it.
+
+Two terminals:
+
+```sh
+# Terminal A -- replay server. Listens on ws://localhost:8888.
+cd demo/gcd
+./run.sh simulate         # writes design.vcd, only needed once
+./run.sh debug-server     # foreground; Ctrl-C stops it
+```
+
+```sh
+# Terminal B -- attach the upstream console client.
+cd demo/gcd
+./run.sh debug
+# (hgdb) b /abs/path/GCD.scala:18
+# (hgdb) c
+# Breakpoint 2 at GCD.scala:18:9
+# 18     x   := io.a
+# (hgdb) p io_a
+# '0x0030'
+# (hgdb) p io_b
+# '0x0012'
+# (hgdb) c
+# Breakpoint 2 at GCD.scala:18:9
+# 18     x   := io.a
+# (hgdb) exit
+```
+
+Commands are gdb-style: `b/break`, `c/continue`, `n/step-over`, `p/print`,
+`set`, `watch`, `info`, `list`, plus reverse debugging (`step-back`,
+`reverse-continue`/`rc`, `go <timestamp>`) -- the latter only meaningful
+under `hgdb-replay`.
+
+`hgdb-replay` and `hgdb-db` both come from the upstream [hgdb][hgdb-runtime]
+repo. They're already on `$PATH` if you installed via pipx; otherwise
+build them with `cmake --build build --target hgdb-replay-bin hgdb-db`.
+`./run.sh debug-server` resolves `hgdb-replay` via `$HGDB_REPLAY`, then
+`$PATH`, then a sibling `practice/hgdb/build/` checkout.
+
+### C. VS Code session -- `hgdb-debug` extension
+
+The author's [hgdb-debug][hgdb-cli-repo] also ships a VS Code extension
+(`keyiz.hgdb-vscode` on the marketplace) -- the same WebSocket protocol
+behind a real DAP-driven UI: breakpoints in the editor margin, locals
+panel, watch, call stack.
+
+`demo/.vscode/launch.json` is checked in with one config per demo
+(`hgdb: gcd`, `hgdb: fsm`, ...). To use:
+
+1. Open `demo/` as the workspace folder in VS Code.
+2. In one terminal: `cd demo/gcd && ./run.sh debug-server` (server on :8888).
+3. F5 -> pick `hgdb: gcd`. The extension connects, breakpoints set in
+   `app/src/GCD.scala` will pause execution exactly like a normal
+   debugger.
+
+For a *live* (non-replay) session you'd link `libhgdb_vpi` into the
+simulator instead -- same WebSocket protocol, so the same client attaches.
+
+What matters for the UHDI thesis is that **both tywaves and hgdb
+consume the same UHDI JSON** -- projected to `.dd` for tywaves and to
+`.db` for hgdb. You don't maintain two separate debug-info builds.
+
+[hgdb-runtime]: https://github.com/Kuree/hgdb
+[hgdb-cli-repo]: https://github.com/Kuree/hgdb-debugger
 
 ## Use this in your own project
 

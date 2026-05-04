@@ -111,6 +111,62 @@ def "main simulate" [demo: string] {
   print "Wrote: design.vcd"
 }
 
+# Start the hgdb-replay debug server. Reads design.vcd, exposes a hgdb
+# WebSocket on the chosen port preloaded with design.db. Foregrounded
+# so Ctrl-C in this terminal stops the server. Pair with `./run.sh debug`
+# in a second terminal.
+def "main debug-server" [demo: string --port: int = 8888] {
+  let dir = (demo-dir $demo)
+  cd $dir
+  if not ("design.vcd" | path exists) {
+    print -e "no design.vcd; run ./run.sh simulate first"
+    return
+  }
+  if not ("design.db" | path exists) {
+    print -e "no design.db; run ./run.sh first"
+    return
+  }
+  let replay = (locate-hgdb-replay)
+  print $"Listening on ws://localhost:($port) -- attach with: ./run.sh debug ($demo)"
+  with-env {DEBUG_DATABASE_FILENAME: ($dir | path join "design.db")} {
+    ^$replay design.vcd --port $port --debug
+  }
+}
+
+# Attach the upstream `hgdb` console debugger (from `hgdb-debugger` on
+# PyPI) to a running debug-server. Gdb-style: b/c/n/p, plus reverse
+# debugging (step-back, rc, go) which pairs with hgdb-replay.
+def "main debug" [demo: string --port: int = 8888] {
+  let dir = (demo-dir $demo)
+  let bin = (locate-hgdb-debugger)
+  ^$bin $"localhost:($port)" ($dir | path join "design.db")
+}
+
+# Search order:
+#   1. $HGDB_DEBUGGER override
+#   2. ~/.local/uhdi-tools/cli-venv/bin/hgdb (preferred -- ABI-matched venv)
+#   3. PATH lookup
+def locate-hgdb-debugger [] {
+  let override = ($env.HGDB_DEBUGGER? | default "")
+  if (not ($override | is-empty)) and ($override | path exists) { return $override }
+  let venv_bin = ($env.HOME | path join ".local/uhdi-tools/cli-venv/bin/hgdb")
+  if ($venv_bin | path exists) { return $venv_bin }
+  let from_path = (which hgdb)
+  if (not ($from_path | is-empty)) { return ($from_path | first | get path) }
+  error make {msg: "hgdb console debugger not found; install with: pip install hgdb-debugger (and link the workspace's hgdb python bindings into the same venv)"}
+}
+
+def locate-hgdb-replay [] {
+  # 1. Honour explicit override.  2. PATH lookup. 3. Sibling practice/hgdb checkout.
+  let override = ($env.HGDB_REPLAY? | default "")
+  if (not ($override | is-empty)) and ($override | path exists) { return $override }
+  let from_path = (which hgdb-replay)
+  if (not ($from_path | is-empty)) { return ($from_path | first | get path) }
+  let sibling = ($REPO_ROOT | path dirname | path join "hgdb/build/tools/hgdb-replay/hgdb-replay")
+  if ($sibling | path exists) { return $sibling }
+  error make {msg: "hgdb-replay not found; build it from upstream hgdb (https://github.com/Kuree/hgdb) and put it on $PATH or set $HGDB_REPLAY"}
+}
+
 # ---- helpers ---------------------------------------------------------------
 
 def demo-dir [demo: string]: nothing -> path {

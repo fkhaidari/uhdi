@@ -116,12 +116,24 @@ def main [] {
     {
       name: "env-hint-lines all components, bin not on PATH"
       body: {||
-        let lines = (env-hint-lines "/p" ["firtool" "hgdb-py" "tywaves"] ["/usr/bin" "/bin"])
+        let lines = (env-hint-lines "/p" ["firtool" "hgdb-py" "tywaves" "hgdb-cli"] ["/usr/bin" "/bin"])
         assert equal $lines [
           "=== Done ==="
           '  export FIRTOOL="/p/bin/firtool"'
           '  export HGDB_PY="/p/lib/hgdb/bindings/python"'
           '  export TYWAVES="/p/bin/tywaves"'
+          '  export HGDB_DEBUGGER="/p/bin/hgdb"'
+          '  export PATH="/p/bin:$PATH"'
+        ]
+      }
+    }
+    {
+      name: "env-hint-lines hgdb-cli only triggers PATH hint"
+      body: {||
+        let lines = (env-hint-lines "/p" ["hgdb-cli"] ["/usr/bin"])
+        assert equal $lines [
+          "=== Done ==="
+          '  export HGDB_DEBUGGER="/p/bin/hgdb"'
           '  export PATH="/p/bin:$PATH"'
         ]
       }

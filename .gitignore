@@ -54,3 +54,6 @@ demo-out-*/
 *.swp
 
 .vscode/
+# Tracked: shared launch config for hgdb-debug VS Code extension.
+!demo/.vscode/
+!demo/.vscode/launch.json
