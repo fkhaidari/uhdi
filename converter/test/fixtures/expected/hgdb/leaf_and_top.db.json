@@ -21,16 +21,16 @@
       "column_num": 5,
       "condition": "1",
       "filename": "LeafAndTop.scala",
-      "instance_name": "Top",
-      "line_num": 15,
+      "instance_name": "Top.l",
+      "line_num": 6,
       "trigger": ""
     },
     {
       "column_num": 5,
       "condition": "1",
       "filename": "LeafAndTop.scala",
-      "instance_name": "Top.l",
-      "line_num": 6,
+      "instance_name": "Top",
+      "line_num": 15,
       "trigger": ""
     }
   ],

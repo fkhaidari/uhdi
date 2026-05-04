@@ -43,6 +43,16 @@ def _check_table_name(table: str) -> str:
     return table
 
 
+def _sort_value(v: Any) -> tuple:
+    """Sort key that orders ints numerically (line_num=2 before 10, not
+    after). Leading bucket avoids cross-type compares on mixed columns."""
+    if v is None:
+        return (0, 0.0, "")
+    if isinstance(v, (bool, int, float)):
+        return (1, float(v), "")
+    return (2, 0.0, str(v))
+
+
 def _row_to_dict(cursor: sqlite3.Cursor, row: tuple) -> Dict[str, Any]:
     cols = [d[0] for d in cursor.description]
     return dict(zip(cols, row))
@@ -87,7 +97,7 @@ def canonical_dump(db_path) -> Dict[str, List[Dict[str, Any]]]:
                     d.pop(c, None)
                 rendered.append(d)
             rendered.sort(key=lambda r: tuple(
-                "" if r.get(k) is None else str(r.get(k)) for k in sort_key))
+                _sort_value(r.get(k)) for k in sort_key))
             out[table] = rendered
 
     return out

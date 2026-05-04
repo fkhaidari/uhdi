@@ -30,6 +30,14 @@
   ],
   "breakpoint": [
     {
+      "column_num": 5,
+      "condition": "1",
+      "filename": "Counter.scala",
+      "instance_name": "Counter",
+      "line_num": 9,
+      "trigger": ""
+    },
+    {
       "column_num": 7,
       "condition": "reset",
       "filename": "Counter.scala",
@@ -51,14 +59,6 @@
       "filename": "Counter.scala",
       "instance_name": "Counter",
       "line_num": 14,
-      "trigger": ""
-    },
-    {
-      "column_num": 5,
-      "condition": "1",
-      "filename": "Counter.scala",
-      "instance_name": "Counter",
-      "line_num": 9,
       "trigger": ""
     }
   ],
