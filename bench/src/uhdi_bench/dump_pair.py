@@ -20,6 +20,10 @@ _TARGET_TO_PIPELINE = {
 _DEFAULT_OUT = pathlib.Path(tempfile.gettempdir()) / "bench-diff"
 
 
+def _fmt(d: dict) -> str:
+    return json.dumps(d, indent=2, sort_keys=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="Dump (ours, native) pairs for one fixture as JSON files.")
@@ -51,11 +55,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{target:14} skip: {e}", file=sys.stderr)
             rc = 1
             continue
-        fmt = lambda d: json.dumps(d, indent=2, sort_keys=True)
         ours_path = out_root / f"{target}.ours.json"
         native_path = out_root / f"{target}.native.json"
-        ours_path.write_text(fmt(ours))
-        native_path.write_text(fmt(native))
+        ours_path.write_text(_fmt(ours))
+        native_path.write_text(_fmt(native))
         print(f"{target:14}  code --diff {ours_path} {native_path}")
     return rc
 
