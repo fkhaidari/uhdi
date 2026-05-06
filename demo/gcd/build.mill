@@ -8,8 +8,8 @@ object app extends ScalaModule {
   def mainClass = Task { Some("Main") }
 
   def mvnDeps = Seq(
-    ivy"com.github.fkhaidari.chisel::chisel:v0.1.1-uhdi",
-    ivy"com.github.fkhaidari.chisel:chisel-plugin_2.13.18:v0.1.1-uhdi",
+    ivy"com.github.fkhaidari.chisel::chisel:v0.1.2-uhdi",
+    ivy"com.github.fkhaidari.chisel:chisel-plugin_2.13.18:v0.1.2-uhdi",
   )
 
   def scalacOptions = Task {
