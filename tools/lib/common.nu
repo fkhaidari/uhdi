@@ -126,7 +126,12 @@ export def docker-extract [image: string src_path: string dest: path] {
 # Upsert a tarball onto a GitHub release: create if missing, else
 # upload with --clobber so the same tag can carry multiple artefacts
 # (firtool + hgdb-py + tywaves all ride on one fkhaidari/uhdi tag).
+# `repo` is passed explicitly because callers cd into build dirs whose
+# git remote points elsewhere (`.cache/tywaves-build/surfer-tywaves`,
+# `.cache/hgdb-py-build/hgdb`); `gh` autodetects from cwd otherwise and
+# uploads silently to the wrong repo.
 export def gh-publish-tarball [
+  repo: string
   tag: string
   tarball: path
   title: string
@@ -137,14 +142,14 @@ export def gh-publish-tarball [
   }
   let exists = (
     try {
-      ^gh release view $tag o> /dev/null e> /dev/null
+      ^gh release view $tag --repo $repo o> /dev/null e> /dev/null
       true
     } catch { false }
   )
   if $exists {
-    ^gh release upload $tag $tarball --clobber
+    ^gh release upload $tag $tarball --repo $repo --clobber
   } else {
-    ^gh release create $tag $tarball --title $title --notes $notes
+    ^gh release create $tag $tarball --repo $repo --title $title --notes $notes
   }
-  print $"Done: https://github.com/(repo-slug)/releases/tag/($tag)"
+  print $"Done: https://github.com/($repo)/releases/tag/($tag)"
 }

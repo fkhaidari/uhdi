@@ -99,6 +99,10 @@ def "main build" [
       ^git -C $src_dir remote add origin $versions.TYWAVES_URL
       ^git -C $src_dir fetch --depth=1 origin $versions.TYWAVES_REV
       ^git -C $src_dir checkout FETCH_HEAD
+      # surfer-tywaves has 5 path-deps as submodules (spade, fzcmd,
+      # f128, instruction-decoder, tywaves-rs); cargo errors immediately
+      # without them.
+      ^git -C $src_dir submodule update --init --recursive --depth=1
     }
 
     print "Building (cargo build --release --locked, ~5-10 min cold)..."
@@ -121,7 +125,7 @@ def "main build" [
     } else {
       $"Built from ($versions.TYWAVES_URL) @ ($versions.TYWAVES_REV)"
     }
-    gh-publish-tarball $release $tarball $"uhdi ($release)" $"Prebuilt tywaves \(surfer fork\) for ($platform).\n\n($source_note)"
+    gh-publish-tarball $REPO $release $tarball $"uhdi ($release)" $"Prebuilt tywaves \(surfer fork\) for ($platform).\n\n($source_note)"
   }
 }
 

@@ -50,6 +50,7 @@ def main [
   --from-docker # also extract prebuilt jars from image into /tmp
   --source: string = "fk-sc/debug-info" # branch carrying the debug-info changes
   --release-branch: string = "fk-sc/debug-info-release" # branch we rebase + tag
+  --remote: string = "origin" # git remote to fetch source from + push tag/branch to (pass --remote fkhaidari on multi-remote checkouts where origin is not the JitPack source)
 ] {
   let chisel_repo = if ($repo | is-empty) {
     ($REPO_ROOT | path dirname | path join "chisel")
@@ -84,21 +85,21 @@ def main [
   cd $chisel_repo
 
   print ""
-  print "Fetching..."
-  ^git fetch origin
+  print $"Fetching from ($remote)..."
+  ^git fetch $remote
 
   let source_ok = (
     try {
-      ^git rev-parse --verify $"origin/($source)" o> /dev/null e> /dev/null
+      ^git rev-parse --verify $"($remote)/($source)" o> /dev/null e> /dev/null
       true
     } catch { false }
   )
   if not $source_ok {
-    error make {msg: $"origin/($source) not found"}
+    error make {msg: $"($remote)/($source) not found"}
   }
 
   print $"Preparing ($release_branch) \(rebased onto ($source)\)..."
-  ^git checkout -B $release_branch $"origin/($source)"
+  ^git checkout -B $release_branch $"($remote)/($source)"
 
   # ---- ensure jitpack.yml ------------------------------------------------
   if not ("jitpack.yml" | path exists) {
@@ -135,9 +136,9 @@ def main [
 
   # ---- push --------------------------------------------------------------
   print ""
-  print $"Pushing ($release_branch) + tag ($tag)..."
-  ^git push origin $release_branch --force-with-lease
-  ^git push origin $tag --force
+  print $"Pushing ($release_branch) + tag ($tag) to ($remote)..."
+  ^git push $remote $release_branch --force-with-lease
+  ^git push $remote $tag --force
 
   print ""
   print "JitPack will build at:"

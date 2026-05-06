@@ -140,7 +140,7 @@ def "main build" [
     } else {
       $"Built from ($versions.CIRCT_URL) @ ($versions.CIRCT_REV)"
     }
-    gh-publish-tarball $release $tarball $"firtool ($release)" $"Prebuilt firtool with --emit-uhdi for ($platform).\n\n($source_note)"
+    gh-publish-tarball $REPO $release $tarball $"firtool ($release)" $"Prebuilt firtool with --emit-uhdi for ($platform).\n\n($source_note)"
   }
 }
 
