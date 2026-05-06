@@ -107,9 +107,27 @@ the C extension is built against glibc; cross-compiles are out of scope"
       }
 
       print "Building C extension..."
+      # Use a workdir-local venv: avoids PEP 668 "externally-managed-
+      # environment" on Ubuntu 24.04+, isolates pybind11/setuptools
+      # from the user's site-packages, and keeps re-runs idempotent
+      # (cached venv across builds in the same .cache/hgdb-py-build).
+      let venv = ($workdir | path join "venv")
+      if not ($venv | path join "bin/python" | path exists) {
+        ^python3 -m venv $venv
+      }
+      let vpy = ($venv | path join "bin/python")
+      let vpip = ($venv | path join "bin/pip")
+      ^$vpip install --no-cache-dir --upgrade pip
+      ^$vpip install --no-cache-dir pybind11 setuptools wheel
       cd ($hgdb_dir | path join "bindings/python")
-      ^pip install --user --no-cache-dir pybind11 setuptools wheel
-      ^python3 setup.py build_ext --inplace
+      # The C extension needs Python.h (apt: python3-dev / python3.X-dev).
+      # Surface a clear precondition error rather than letting cmake fail
+      # mid-build with a less obvious "Python.h: No such file" log line.
+      let py_inc = (^$vpy -c 'import sysconfig; print(sysconfig.get_paths()["include"])' | str trim)
+      if not ($py_inc | path join "Python.h" | path exists) {
+        error make {msg: $"Python.h not found at ($py_inc)/Python.h; install python3-dev (apt install python3-dev) and retry"}
+      }
+      ^$vpy setup.py build_ext --inplace
       cd $REPO_ROOT
 
       print "Staging..."
@@ -151,7 +169,7 @@ the C extension is built against glibc; cross-compiles are out of scope"
     } else {
       $"Built from ($versions.HGDB_URL) @ ($versions.HGDB_REV)"
     }
-    gh-publish-tarball $release $tarball $"uhdi ($release)" $"Prebuilt hgdb python bindings for ($platform).\n\n($source_note)"
+    gh-publish-tarball $REPO $release $tarball $"uhdi ($release)" $"Prebuilt hgdb python bindings for ($platform).\n\n($source_note)"
   }
 }
 
