@@ -24,15 +24,11 @@ def "main build" [demo: string] {
     ^./millw app.runMain Main o> /dev/null
   }
 
+  let r = (converter-runner)
   print "Converting UHDI -> HGLDD..."
-  with-env {PYTHONPATH: ($REPO_ROOT | path join "converter/src")} {
-    ^python3 -m uhdi_to_hgldd design.uhdi.json -o design.dd
-  }
-
+  with-env $r.env { ^$r.py -m uhdi_to_hgldd design.uhdi.json -o design.dd }
   print "Converting UHDI -> HGDB..."
-  with-env {PYTHONPATH: ($REPO_ROOT | path join "converter/src")} {
-    ^python3 -m uhdi_to_hgdb design.uhdi.json -o design.db
-  }
+  with-env $r.env { ^$r.py -m uhdi_to_hgdb design.uhdi.json -o design.db }
 
   let sv_files = (glob $"($dir)/*.sv")
   let sv_name = if ($sv_files | is-empty) { "<TopModule>.sv" } else { $sv_files.0 | path basename }
@@ -78,9 +74,10 @@ def "main simulate" [demo: string] {
     ^./millw app.runMain $sim_main
   }
   print "Re-running UHDI converters against sim-emitted UHDI..."
-  with-env {PYTHONPATH: ($REPO_ROOT | path join "converter/src")} {
-    ^python3 -m uhdi_to_hgldd design.uhdi.json -o design.dd
-    ^python3 -m uhdi_to_hgdb  design.uhdi.json -o design.db
+  let r = (converter-runner)
+  with-env $r.env {
+    ^$r.py -m uhdi_to_hgldd design.uhdi.json -o design.dd
+    ^$r.py -m uhdi_to_hgdb  design.uhdi.json -o design.db
   }
   print ""
   print $"Open in tywaves: tywaves design.vcd --hgldd-dir . --top-module ($top) --extra-scopes TOP svsimTestbench dut"
@@ -152,7 +149,21 @@ def demo-dir [demo: string]: nothing -> path {
   $dir
 }
 
-# Resolve order: cache > docker image > GitHub Releases.
+# Pick the python that should run the UHDI converters. Prefer the cli-venv
+# tools/install.sh sets up (has uhdi-converter pre-installed, no PYTHONPATH
+# fiddling). Fall back to system python3 + PYTHONPATH for dev users who
+# work straight off a clone without running install.sh.
+def converter-runner []: nothing -> record<py: string, env: record> {
+  let venv_py = ($env.HOME | path join ".local/uhdi-tools/cli-venv/bin/python3")
+  if ($venv_py | path exists) {
+    {py: ($venv_py | into string), env: {}}
+  } else {
+    {py: "python3", env: {PYTHONPATH: (($REPO_ROOT | path join "converter/src") | into string)}}
+  }
+}
+
+# Resolve order: cache > $FIRTOOL > install.sh prefix > docker image >
+# GitHub Releases.
 def download-firtool [dir: path] {
   let firtool = ($dir | path join ".bin/firtool")
   if ($firtool | path exists) {
@@ -161,7 +172,18 @@ def download-firtool [dir: path] {
   }
   mkdir ($dir | path join ".bin")
 
-  if (not (which docker | is-empty)) {
+  let from_env = ($env.FIRTOOL? | default "")
+  let from_install = ($env.HOME | path join ".local/uhdi-tools/bin/firtool")
+  let preinstalled = if (not ($from_env | is-empty)) and ($from_env | path exists) {
+    $from_env
+  } else if ($from_install | path exists) {
+    $from_install
+  } else { "" }
+
+  if (not ($preinstalled | is-empty)) {
+    print $"Linking firtool from ($preinstalled)..."
+    ^ln -sf $preinstalled $firtool
+  } else if (not (which docker | is-empty)) {
     print "Downloading firtool from Docker image..."
     docker-extract (image-ref) "/opt/circt/bin/firtool" $firtool
     chmod +x $firtool
@@ -179,7 +201,7 @@ def download-firtool [dir: path] {
     rm -rf $dl_dir
     chmod +x $firtool
   } else {
-    error make {msg: "need docker or gh CLI to download firtool"}
+    error make {msg: "need $FIRTOOL, tools/install.sh, docker, or gh CLI to provide firtool"}
   }
   print $"firtool: ($firtool)"
 }

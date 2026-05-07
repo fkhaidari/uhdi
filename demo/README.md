@@ -35,12 +35,14 @@ SystemVerilog harness. `./run.sh simulate` runs it end-to-end.
 ## Quick start
 
 ### Prerequisites
-- Java 21+ (mill needs it)
-- Python 3 (for the UHDI converters)
-- Either Docker / podman (preferred -- pulls a prebuilt image with firtool)
-  or `gh` CLI authenticated with a token that can read public releases
-- Verilator (only for `./run.sh simulate` -- chisel3.simulator builds
-  with it under the hood)
+- Java 21+ (mill needs it; `millw` self-bootstraps mill on first run,
+  no system-wide install needed)
+- Python 3.12 (for the UHDI converters; `install.sh` provisions a venv,
+  no global pip needed)
+- Either Docker / podman or `gh` CLI authenticated for public releases
+  (only as a fallback for `firtool`; `install.sh` already pulls it)
+- Verilator + `make` + a C++ compiler (only for `./run.sh simulate` --
+  chisel3.simulator drives verilator through a generated Makefile)
 
 ### Clone and install
 ```sh
@@ -49,8 +51,10 @@ cd uhdi
 tools/install.sh all --prefix ~/.local/uhdi-tools
 ```
 That installs `firtool` (with `--emit-uhdi`), the hgdb python bindings,
-the tywaves binary, and prints a JitPack snippet for the modified
-Chisel artefact. Add the snippet exports to your shell profile.
+the tywaves binary, the `hgdb` console debugger, and the
+`uhdi-to-hgldd` / `uhdi-to-hgdb` converters into a shared Python venv.
+Also prints a JitPack snippet for the modified Chisel artefact -- add
+the snippet exports to your shell profile.
 
 ### Run any demo
 ```sh
@@ -224,12 +228,15 @@ consume the same UHDI JSON** -- projected to `.dd` for tywaves and to
 
 The standalone layout under each `demo/<name>/` is a working starter.
 You can copy `demo/fsm/` (or any of them) anywhere on disk and use it
-as the skeleton of your own Chisel project.
+as the skeleton of your own Chisel project. `millw` and `run.sh` are
+symlinks to a shared `demo/millw` / `demo/run.sh` -- copy with
+`cp -rL demo/fsm my-chisel-project` so the symlinks resolve into
+regular files.
 
 ```text
 my-chisel-project/
-|-- build.mill           # mill module + chisel JitPack dep
-|-- millw                # mill bootstrap (4-line shell wrapper)
+|-- build.mill           # mill module + chisel JitPack dep + scopt workaround
+|-- millw                # self-bootstrapping mill launcher
 |-- .mill-version
 |-- app/
 |   `-- src/
@@ -261,13 +268,13 @@ Three things to adapt:
    what carry source-level info from `MyTop.scala` all the way to
    `design.uhdi.json`. Drop them and tywaves falls back to flat signals.
 
-2. **Update `run.sh`'s `UHDI_ROOT`.** In a copy that lives outside this
-   repo, the converters have to be reachable. Two options:
-   - Install the converter package: `pip install -e ./converter` from
-     a clone of `fkhaidari/uhdi`, then drop the `PYTHONPATH=` prefix
-     from the `python3 -m uhdi_to_hgldd` lines and just call
-     `uhdi-to-hgldd design.uhdi.json -o design.dd`.
-   - Or keep `PYTHONPATH=` and point `UHDI_ROOT` at the cloned repo.
+2. **Wire up the converters.** In a copy that lives outside this repo,
+   the converters have to be reachable. Easiest path: run
+   `tools/install.sh all` from a clone of `fkhaidari/uhdi` once -- it
+   sets up a venv with `uhdi-to-hgldd` / `uhdi-to-hgdb` on `PATH` and
+   in `~/.local/uhdi-tools/cli-venv/`, and `run.sh`'s shared runner
+   picks it up automatically. Or replace `run.sh` with a one-liner
+   that calls `uhdi-to-hgldd design.uhdi.json -o design.dd` directly.
 
 3. **Bring your own testbench.** Each demo ships an
    `app/src/<Top>Sim.scala` entrypoint -- a `chisel3.simulator`-based
