@@ -22,7 +22,10 @@ This repository hosts the out-of-tree pieces of the uhdi work:
   (`consumer-roadmap.md`).
 - **`tools/`** -- consumer-side installer (`install.sh` /
   `install.nu`) that pulls firtool, hgdb-py, and tywaves from a
-  GitHub Release; bench-side toolchain Docker image
+  GitHub Release and provisions a shared cli-venv with the upstream
+  hgdb console (`hgdb-debugger`), the libhgdb runtime tools
+  (`hgdb-replay`, `hgdb-db`), and the in-tree `uhdi-converter`
+  (`uhdi-to-hgldd`, `uhdi-to-hgdb`); bench-side toolchain Docker image
   (`ghcr.io/fkhaidari/uhdi-tools`) recipe pinned via
   `tools/versions.env`; per-component release scripts in
   `tools/release/`.

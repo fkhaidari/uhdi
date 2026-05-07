@@ -20,10 +20,18 @@ ships from the workspace via
 
 ## Installing the toolchain in a downstream Chisel project
 
-`tools/install.sh` is the consumer-side installer. It pulls every
-binary (firtool, hgdb-py, tywaves) from a single GitHub Release on
-`fkhaidari/uhdi` and prints the JitPack snippet for the chisel fork.
-**No Docker required on the consumer side.**
+`tools/install.sh` is the consumer-side installer. It pulls firtool,
+hgdb-py, and tywaves from a single GitHub Release on `fkhaidari/uhdi`,
+provisions a shared `<prefix>/cli-venv` with the upstream hgdb console
+(`hgdb-debugger`), the libhgdb runtime (`hgdb-replay` / `hgdb-db`), and
+the in-tree `uhdi-converter` (`uhdi-to-hgldd` / `uhdi-to-hgdb`), and
+prints the JitPack snippet for the chisel fork. **No Docker required
+on the consumer side.**
+
+Host prerequisites (preflighted by the installer with apt hints):
+`curl` + `tar` (used to bootstrap `nu` and fetch tarballs) and
+Python 3.12 (`_hgdb.so` is a cpython-3.12 wheel). Java is **not**
+needed -- `millw` self-bootstraps a JDK via coursier when demos build.
 
 ```sh
 git clone https://github.com/fkhaidari/uhdi
@@ -38,7 +46,7 @@ curl-pipe-bash is no longer supported (the install spans multiple
 `.nu` files).
 
 Subcommands: `firtool`, `hgdb-py`, `chisel` (prints snippet only),
-`tywaves`, `all`. Each accepts `--prefix DIR` (default
+`tywaves`, `hgdb-cli`, `all`. Each accepts `--prefix DIR` (default
 `$HOME/.local/uhdi-tools`); pin a release with `--release-tag` (one
 release on `fkhaidari/uhdi` carries firtool, hgdb-py, and tywaves) or
 `--chisel-tag` (separate, JitPack tag on `fkhaidari/chisel`). Hint
@@ -62,6 +70,14 @@ Caveats:
   `fkhaidari/surfer-tywaves`. Currently linux-x86_64 only. Other
   platforms fall back to `tools/release/release-tywaves.nu build`
   (needs Rust 1.75+).
+- `hgdb-cli` depends on `hgdb-py` (links the cpython-3.12 `_hgdb.so`
+  into the venv), so it inherits the linux-x86_64 restriction. It
+  pip-installs `hgdb-debugger` + `libhgdb` from PyPI into
+  `<prefix>/cli-venv` and exposes `hgdb`, `hgdb-replay`, `hgdb-db`,
+  `uhdi-to-hgldd`, and `uhdi-to-hgdb` as `<prefix>/bin/*` symlinks.
+  `install.sh all` runs preflight on `python3` (3.12 required) before
+  dispatching components, so a missing/wrong python fails fast rather
+  than silently skipping hgdb-cli.
 
 ## Running the image
 

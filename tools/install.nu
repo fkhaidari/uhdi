@@ -15,6 +15,7 @@ def "main all" [
   --force
 ] {
   let p = (resolve-prefix $prefix)
+  preflight-all
   let work_root = (mktemp -d | str trim)
   let did = (
     # hgdb-cli runs after hgdb-py because it symlinks the bindings.
@@ -90,6 +91,24 @@ def main [
 
 export def resolve-prefix [prefix: path]: nothing -> path {
   if ($prefix | is-empty) { $env.HOME | path join ".local/uhdi-tools" } else { $prefix }
+}
+
+# Surface python3.12 missing/wrong-version up front; dispatch's per-
+# component try/catch hides it otherwise (silent hgdb-cli skip).
+def preflight-all [] {
+  # hgdb-cli is linux-x86_64-only; non-linux platforms skip via dispatch.
+  if (detect-platform) != "linux-x86_64" { return }
+  check-python-312
+}
+
+def check-python-312 [] {
+  if ((which python3) | is-empty) {
+    error make {msg: "python3 not found on PATH (needed for hgdb-cli). Debian/Ubuntu: apt install python3 python3-venv. macOS: brew install python@3.12."}
+  }
+  let py_ver = (^python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" | str trim)
+  if $py_ver != "3.12" {
+    error make {msg: $"python3 is ($py_ver) but hgdb-cli needs cpython-3.12 \(the shipped _hgdb.so is built for 3.12\). Install python3.12 and re-run."}
+  }
 }
 
 # Swallows hgdb-py / chisel failures (allowed to skip on platform
@@ -336,11 +355,10 @@ def install-tywaves [p: path release_tag: string force: bool work_root: path] {
 
 # ---- hgdb-cli (hgdb console debugger + uhdi converters) -------------------
 
-# Single Python venv at $prefix/cli-venv shared by:
-#   1. upstream hgdb console debugger (hgdb-debugger PyPI + linked _hgdb.so),
-#   2. the in-tree uhdi-converter package (editable from $REPO_ROOT/converter,
-#      so demos can call `uhdi-to-hgldd` / `uhdi-to-hgdb` without setting
-#      PYTHONPATH and without relying on system-wide pip).
+# Shared $prefix/cli-venv with: hgdb-debugger (console + linked _hgdb.so),
+# libhgdb (hgdb-replay / hgdb-db as prebuilt console_scripts -- cheaper
+# than building from upstream cmake), and in-tree uhdi-converter
+# (editable; provides uhdi-to-hgldd / uhdi-to-hgdb).
 def install-hgdb-cli [p: path force: bool] {
   print "=== hgdb-cli ==="
   let hgdb_bin = ($p | path join "bin/hgdb")
@@ -349,11 +367,7 @@ def install-hgdb-cli [p: path force: bool] {
   let so = ($bindings | path join "build/lib.linux-x86_64-cpython-312/_hgdb.cpython-312-x86_64-linux-gnu.so")
 
   # ABI: shipped _hgdb.so is built for cpython-3.12; venv must match.
-  let py_ver = (^python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" | str trim)
-  if $py_ver != "3.12" {
-    print -e $"  python3 is ($py_ver) but _hgdb.so is cpython-3.12; install python3.12 and re-run. Skipping."
-    error make {msg: $"python version mismatch: ($py_ver)"}
-  }
+  check-python-312
 
   if (not ($bindings | path join "hgdb" | path exists)) or (not ($so | path exists)) {
     print -e "  hgdb python bindings not found. Run install.sh hgdb-py first."
@@ -363,7 +377,7 @@ def install-hgdb-cli [p: path force: bool] {
   if not (ensure-writable $hgdb_bin $force) { return }
   rm -rf $venv
 
-  print "  Building 3.12 venv + hgdb-debugger + uhdi-converter..."
+  print "  Building 3.12 venv + hgdb-debugger + libhgdb + uhdi-converter..."
   ^python3 -m venv $venv
   let pip = ($venv | path join "bin/pip")
   # PIP_CONFIG_FILE override sidesteps any site-wide artifactory proxy.
@@ -372,16 +386,21 @@ def install-hgdb-cli [p: path force: bool] {
   with-env {PIP_CONFIG_FILE: "/dev/null"} {
     ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" "websockets<11" prompt-toolkit pygments "jsonschema>=4.18" "referencing>=0.30"
     ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" --no-deps hgdb-debugger
+    ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" libhgdb
     ^$pip install --quiet --disable-pip-version-check --no-deps -e ($REPO_ROOT | path join "converter")
   }
 
   let sp = ($venv | path join "lib/python3.12/site-packages")
   ^ln -sfn ($bindings | path join "hgdb") ($sp | path join "hgdb")
   ^ln -sfn $so ($sp | path join ($so | path basename))
-  ^ln -sfn ($venv | path join "bin/hgdb") $hgdb_bin
+  ^ln -sfn ($venv | path join "bin/hgdb")          $hgdb_bin
+  ^ln -sfn ($venv | path join "bin/hgdb-replay")   ($p | path join "bin/hgdb-replay")
+  ^ln -sfn ($venv | path join "bin/hgdb-db")       ($p | path join "bin/hgdb-db")
   ^ln -sfn ($venv | path join "bin/uhdi-to-hgldd") ($p | path join "bin/uhdi-to-hgldd")
   ^ln -sfn ($venv | path join "bin/uhdi-to-hgdb")  ($p | path join "bin/uhdi-to-hgdb")
   print $"  Installed:  ($hgdb_bin)"
+  print $"  Installed:  ($p | path join "bin/hgdb-replay")"
+  print $"  Installed:  ($p | path join "bin/hgdb-db")"
   print $"  Installed:  ($p | path join "bin/uhdi-to-hgldd")"
   print $"  Installed:  ($p | path join "bin/uhdi-to-hgdb")"
 }

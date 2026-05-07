@@ -67,6 +67,11 @@ def "main simulate" [demo: string] {
   let sim_main = ($chisel_sim_files | first | path basename | str replace ".scala" "")
   let top = ($sim_main | str replace -r "Sim$" "")
 
+  # Preflight; otherwise svsim throws a 22-line Java stacktrace.
+  if ((which verilator) | is-empty) {
+    error make {msg: "verilator not found on PATH (Chisel testbench drives it; replay-debug needs the resulting design.vcd too). Debian/Ubuntu: sudo apt install verilator make g++"}
+  }
+
   print $"Simulating via Chisel testbench \(($sim_main)) -> design.vcd..."
   download-firtool $dir
   cd $dir

@@ -35,14 +35,25 @@ SystemVerilog harness. `./run.sh simulate` runs it end-to-end.
 ## Quick start
 
 ### Prerequisites
-- Java 21+ (mill needs it; `millw` self-bootstraps mill on first run,
-  no system-wide install needed)
-- Python 3.12 (for the UHDI converters; `install.sh` provisions a venv,
-  no global pip needed)
-- Either Docker / podman or `gh` CLI authenticated for public releases
-  (only as a fallback for `firtool`; `install.sh` already pulls it)
-- Verilator + `make` + a C++ compiler (only for `./run.sh simulate` --
-  chisel3.simulator drives verilator through a generated Makefile)
+
+A Linux x86_64 host with:
+
+- `git`, `curl`, `tar` -- to clone the repo and bootstrap the installer.
+- Python 3.12 -- the cli-venv that hosts `uhdi-to-hgldd`/`uhdi-to-hgdb`
+  and the upstream `hgdb`/`hgdb-replay`/`hgdb-db` runtime tools is built
+  on it (`_hgdb.so` ships as a cpython-3.12 wheel).
+- Verilator + `make` + a C++ compiler -- for `./run.sh simulate`. The
+  hgdb replay flow (`./run.sh debug-server`) reads the `design.vcd`
+  produced by `simulate`, so it inherits this requirement.
+
+On Debian / Ubuntu:
+```sh
+sudo apt install git curl ca-certificates python3 python3-venv \
+                 verilator make g++
+```
+
+Java is **not** needed on the host -- `millw` self-bootstraps a JDK
+under `~/.cache/coursier/` on first run.
 
 ### Clone and install
 ```sh
@@ -51,7 +62,8 @@ cd uhdi
 tools/install.sh all --prefix ~/.local/uhdi-tools
 ```
 That installs `firtool` (with `--emit-uhdi`), the hgdb python bindings,
-the tywaves binary, the `hgdb` console debugger, and the
+the tywaves binary, the upstream `hgdb` console debugger and `libhgdb`
+runtime tools (`hgdb-replay` / `hgdb-db`), and the
 `uhdi-to-hgldd` / `uhdi-to-hgdb` converters into a shared Python venv.
 Also prints a JitPack snippet for the modified Chisel artefact -- add
 the snippet exports to your shell profile.
@@ -155,17 +167,22 @@ into a virtual simulator that hosts the debug server.
 
 `tools/install.sh all` (or `tools/install.sh hgdb-cli`) handles setup:
 it builds a CPython 3.12 venv at `<prefix>/cli-venv`, pip-installs
-`hgdb-debugger` + deps, links the hgdb python bindings into it, and
-exposes `<prefix>/bin/hgdb` alongside `firtool` and `tywaves`.  The
-3.12 split is needed because the shipped `_hgdb.so` is built for
-cpython-3.12 -- the workspace `.venv` is 3.11 and can't load it.
+`hgdb-debugger` (console client), `libhgdb` (the runtime tools --
+`hgdb-replay` / `hgdb-db` ship as console_scripts), and the in-tree
+`uhdi-converter`. It then links the hgdb python bindings into the venv
+and symlinks `<prefix>/bin/hgdb`, `<prefix>/bin/hgdb-replay`,
+`<prefix>/bin/hgdb-db`, `<prefix>/bin/uhdi-to-hgldd`, and
+`<prefix>/bin/uhdi-to-hgdb` alongside `firtool` and `tywaves`.  The 3.12
+split is needed because the shipped `_hgdb.so` is built for cpython-3.12
+-- the workspace `.venv` is 3.11 and can't load it.
 
-Two terminals:
+Two terminals -- `./run.sh simulate` first to produce `design.vcd`
+(replay reads it; verilator must be installed):
 
 ```sh
 # Terminal A -- replay server. Listens on ws://localhost:8888.
 cd demo/gcd
-./run.sh simulate         # writes design.vcd, only needed once
+./run.sh simulate         # produces design.vcd via verilator; re-run when sources change
 ./run.sh debug-server     # foreground; Ctrl-C stops it
 ```
 
@@ -192,11 +209,13 @@ Commands are gdb-style: `b/break`, `c/continue`, `n/step-over`, `p/print`,
 `reverse-continue`/`rc`, `go <timestamp>`) -- the latter only meaningful
 under `hgdb-replay`.
 
-`hgdb-replay` and `hgdb-db` both come from the upstream [hgdb][hgdb-runtime]
-repo. They're already on `$PATH` if you installed via pipx; otherwise
-build them with `cmake --build build --target hgdb-replay-bin hgdb-db`.
-`./run.sh debug-server` resolves `hgdb-replay` via `$HGDB_REPLAY`, then
-`$PATH`, then a sibling `practice/hgdb/build/` checkout.
+`hgdb-replay` and `hgdb-db` come from the upstream [hgdb][hgdb-runtime]
+repo, but `tools/install.sh hgdb-cli` already ships them: they're
+console_scripts of the `libhgdb` PyPI wheel pulled into `<prefix>/cli-venv`,
+symlinked into `<prefix>/bin`. `./run.sh debug-server` resolves
+`hgdb-replay` via `$HGDB_REPLAY` (env override, e.g. for a local cmake
+build of upstream), then `$PATH`, then a sibling `practice/hgdb/build/`
+checkout.
 
 ### C. VS Code session -- `hgdb-debug` extension
 

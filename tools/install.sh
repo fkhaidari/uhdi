@@ -33,6 +33,21 @@ for a in "$@"; do
 done
 prefix="${prefix:-$HOME/.local/uhdi-tools}"
 
+# Preflight before nu bootstrap and downstream tarball fetches need them.
+missing=()
+for c in curl tar; do
+    command -v "$c" >/dev/null 2>&1 || missing+=("$c")
+done
+if (( ${#missing[@]} )); then
+    {
+        echo "ERROR: missing prerequisite(s): ${missing[*]}"
+        echo "  Debian/Ubuntu: sudo apt-get install -y ${missing[*]} ca-certificates"
+        echo "  RHEL/Fedora:   sudo dnf install -y ${missing[*]} ca-certificates"
+        echo "  macOS:         brew install ${missing[*]}"
+    } >&2
+    exit 1
+fi
+
 # Find or fetch nu. Order: PATH > prefix-installed > download.
 if command -v nu &>/dev/null; then
     NU="$(command -v nu)"
