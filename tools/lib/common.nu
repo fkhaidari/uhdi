@@ -68,6 +68,18 @@ export def image-ref []: nothing -> string {
   $"ghcr.io/(repo-owner)/uhdi-tools:($tag)"
 }
 
+# `http get` with $GITHUB_TOKEN bearer auth if set. The unauthenticated
+# 60 req/hr api.github.com limit blows through fast on shared CI runners
+# (multiple jobs share an egress IP), so callers should route every API
+# read through this wrapper rather than calling `http get` directly.
+export def gh-api-get [url: string] {
+  if (($env.GITHUB_TOKEN? | default "") | is-empty) {
+    http get $url
+  } else {
+    http get --headers ["Authorization" $"Bearer ($env.GITHUB_TOKEN)"] $url
+  }
+}
+
 # `tag` empty or "latest" -> hit /releases/latest; otherwise pass through.
 # Errors out if the repo has no releases yet.
 export def resolve-release-tag [repo: string tag: string]: nothing -> string {
@@ -75,7 +87,7 @@ export def resolve-release-tag [repo: string tag: string]: nothing -> string {
     return $tag
   }
   let resolved = (
-    http get $"https://api.github.com/repos/($repo)/releases/latest"
+    gh-api-get $"https://api.github.com/repos/($repo)/releases/latest"
     | get tag_name?
   )
   if ($resolved | is-empty) {
@@ -93,7 +105,7 @@ export def find-asset-url [
 ]: nothing -> string {
   let release = (
     try {
-      http get $"https://api.github.com/repos/($repo)/releases/tags/($tag)"
+      gh-api-get $"https://api.github.com/repos/($repo)/releases/tags/($tag)"
     } catch {
       return ""
     }
