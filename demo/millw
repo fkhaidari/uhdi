@@ -1,0 +1,16 @@
+#!/bin/sh
+# Self-bootstrapping mill wrapper. Reads .mill-version, downloads the
+# matching launcher from Maven Central into ~/.cache/uhdi-demo/ on first
+# run, then execs it -- so users don't need mill installed system-wide.
+set -eu
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+MILL_VERSION=$(cat "$SCRIPT_DIR/.mill-version" 2>/dev/null || echo 1.0.6)
+MILL=$HOME/.cache/uhdi-demo/mill-$MILL_VERSION
+if [ ! -x "$MILL" ]; then
+    mkdir -p "$(dirname "$MILL")"
+    url=https://repo1.maven.org/maven2/com/lihaoyi/mill-dist/$MILL_VERSION/mill-dist-$MILL_VERSION-mill.sh
+    echo "Bootstrapping mill $MILL_VERSION..." >&2
+    curl -fsSL "$url" -o "$MILL"
+    chmod +x "$MILL"
+fi
+exec "$MILL" "$@"

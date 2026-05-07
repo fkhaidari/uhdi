@@ -334,8 +334,13 @@ def install-tywaves [p: path release_tag: string force: bool work_root: path] {
   } $p $release_tag $force $work_root
 }
 
-# ---- hgdb-cli (upstream `hgdb` console debugger) ---------------------------
+# ---- hgdb-cli (hgdb console debugger + uhdi converters) -------------------
 
+# Single Python venv at $prefix/cli-venv shared by:
+#   1. upstream hgdb console debugger (hgdb-debugger PyPI + linked _hgdb.so),
+#   2. the in-tree uhdi-converter package (editable from $REPO_ROOT/converter,
+#      so demos can call `uhdi-to-hgldd` / `uhdi-to-hgdb` without setting
+#      PYTHONPATH and without relying on system-wide pip).
 def install-hgdb-cli [p: path force: bool] {
   print "=== hgdb-cli ==="
   let hgdb_bin = ($p | path join "bin/hgdb")
@@ -358,22 +363,27 @@ def install-hgdb-cli [p: path force: bool] {
   if not (ensure-writable $hgdb_bin $force) { return }
   rm -rf $venv
 
-  print "  Building 3.12 venv + hgdb-debugger..."
+  print "  Building 3.12 venv + hgdb-debugger + uhdi-converter..."
   ^python3 -m venv $venv
   let pip = ($venv | path join "bin/pip")
   # PIP_CONFIG_FILE override sidesteps any site-wide artifactory proxy.
   # `--no-deps` on hgdb-debugger because it declares a `hgdb[client]`
   # extra that doesn't exist on PyPI -- the symlinks below provide it.
   with-env {PIP_CONFIG_FILE: "/dev/null"} {
-    ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" "websockets<11" prompt-toolkit pygments
+    ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" "websockets<11" prompt-toolkit pygments "jsonschema>=4.18" "referencing>=0.30"
     ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" --no-deps hgdb-debugger
+    ^$pip install --quiet --disable-pip-version-check --no-deps -e ($REPO_ROOT | path join "converter")
   }
 
   let sp = ($venv | path join "lib/python3.12/site-packages")
   ^ln -sfn ($bindings | path join "hgdb") ($sp | path join "hgdb")
   ^ln -sfn $so ($sp | path join ($so | path basename))
   ^ln -sfn ($venv | path join "bin/hgdb") $hgdb_bin
+  ^ln -sfn ($venv | path join "bin/uhdi-to-hgldd") ($p | path join "bin/uhdi-to-hgldd")
+  ^ln -sfn ($venv | path join "bin/uhdi-to-hgdb")  ($p | path join "bin/uhdi-to-hgdb")
   print $"  Installed:  ($hgdb_bin)"
+  print $"  Installed:  ($p | path join "bin/uhdi-to-hgldd")"
+  print $"  Installed:  ($p | path join "bin/uhdi-to-hgdb")"
 }
 
 # ---- end-of-run summary ----------------------------------------------------
