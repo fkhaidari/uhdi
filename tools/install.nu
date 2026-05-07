@@ -274,7 +274,7 @@ def resolve-chisel-tag []: nothing -> string {
   let from_tags = (
     try {
       pick-uhdi-tag (
-        http get "https://api.github.com/repos/fkhaidari/chisel/tags?per_page=100"
+        gh-api-get "https://api.github.com/repos/fkhaidari/chisel/tags?per_page=100"
         | get name
       )
     } catch { "" }
@@ -283,7 +283,7 @@ def resolve-chisel-tag []: nothing -> string {
   let from_releases = (
     try {
       pick-uhdi-tag (
-        http get "https://api.github.com/repos/fkhaidari/chisel/releases?per_page=30"
+        gh-api-get "https://api.github.com/repos/fkhaidari/chisel/releases?per_page=30"
         | get tag_name
       )
     } catch { "" }
