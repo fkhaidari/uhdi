@@ -274,7 +274,7 @@ Three things to adapt:
      val uhdi = "design.uhdi.json"
      ChiselStage.emitSystemVerilog(
        new MyTop,
-       args = Array("--with-debug-intrinsics"),
+       args = Array("--with-experimental-debug-intrinsics"),
        firtoolOpts = Array(
          "-g", "-O=debug",
          "--emit-uhdi", s"--uhdi-output-file=$uhdi",
@@ -283,7 +283,7 @@ Three things to adapt:
      )
    }
    ```
-   `--with-debug-intrinsics` (Chisel) and `-g -O=debug` (firtool) are
+   `--with-experimental-debug-intrinsics` (Chisel) and `-g -O=debug` (firtool) are
    what carry source-level info from `MyTop.scala` all the way to
    `design.uhdi.json`. Drop them and tywaves falls back to flat signals.
 

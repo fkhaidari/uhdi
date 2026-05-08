@@ -17,9 +17,9 @@ object app extends ScalaModule {
   // into com.github.scopt.scopt_2.13:scopt_2.13, producing 401/404s. Drop
   // the broken transitive and side-load the jar via unmanagedClasspath.
   def mvnDeps = Seq(
-    mvn"com.github.fkhaidari.chisel::chisel:v0.1.2-uhdi"
+    mvn"com.github.fkhaidari.chisel::chisel:v0.1.3-uhdi"
       .exclude("com.github.scopt" -> "scopt_2.13"),
-    mvn"com.github.fkhaidari.chisel:chisel-plugin_2.13.18:v0.1.2-uhdi",
+    mvn"com.github.fkhaidari.chisel:chisel-plugin_2.13.18:v0.1.3-uhdi",
   )
 
   def scoptJar = Task {

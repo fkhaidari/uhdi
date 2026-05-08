@@ -46,7 +46,7 @@ object Main extends App {
   val uhdi = "design.uhdi.json"
   ChiselStage.emitSystemVerilog(
     new TrafficLight,
-    args = Array("--with-debug-intrinsics"),
+    args = Array("--with-experimental-debug-intrinsics"),
     firtoolOpts = Array("-g", "-O=debug", "--emit-uhdi", s"--uhdi-output-file=$uhdi", "-o", "TrafficLight.sv")
   )
   println(uhdi + " + TrafficLight.sv written")
