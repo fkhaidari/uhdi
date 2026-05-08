@@ -35,8 +35,8 @@ _TYWAVES = Pipeline(
 _UHDI = Pipeline(
     name="uhdi",
     scala_version="2.13.14",
-    chisel_dep="org.chipsalliance::chisel:7.1.1+199-61414bab-SNAPSHOT",
-    plugin_dep="org.chipsalliance:::chisel-plugin:7.1.1+199-61414bab-SNAPSHOT",
+    chisel_dep="org.chipsalliance::chisel:7.1.1+208-2aa674c8-SNAPSHOT",
+    plugin_dep="org.chipsalliance:::chisel-plugin:7.1.1+208-2aa674c8-SNAPSHOT",
     repositories=("ivy2Local",),
 )
 

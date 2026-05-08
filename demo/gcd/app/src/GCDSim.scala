@@ -25,7 +25,7 @@ object GCDSim extends App with ChiselSim {
 
   simulate(
     new GCD,
-    chiselOpts = Array("--with-debug-intrinsics"),
+    chiselOpts = Array("--with-experimental-debug-intrinsics"),
     firtoolOpts = Array(
       "-g", "-O=debug",
       "--emit-uhdi",

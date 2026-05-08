@@ -25,7 +25,7 @@ object MemControllerSim extends App with ChiselSim {
 
   simulate(
     new MemController,
-    chiselOpts = Array("--with-debug-intrinsics"),
+    chiselOpts = Array("--with-experimental-debug-intrinsics"),
     firtoolOpts = Array(
       "-g", "-O=debug",
       "--emit-uhdi",
