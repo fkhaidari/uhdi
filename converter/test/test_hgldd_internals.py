@@ -1141,3 +1141,222 @@ def test_convert_hdl_file_index_kept_when_no_locations_at_all():
     header = out["HGLDD"]
     hdl_idx = header["hdl_file_index"] - 1
     assert header["file_info"][hdl_idx] == "Bare.sv"
+
+
+# ---- sourceLangType / enum_defs / enum_def_ref --------------------------
+#
+# These tests exercise the second-iteration UHDI -> HGLDD pipeline,
+# covering metadata that surfaces in tywaves' waveform when the
+# CIRCT-side EmitUHDI produces sourceLangType + dbg.enumdef entries.
+# Fixtures mirror the Alu example in text/visual/experiments/alu and the
+# rameloni Tywaves-Chisel HGLDD shape it's compared against.
+
+
+def _alu_with_sourcelang_and_enum():
+    """UHDI document approximating Alu after the producer-side update:
+    parent aggregate `var_Alu_io` plus synthetic per-field Variables,
+    an AluOp enum type, and sourceLangType strings on both the module
+    scope and every chisel-repr of a Variable."""
+    doc = _doc_skeleton()
+    doc["top"] = ["Alu"]
+    doc["types"]["uint2"] = {"kind": "uint", "width": 2}
+    doc["types"]["uint8"] = {"kind": "uint", "width": 8}
+    doc["types"]["bool"] = {"kind": "uint", "width": 1}
+    doc["types"]["AluOp"] = {
+        "kind": "enum",
+        "underlyingTypeRef": "uint2",
+        "variants": {"0": "ADD", "1": "SUB", "2": "AND", "3": "OR"},
+    }
+    doc["types"]["Alu_io_in"] = {
+        "kind": "struct",
+        "members": [
+            {"name": "a", "typeRef": "uint8", "flipped": True},
+            {"name": "b", "typeRef": "uint8", "flipped": True},
+            {"name": "op", "typeRef": "AluOp", "flipped": True},
+        ],
+    }
+    doc["types"]["Alu_io"] = {
+        "kind": "struct",
+        "members": [
+            {"name": "in", "typeRef": "Alu_io_in"},
+            {"name": "out", "typeRef": "uint8", "flipped": True},
+        ],
+    }
+    # Parent aggregate Variable.
+    doc["variables"]["var_io"] = {
+        "typeRef": "Alu_io", "bindKind": "node", "ownerScopeRef": "Alu",
+        "representations": {
+            "chisel": {
+                "name": "io",
+                "sourceLangType": {"typeName": "IO[AnonymousBundle]"},
+            },
+            "verilog": {"value": {"exprRef": "io_expr"}},
+        },
+    }
+    # Synthetic per-field leaves.
+    doc["variables"]["var_io__in"] = {
+        "typeRef": "Alu_io_in", "bindKind": "synthetic", "ownerScopeRef": "Alu",
+        "representations": {"chisel": {
+            "name": "in", "sourceLangType": {"typeName": "IO[Operands]"}}},
+    }
+    doc["variables"]["var_io__in__a"] = {
+        "typeRef": "uint8", "bindKind": "synthetic", "ownerScopeRef": "Alu",
+        "representations": {"chisel": {
+            "name": "a", "sourceLangType": {"typeName": "IO[UInt<8>]"}}},
+    }
+    doc["variables"]["var_io__in__b"] = {
+        "typeRef": "uint8", "bindKind": "synthetic", "ownerScopeRef": "Alu",
+        "representations": {"chisel": {
+            "name": "b", "sourceLangType": {"typeName": "IO[UInt<8>]"}}},
+    }
+    doc["variables"]["var_io__in__op"] = {
+        "typeRef": "AluOp", "bindKind": "synthetic", "ownerScopeRef": "Alu",
+        "representations": {"chisel": {
+            "name": "op", "sourceLangType": {"typeName": "IO[AluOp]"}}},
+    }
+    doc["variables"]["var_io__out"] = {
+        "typeRef": "uint8", "bindKind": "synthetic", "ownerScopeRef": "Alu",
+        "representations": {"chisel": {
+            "name": "out", "sourceLangType": {"typeName": "IO[UInt<8>]"}}},
+    }
+    # Top-level wire `res` to exercise sourceLangType on a non-aggregate
+    # Variable (matches the Wire[UInt<8>] case in the rameloni golden).
+    doc["variables"]["var_res"] = {
+        "typeRef": "uint8", "bindKind": "wire", "ownerScopeRef": "Alu",
+        "representations": {
+            "chisel": {
+                "name": "res",
+                "sourceLangType": {"typeName": "Wire[UInt<8>]"},
+            },
+            "verilog": {"value": {"sigName": "res"}},
+        },
+    }
+    doc["expressions"]["io_expr"] = {
+        "opcode": "'{",
+        "operands": [{"sigName": "io_in_a"}, {"sigName": "io_out"}],
+    }
+    doc["scopes"]["Alu"] = {
+        "name": "Alu", "kind": "module",
+        "representations": {
+            "chisel": {"name": "Alu",
+                       "sourceLangType": {"typeName": "Alu"}},
+            "verilog": {"name": "Alu"},
+        },
+        "variableRefs": ["var_io", "var_io__in", "var_io__in__a",
+                         "var_io__in__b", "var_io__in__op", "var_io__out",
+                         "var_res"],
+    }
+    return doc
+
+
+def _module_object(out):
+    return next(o for o in out["objects"] if o.get("kind") == "module")
+
+
+def _struct_object(out, obj_name):
+    return next(o for o in out["objects"]
+                if o.get("kind") == "struct" and o.get("obj_name") == obj_name)
+
+
+def test_convert_emits_sourcelangtype_on_module_scope():
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    mod = _module_object(out)
+    assert mod["source_lang_type_info"] == {"type_name": "Alu"}
+
+
+def test_convert_emits_enum_defs_on_module():
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    mod = _module_object(out)
+    # First (and only) enum referenced from this scope -> id 0.
+    assert mod["enum_defs"] == {
+        "0": {"0": "ADD", "1": "SUB", "2": "AND", "3": "OR"}
+    }
+
+
+def test_convert_emits_sourcelangtype_on_non_aggregate_variable():
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    mod = _module_object(out)
+    res = next(pv for pv in mod["port_vars"] if pv["var_name"] == "res")
+    assert res["source_lang_type_info"] == {"type_name": "Wire[UInt<8>]"}
+
+
+def test_convert_skips_synthetic_variables_as_top_level_port_vars():
+    """Synthetic per-field Variables surface only through the struct's
+    port_vars, never as standalone HGLDD port_vars on the module."""
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    mod = _module_object(out)
+    names = {pv["var_name"] for pv in mod["port_vars"]}
+    assert names == {"io", "res"}
+
+
+def test_convert_propagates_sourcelangtype_to_struct_members():
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    inner = _struct_object(out, "Alu_io_in")
+    by_name = {pv["var_name"]: pv for pv in inner["port_vars"]}
+    assert by_name["a"]["source_lang_type_info"] == {
+        "type_name": "IO[UInt<8>]"}
+    assert by_name["b"]["source_lang_type_info"] == {
+        "type_name": "IO[UInt<8>]"}
+    assert by_name["op"]["source_lang_type_info"] == {
+        "type_name": "IO[AluOp]"}
+
+
+def test_convert_sets_enum_def_ref_on_struct_member():
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    inner = _struct_object(out, "Alu_io_in")
+    op_pv = next(pv for pv in inner["port_vars"] if pv["var_name"] == "op")
+    assert op_pv["enum_def_ref"] == 0
+
+
+def test_convert_propagates_sourcelangtype_to_nested_struct_member():
+    """Outer struct's `in` member picks up IO[Operands] from the
+    synthetic per-field Variable -- which itself wraps another struct."""
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    outer = _struct_object(out, "Alu_io")
+    in_pv = next(pv for pv in outer["port_vars"] if pv["var_name"] == "in")
+    assert in_pv["source_lang_type_info"] == {"type_name": "IO[Operands]"}
+
+
+def test_convert_omits_enum_defs_when_no_enum_types_referenced():
+    """Module without enum-typed Variables should not get an empty
+    enum_defs object (mirrors rameloni: absent rather than {}).
+    Regression guard for the pre-pass."""
+    doc = _doc_skeleton()
+    doc["types"]["uint8"] = {"kind": "uint", "width": 8}
+    doc["variables"]["v"] = {
+        "typeRef": "uint8", "bindKind": "wire", "ownerScopeRef": "Top",
+        "representations": {"chisel": {"name": "v"},
+                            "verilog": {"value": {"sigName": "v"}}},
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["v"],
+    }
+    out = hgldd_convert(doc)
+    mod = _module_object(out)
+    assert "enum_defs" not in mod
+
+
+def test_convert_omits_sourcelangtype_when_typename_missing():
+    """A repr-record without `sourceLangType` (legacy / not-yet-updated
+    UHDI) must not surface source_lang_type_info in HGLDD."""
+    doc = _doc_skeleton()
+    doc["types"]["uint8"] = {"kind": "uint", "width": 8}
+    doc["variables"]["v"] = {
+        "typeRef": "uint8", "bindKind": "wire", "ownerScopeRef": "Top",
+        "representations": {"chisel": {"name": "v"},
+                            "verilog": {"value": {"sigName": "v"}}},
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["v"],
+    }
+    out = hgldd_convert(doc)
+    mod = _module_object(out)
+    assert "source_lang_type_info" not in mod
+    pv = next(p for p in mod["port_vars"] if p["var_name"] == "v")
+    assert "source_lang_type_info" not in pv

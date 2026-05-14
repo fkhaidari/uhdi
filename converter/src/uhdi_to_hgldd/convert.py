@@ -57,6 +57,101 @@ class _Context(BaseContext):
     files: _FileInfo = field(default_factory=_FileInfo)
     aggregated_leaves: set = field(default_factory=set)
     hdl_file_path: Optional[str] = None
+    # Per-scope enum-id pool: `(scope_id, enum_type_ref) -> int`. Reset
+    # while emitting each scope_object so two modules referencing the
+    # same enum each number from 0 (mirrors rameloni HGLDD output).
+    enum_id_by_scope_type: Dict[Tuple[str, str], int] = field(default_factory=dict)
+    # Mirror of enum_id_by_scope_type as the HGLDD `enum_defs` payload
+    # per scope: `scope_id -> {"<int>": {"<int>": "<name>", ...}, ...}`.
+    enum_defs_by_scope: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    # `parent_var_id -> {field_name -> synthetic_var_record}`. Populated
+    # once in convert(); consumed by struct/port emitters to surface
+    # per-field source_lang_type_info and enum_def_ref pulled from the
+    # producer-emitted synthetic Variables.
+    subfields_by_parent: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
+
+def _source_lang_type(repr_obj: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Translate UHDI `representations[k].sourceLangType` -> HGLDD
+    `source_lang_type_info`. Returns None when absent or when typeName
+    is empty (HGLDD treats `type_name` as required on the object)."""
+    if not repr_obj:
+        return None
+    slt = repr_obj.get("sourceLangType")
+    if not slt or not slt.get("typeName"):
+        return None
+    # First-pass: project typeName only. `params` is preserved on the
+    # UHDI side (see uhdi-spec §6.4 SourceLangType) but Tywaves does not
+    # render it yet; surface in a follow-up when there is a consumer.
+    return {"type_name": slt["typeName"]}
+
+
+def _populate_enum_index(ctx: "_Context") -> None:
+    """Walk every scope's variables (and their struct members) to find
+    enum-typed references; assign sequential per-scope ids; cache both
+    `(scope_id, type_ref) -> id` and the inverse `scope_id -> enum_defs`
+    HGLDD payload. Runs once in convert() before struct/scope emission
+    so _struct_objects (which renders before _scope_object) can read
+    enum_def_ref from the same index."""
+    for scope_id, scope in ctx.scopes.items():
+        if scope.get("kind") not in ("module", "extmodule"):
+            continue
+        defs: Dict[str, Any] = {}
+        next_eid = 0
+
+        def _register(type_ref: str) -> None:
+            nonlocal next_eid
+            if not type_ref:
+                return
+            td = ctx.types.get(type_ref) or {}
+            if td.get("kind") != "enum":
+                return
+            key = (scope_id, type_ref)
+            if key in ctx.enum_id_by_scope_type:
+                return
+            ctx.enum_id_by_scope_type[key] = next_eid
+            defs[str(next_eid)] = dict(td.get("variants") or {})
+            next_eid += 1
+
+        for vid, v in _ordered_scope_vars(scope, scope_id, ctx):
+            _register(v.get("typeRef", ""))
+            td = ctx.types.get(v.get("typeRef", "") or "") or {}
+            stack = [td] if td.get("kind") == "struct" else []
+            seen_types: set = set()
+            while stack:
+                cur = stack.pop()
+                for m in cur.get("members") or []:
+                    mt = m.get("typeRef", "")
+                    _register(mt)
+                    if mt in seen_types:
+                        continue
+                    seen_types.add(mt)
+                    nested = ctx.types.get(mt) or {}
+                    if nested.get("kind") == "struct":
+                        stack.append(nested)
+        if defs:
+            ctx.enum_defs_by_scope[scope_id] = defs
+
+
+def _populate_subfields_index(ctx: "_Context") -> None:
+    """Index every `bindKind=="synthetic"` Variable under
+    `subfields_by_parent[parent_id][field_name]`. The producer emits
+    synthetic ids as `<parent_id>__<flat_field_path>`, where the leaf
+    chisel-repr `name` is the bare field name. Recurses naturally
+    because nested struct levels produce ids like
+    `parent__in__a` -> parsed parent `parent__in` (a synthetic of its
+    own, itself indexed under `parent`)."""
+    for vid, v in ctx.variables.items():
+        if v.get("bindKind") != "synthetic":
+            continue
+        if "__" not in vid:
+            continue
+        parent_id, _, _ = vid.rpartition("__")
+        name = ((v.get("representations", {}) or {})
+                .get(ctx.authoring_repr, {}) or {}).get("name")
+        if not name:
+            continue
+        ctx.subfields_by_parent.setdefault(parent_id, {})[name] = v
 
 
 # Map UHDI `language` -> file extension used to synthesize a missing
@@ -238,12 +333,42 @@ def _struct_objects(ctx):
         for tid, cands in struct_candidates.items()
     }
 
+    # Map struct typeRef -> parent_var_id whose typeRef is that struct.
+    # Lets us locate the right synthetic-Variable pool when emitting
+    # per-field source_lang_type_info on this struct's port_vars.
+    struct_parent_by_tid: Dict[str, str] = {}
+    for parent_id, v in ctx.variables.items():
+        tref = v.get("typeRef", "")
+        if not tref or v.get("bindKind") == "synthetic":
+            continue
+        if (ctx.types.get(tref) or {}).get("kind") == "struct":
+            struct_parent_by_tid.setdefault(tref, parent_id)
+    # Nested structs: a synthetic Variable for an outer field whose own
+    # value is another struct serves as the parent for that inner struct.
+    for parent_id, v in ctx.variables.items():
+        if v.get("bindKind") != "synthetic":
+            continue
+        tref = v.get("typeRef", "")
+        if (tref and (ctx.types.get(tref) or {}).get("kind") == "struct"):
+            struct_parent_by_tid.setdefault(tref, parent_id)
+
     out = []
     for tid in _topo_sorted_struct_ids(ctx):
         d = ctx.types.get(tid) or {}
         if d.get("kind") != "struct":  # pragma: no cover
             continue
         struct_loc, owner = struct_info.get(tid, (None, ""))
+        struct_parent = struct_parent_by_tid.get(tid)
+        subfields = (ctx.subfields_by_parent.get(struct_parent, {})
+                     if struct_parent else {})
+        # Fallback owner for enum_def_ref lookup: the struct may have no
+        # struct-with-hgl_loc owner (struct_info empty when none of its
+        # Variables expose a chisel location), but its parent Variable
+        # always carries an ownerScopeRef. Use that to find the right
+        # enum_defs table on the owning scope.
+        enum_owner = owner or (
+            ctx.variables.get(struct_parent, {}).get("ownerScopeRef", "")
+            if struct_parent else "")
         port_vars = []
         for m in d.get("members") or []:
             name = m.get("name", "")
@@ -254,6 +379,23 @@ def _struct_objects(ctx):
                        else scope_var_loc.get((owner, name)))
             if (mloc := backing or struct_loc):
                 pv["hgl_loc"] = mloc
+            # Synthetic Variable for this field carries the per-leaf
+            # source-language metadata. Resolve it lazily so structs
+            # whose producer didn't emit synthetics still get the
+            # legacy (type-only) port_var.
+            if (sub := subfields.get(name)):
+                sub_hgl = ((sub.get("representations", {}) or {})
+                           .get(ctx.authoring_repr, {}) or {})
+                if slti := _source_lang_type(sub_hgl):
+                    pv["source_lang_type_info"] = slti
+                # enum_def_ref pulled from the member's own typeRef
+                # (more reliable than the synthetic's typeRef, which
+                # matches but is also more rewriteable in future).
+                mref = m.get("typeRef", "")
+                if enum_owner and (
+                        eid := ctx.enum_id_by_scope_type.get((enum_owner, mref))
+                ) is not None:
+                    pv["enum_def_ref"] = eid
             port_vars.append(pv)
         obj = {"kind": "struct", "obj_name": tid, "port_vars": port_vars}
         if struct_loc:
@@ -277,6 +419,12 @@ def _first_vector_element_sig(hdl_value, ctx):
 
 def _variable_to_port_var(var_id, var, ctx):
     """Convert variable to HGLDD port_var entry."""
+    # Synthetic variables (per-field aggregate leaves emitted by the
+    # producer for source-language metadata only) do not stand alone in
+    # HGLDD: their info already rides on the parent struct's port_vars
+    # via _struct_objects. Skip here to avoid duplication.
+    if var.get("bindKind") == "synthetic":
+        return None
     reprs = var.get("representations", {}) or {}
     hgl = reprs.get(ctx.authoring_repr, {}) or {}
     hdl = reprs.get(ctx.simulation_repr, {}) or {}
@@ -319,6 +467,16 @@ def _variable_to_port_var(var_id, var, ctx):
         out["hgl_loc"] = loc
     if loc := _loc_to_hgldd(hdl.get("location"), ctx.simulation_repr, ctx):
         out["hdl_loc"] = loc
+    if slti := _source_lang_type(hgl):
+        out["source_lang_type_info"] = slti
+    # enum_def_ref: cross-reference into the owning scope's enum_defs
+    # table. The numeric id is assigned per-scope in _scope_object, so
+    # only a port_var whose owner scope already populated the index
+    # gets the ref.
+    owner = var.get("ownerScopeRef", "")
+    type_ref = var.get("typeRef", "")
+    if owner and (eid := ctx.enum_id_by_scope_type.get((owner, type_ref))) is not None:
+        out["enum_def_ref"] = eid
     return out
 
 
@@ -402,6 +560,10 @@ def _scope_object(scope_id, scope, ctx):
         out["hgl_loc"] = loc
     if loc := _loc_to_hgldd(hdl.get("location"), ctx.simulation_repr, ctx):
         out["hdl_loc"] = loc
+    if slti := _source_lang_type(hgl):
+        out["source_lang_type_info"] = slti
+    if defs := ctx.enum_defs_by_scope.get(scope_id):
+        out["enum_defs"] = defs
 
     # Dedupe by var_name keeping first occurrence (pool may carry
     # duplicate records with different audit fields; native coalesces).
@@ -469,6 +631,8 @@ def convert(uhdi):
 
     try:
         ctx.aggregated_leaves = _collect_aggregated_leaves(ctx)
+        _populate_subfields_index(ctx)
+        _populate_enum_index(ctx)
         for sid in uhdi.get("top", []):
             if sid not in ctx.scopes:
                 raise HGLDDConversionError(
