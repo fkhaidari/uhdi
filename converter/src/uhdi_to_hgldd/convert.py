@@ -281,11 +281,6 @@ def _variable_to_port_var(var_id, var, ctx):
     hgl = reprs.get(ctx.authoring_repr, {}) or {}
     hdl = reprs.get(ctx.simulation_repr, {}) or {}
 
-    # Output ports DCE'd to a backing signal: native HGLDD doesn't emit them.
-    if (var.get("bindKind") == "port"
-            and var.get("direction") == "output" and not hdl):
-        return None
-
     # Skip flat ports already represented as leaves of an aggregate's
     # value tree (native emits only the aggregate).
     hdl_value = hdl.get("value") if isinstance(hdl, dict) else None

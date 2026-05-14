@@ -576,10 +576,12 @@ def test_convert_handles_extmodule_scope():
     assert obj.get("isExtModule") == 1
 
 
-def test_convert_skips_output_port_without_verilog_repr():
-    """An output port with no verilog repr block (DCE'd in our flow)
-    must not appear in port_vars -- otherwise the HGLDD output diverges
-    from native, which only emits what survives DCE."""
+def test_convert_keeps_output_port_without_verilog_repr():
+    """An output port with no verilog repr block must still appear in
+    port_vars -- Bundle outputs whose firtool-UHDI emit happens to omit
+    the verilog block (e.g. io_out of an aggregate IO) used to vanish.
+    Keep them but emit no value/hdl_loc; the schema is correct, and the
+    consumer can tell sim-binding is absent."""
     doc = _doc_skeleton()
     doc["types"]["u8"] = {"kind": "uint", "width": 8}
     doc["variables"]["v_q"] = {
@@ -587,7 +589,7 @@ def test_convert_skips_output_port_without_verilog_repr():
         "ownerScopeRef": "Top",
         "representations": {
             "chisel": {"name": "q"},
-            # No verilog repr -- DCE collapsed this output.
+            # No verilog repr.
         },
     }
     doc["scopes"]["Top"] = {
@@ -598,8 +600,9 @@ def test_convert_skips_output_port_without_verilog_repr():
     }
     out = hgldd_convert(doc)
     obj = next(o for o in out["objects"] if o.get("obj_name") == "Top")
-    names = [pv["var_name"] for pv in obj["port_vars"]]
-    assert "q" not in names
+    pv = next(p for p in obj["port_vars"] if p["var_name"] == "q")
+    assert "value" not in pv
+    assert "hdl_loc" not in pv
 
 
 def test_convert_renames_vector_var_after_first_leaf():
@@ -867,11 +870,10 @@ def test_convert_inline_scope_with_unique_name_no_uniquify_collision():
     assert "hgl_loc" in inline_child
 
 
-def test_convert_inline_scope_skips_dce_output_port():
-    """An inline scope can also contain a DCE'd output port (no
-    verilog repr); the inline emitter must use the same skip rule
-    as the parent so the inline port_vars stay shape-aligned with
-    native."""
+def test_convert_inline_scope_keeps_output_port_without_verilog_repr():
+    """Same as the module-level case but for inline scopes: an output
+    port whose UHDI variable lacks a verilog repr stays in port_vars,
+    just without value/hdl_loc."""
     doc = _doc_skeleton()
     doc["scopes"]["Top"] = {
         "name": "Top", "kind": "module",
@@ -880,28 +882,27 @@ def test_convert_inline_scope_skips_dce_output_port():
         "variableRefs": [],
     }
     doc["types"]["u8"] = {"kind": "uint", "width": 8}
-    doc["variables"]["v_dce_output"] = {
+    doc["variables"]["v_inline_output"] = {
         "typeRef": "u8", "bindKind": "port", "direction": "output",
         "ownerScopeRef": "inline",
         "representations": {
-            "chisel": {"name": "dce_q"},
-            # No verilog repr -- DCE collapsed it.
+            "chisel": {"name": "inline_q"},
+            # No verilog repr.
         },
     }
     doc["scopes"]["inline"] = {
         "name": "inline", "kind": "inline",
         "containerScopeRef": "Top",
         "representations": {"chisel": {"name": "inline"}},
-        "variableRefs": ["v_dce_output"],
+        "variableRefs": ["v_inline_output"],
     }
     out = hgldd_convert(doc)
     top_obj = next(o for o in out["objects"] if o.get("obj_name") == "Top")
     inline_child = next(c for c in top_obj["children"]
                         if c.get("name") == "inline")
-    inline_names = [pv["var_name"] for pv in inline_child["port_vars"]]
-    # The DCE'd port was skipped (returned None from
-    # _variable_to_port_var) and never landed in port_vars.
-    assert "dce_q" not in inline_names
+    pv = next(p for p in inline_child["port_vars"] if p["var_name"] == "inline_q")
+    assert "value" not in pv
+    assert "hdl_loc" not in pv
 
 
 def test_convert_skips_port_whose_sig_is_aggregated_leaf():
