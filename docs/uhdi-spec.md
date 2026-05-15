@@ -231,7 +231,7 @@ A `uhdi` document is a JSON object with the following top-level shape:
       "additionalProperties": false,
       "properties": {
         "name":    { "const": "uhdi" },
-        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" }
+        "version": { "type": "string", "enum": ["1.0"] }
       }
     },
 
@@ -668,7 +668,7 @@ An emitter that does not track a pre-elaboration representation will never produ
 A variable has two information layers:
 
 1. **Representation-independent**: `typeRef`, `bindKind`, `ownerScopeRef`, `direction`, `delay`.
-2. **Per-representation**: `name`, `location`, `value`, `status` -- stored in the `representations` map with arbitrary repr keys.
+2. **Per-representation**: `name`, `location`, `value`, `status`, `sourceLangType` -- stored in the `representations` map with arbitrary repr keys.
 
 Value binding (per-repr) describes how to recover the value at that IR level: `sigName`, `exprRef`, `constant`, or `bitVector` (a fixed-width binary literal -- used when an integer constant is wider than 64 bits and would not fit a JSON number safely). Status (per-repr) records what happened to the variable *in that specific representation* -- the same variable may be preserved at the FIRRTL level and reconstructed or lost at the Verilog level after DCE.
 
@@ -746,14 +746,25 @@ A variable without a `status` in some repr is implicitly `preserved` -- a conser
       ]
     },
 
+    "SourceLangType": {
+      "type": "object",
+      "required": ["typeName"],
+      "additionalProperties": false,
+      "properties": {
+        "typeName": { "type": "string" },
+        "params":   {}
+      }
+    },
+
     "PerRepresentation": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "name":     { "type": "string" },
-        "location": { "$ref": "#/$defs/Location" },
-        "value":    { "$ref": "#/$defs/ValueBinding" },
-        "status":   { "$ref": "#/$defs/Status" }
+        "name":           { "type": "string" },
+        "location":       { "$ref": "#/$defs/Location" },
+        "value":          { "$ref": "#/$defs/ValueBinding" },
+        "status":         { "$ref": "#/$defs/Status" },
+        "sourceLangType": { "$ref": "#/$defs/SourceLangType" }
       }
     },
 
@@ -933,6 +944,25 @@ FIRRTL supports hierarchical references via `RefType` / `firrtl.xmr.deref`. In `
 
 An XMR read does not generate any dataflow `Data` edge *to the consuming variable* -- only a `Declaration` edge. This models the formal-verification semantics of probes (read-through without electrical load).
 
+### 6.9 Source-language type info
+
+Tywaves and similar authoring-language-aware waveform viewers render not only the bound HDL signal but also the surface-language type it was declared with (e.g. `Wire[UInt<8>]`, `IO[Bundle]`, `Vec[Alu]`). To carry this through the pipeline, each `PerRepresentation` entry may include a `sourceLangType` object:
+
+```jsonc
+"representations": {
+  "chisel": {
+    "name": "io",
+    "sourceLangType": { "typeName": "IO[Operands]" },
+    "location": { "file": 0, "beginLine": 3 }
+  }
+}
+```
+
+- `typeName` (required): the rendered surface-language type string, opaque to the format. Producers choose the convention; consumers display it verbatim.
+- `params` (optional, untyped): an opaque escape hatch reserved for parameterized-type metadata (e.g. width / depth values that an extended consumer could substitute back into the rendered name). No projector reads `params` today; emitters may omit it freely.
+
+The authoring representation (`roles.authoring`, §3.3) is the canonical site for this field. Absence of `sourceLangType` is not an error -- the consumer falls back to rendering the type-pool type (§4) instead.
+
 ---
 
 ## 7. Scopes Pool
@@ -984,6 +1014,10 @@ Body array order is significant (FIRRTL last-connect semantics).
     "ScopeRef": { "type": "string" },
     "VarRef":   { "type": "string" },
     "ExprRef":  { "type": "string" },
+    "ExprOrVarRef": {
+      "description": "Polymorphic id: resolves first against the expressions pool, then variables. Used for control-flow breakpoint metadata (`enableRef`, `guardRef`, `matchRef`) where producers commonly emit a bare variable id when the predicate is a single-signal sample, and an expression id when it's a compound boolean. The §9.3 MVP shape also accepts an `&`-joined predicate string here (transitional; see §9.3).",
+      "type": "string"
+    },
 
     "Location": {
       "type": "object",
@@ -1034,14 +1068,14 @@ Body array order is significant (FIRRTL last-connect semantics).
       "additionalProperties": false,
       "properties": {
         "steppable":  { "type": "boolean", "default": true },
-        "enableRef":  { "$ref": "#/$defs/ExprRef" },
+        "enableRef":  { "$ref": "#/$defs/ExprOrVarRef" },
         "priority":   { "type": "integer", "default": 0 },
         "watchpoint": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "kind":     { "enum": ["change", "rising", "falling", "value"] },
-            "matchRef": { "$ref": "#/$defs/ExprRef" }
+            "matchRef": { "$ref": "#/$defs/ExprOrVarRef" }
           },
           "required": ["kind"]
         },
@@ -1118,8 +1152,8 @@ Body array order is significant (FIRRTL last-connect semantics).
       "additionalProperties": false,
       "properties": {
         "kind":      { "const": "block" },
-        "guardRef":  { "$ref": "#/$defs/ExprRef" },
-        "negated":   { "type": "boolean", "default": false },
+        "guardRef":  { "$ref": "#/$defs/ExprOrVarRef" },
+        "negated":   { "type": "boolean" },
         "body":      { "type": "array", "items": { "$ref": "#/$defs/Statement" } },
         "locations": { "$ref": "#/$defs/LocationMap" }
       }
@@ -1176,6 +1210,11 @@ Body array order is significant (FIRRTL last-connect semantics).
     },
 
     "Statement": {
+      // Conceptually a tagged union over the seven Stmt* variants. The
+      // shipped schema dispatches on `kind` via `allOf` + `if/then/else`
+      // so a typo in `body[]` produces one focused error path instead of
+      // jsonschema's "all branches failed" cascade; mechanics-only
+      // difference, semantics identical to this `oneOf`.
       "oneOf": [
         { "$ref": "#/$defs/StmtDecl" },
         { "$ref": "#/$defs/StmtConnect" },
@@ -1472,7 +1511,7 @@ They coincide for trivial cases but diverge after optimization.
 
 > **Implementation note (CIRCT/FIRRTL):** in the FIRRTL dialect, `enableRef` is computed by the same analysis that drives `firrtl-expand-whens`. A reference emitter should either hook into `ExpandWhensPass` to record the AND-reduced condition stack before `when`/`else` collapse, or run an equivalent analysis on pre-`ExpandWhens` IR. Post-`ExpandWhens` recovery is possible but requires reconstructing the predicate from mux trees, which loses source-level structure.
 >
-> **MVP shape (current `firrtl-uhdi-capture-when` + `EmitUHDI`):** instead of materialising the AND-reduced predicate as an entry in the `expressions` pool, the reference emitter writes `enableRef` as an `&`-joined list of variable stable_ids with optional `!` per leaf (e.g. `var_a_id&!var_b_id`). The unresolvable-leaf sentinel is the literal string `<complex>`. The format is purely a string-typed shortcut and is consumed verbatim by `uhdi-to-hgdb`; the schema-typed `ExprRef` shape above is the long-term target and a future revision will switch to it.
+> **MVP shape (current `firrtl-uhdi-capture-when` + `EmitUHDI`):** instead of materialising the AND-reduced predicate as an entry in the `expressions` pool, the reference emitter writes `enableRef` as an `&`-joined predicate string of variable stable_ids with optional `!` per leaf (e.g. `var_a_id&!var_b_id`). The unresolvable-leaf sentinel is the literal string `<complex>`. The string passes `ExprOrVarRef` schema validation (the type is `string` with no pattern) and is consumed verbatim by `uhdi-to-hgdb`. This form is **transitional**: a future revision moves the AND-reduction into the `expressions` pool and switches `enableRef` to a single id resolving there. Consumers must accept both forms during the transition; producers writing the long-term form do not need to retain the joined shortcut. Linters (§13) treat ids containing `&` or equal to `<complex>` as the MVP shape and skip per-leaf resolution.
 
 Example from the hgdb paper:
 
@@ -1660,12 +1699,11 @@ Same semantics as statement-level `category`.
 
 ### 9.6 Invariants
 
-1. `enableRef` and `watchpoint.matchRef` must reference expressions with `uint<1>` result (for `matchRef`: with type matching the watched variable, for `kind: "value"`).
+1. `enableRef` and `watchpoint.matchRef` must reference an expression *or* a variable (§7.4 `ExprOrVarRef`) with `uint<1>` result (for `matchRef`: with type matching the watched variable, for `kind: "value"`).
 2. `watchpoint.kind: "rising"` and `"falling"` are legal only when the target variable's `typeRef` resolves to `uint<1>`.
 3. `watchpoint.kind: "value"` requires `matchRef` to be present.
 4. `throttle.maxHits` and `throttle.period` are mutually exclusive.
-5. `bp` on `StmtBlock` is rejected by the schema (not listed in its `properties`); no runtime check needed.
-6. Duplicate `priority` values among breakpoints sharing a source location -- linter warning.
+5. Duplicate `priority` values among breakpoints sharing a source location -- linter warning.
 
 ### 9.7 Interaction with other layers
 
@@ -1785,7 +1823,7 @@ Dataflow is the heaviest layer by document size. Estimates for RocketChip-scale 
 
 Inter-chunk edges (edges whose `from` and `to` belong to different top scopes) are permitted and stored in whichever chunk the consumer picks up first; duplicates across chunks are deduplicated at load time.
 
-**Binary encoding.** CBOR is the recommended binary form for chunks (3-5× shrinkage with no semantic change). `dataflowChunks` entries ending in `.cbor` are CBOR; `.json` are text.
+**Binary encoding.** CBOR is the recommended binary form for chunks (3-5× shrinkage with no semantic change). `dataflowChunks` entries ending in `.cbor` are CBOR; `.json` are text. *Status:* no reference projector consumes `dataflowChunks` today; producers may emit the field, but consumers (`uhdi-to-hgldd`, `uhdi-to-hgdb`, `uhdi-to-pdg`) currently expect the dataflow pool inline. The chunking protocol is reserved for RocketChip-scale designs and will be activated when a consumer benchmarks against an external case.
 
 **Critical:** the dataflow layer is never required. Interactive debuggers and waveform viewers should never load it.
 
@@ -2397,7 +2435,7 @@ The format stores only forward provenance (from synthetic to source). A reverse 
 
     "Origin": {
       "type": "string",
-      "pattern": "^(source|elab|pass:|external|inferred)"
+      "pattern": "^(source|elab|external|inferred|pass:[A-Za-z0-9_]+)$"
     },
 
     "Transform": {
@@ -2609,7 +2647,7 @@ This section summarises open questions with thesis-level scope. Each has been de
 
 JSON Schema cannot express all invariants. A separate linter must validate:
 
-- Cross-pool reference integrity (every `*Ref` resolves to an existing ID).
+- Cross-pool reference integrity (every `*Ref` resolves to an existing ID). Exception for `ExprOrVarRef` slots (`enableRef`, `guardRef`, `matchRef`): the id resolves first against the expressions pool and then against the variables pool. The §9.3 MVP transitional shape is recognised as a single token by the rule "if the string contains `&` or equals `<complex>`, treat it as a literal predicate snapshot and do not attempt resolution"; this exception is removed when the MVP shape is retired.
 - No cycles in types (struct membership, vector elements).
 - No cycles in expressions (via `exprRef` chains).
 - No cycles in scope instantiation.
@@ -2623,7 +2661,8 @@ JSON Schema cannot express all invariants. A separate linter must validate:
 - Representation keys used in entities ⊆ top-level representation keys.
 - Location file indices within bounds of the owning representation's files array.
 - Uniqueness of names/IDs where required.
-- Breakpoint `enableRef` and `watchpoint.matchRef` reference expressions with `uint<1>` result (for `matchRef`: with result type matching the watched variable when `kind: "value"`).
+- Breakpoint `enableRef` and `watchpoint.matchRef` reference an expression *or* a variable (§7.4 `ExprOrVarRef`) with `uint<1>` result (for `matchRef`: with result type matching the watched variable when `kind: "value"`). The MVP `&`-joined predicate string (§9.3) is exempt -- the implicit result type is `uint<1>` by construction.
+- §11.5 `domains[V]` override: when a `reg` or `mem` variable's resolved clock (per §11.5 step 1) differs from its owning scope's default clock (step 2), the temporal pool MUST carry an explicit `domains[V]` entry for that variable. Absence is a linter error.
 - Breakpoint `watchpoint.kind` of `rising`/`falling` only on variables whose type is `uint<1>`.
 - Breakpoint `watchpoint.kind: "value"` requires `matchRef` present.
 - Breakpoint `throttle.maxHits` and `throttle.period` are mutually exclusive.
@@ -2656,7 +2695,7 @@ Recommended: warn on unreachable expressions, duplicate `priority` within one so
 
 ### Format-wide
 - Exact semantics of `bitVector` ordering (LSB-first vs MSB-first) -- needs decision.
-- Binary encoding (CBOR or Protobuf variant) for large designs. CBOR selected for dataflow chunks (§10.8); remainder of document still JSON-only.
+- Binary encoding (CBOR or Protobuf variant) for the main document. CBOR is already specified for dataflow chunks (§10.8) but no consumer reads chunked output yet; binary encoding for the *rest* of the document remains open and unimplemented.
 - Derived SQLite index format analogous to hgdb's runtime representation.
 - Merging protocol for documents produced by independent tools.
 - Reference implementation: emitter (Chisel/CIRCT) and adapters (to hgdb, HGLDD).
@@ -2703,7 +2742,7 @@ Ingestion (the reverse direction: hgdb / HGLDD / PDG -> `uhdi`) is a separate co
 | Projection | `uhdi` layers required on input | Auxiliary inputs |
 |---|---|---|
 | `uhdi` -> HGLDD | §3-§7 core; §11 only for Tywaves-extended HGLDD (enum types, module info) | None |
-| `uhdi` -> hgdb | §3-§7 core + §9 breakpoint metadata + §11 delays | None |
+| `uhdi` -> hgdb | §3-§7 core + §9 breakpoint metadata | None |
 | `uhdi` -> PDG | §3-§7 core + **§10 dataflow** | None, or dataflow derivation pass if §10 absent |
 
 A `uhdi` document emitted for a source-level consumer (e.g., a Tywaves-targeted emitter that skipped §10) cannot be converted to PDG without first running a dataflow derivation pass. This is a pipeline step, not a limitation; it is documented in §15.5.4.
@@ -2726,11 +2765,13 @@ The simplest projection. HGLDD is a snapshot format whose information content is
 | `variables[k].representations["<hdl-role>"].location` | `hdl_loc` |
 | `variables[k].representations["<hdl-role>"].value.sigName` | `value.sig_name` |
 | `variables[k].representations["<hdl-role>"].value.exprRef` (inlined) | HGLDD expression tree |
+| `variables[k].representations["<authoring-role>"].sourceLangType.typeName` (§6.9) | Tywaves `source_lang_type_info.type_name` (Tywaves variant only) |
 | `variables[k].bindKind` + `direction` | HGLDD port semantic (input / output / inout) |
 | `scopes[k].kind: "extmodule"` | `isExtModule: true` |
 | `scopes[k].kind: "inline"` | inline scope record |
-| `scopes[k].kind: "layer_block"` | inline scope with category marker; no native HGLDD support (emit as synthetic inline or drop per emitter policy) |
-| `Instantiation.as` + `representations["<hdl-role>"].name` | `name` + `hdl_obj_name` |
+| `scopes[k].kind: "layer_block"` | not handled by the reference projector today -- emitted as a plain inline scope record without category metadata; explicit `layer`-aware rendering is a Phase 3+ item |
+| `Instantiation.as` | HGLDD instance `name` |
+| `Instantiation.representations["<hdl-role>"].name` | HGLDD `hdl_obj_name` (verilog-side instance rename; reference projector does not emit this slot today -- `name` carries the canonical instance handle) |
 
 #### 15.3.2 Required transformations
 
@@ -2763,7 +2804,7 @@ Structural mapping to hgdb's SQLite schema is direct. The non-trivial work is se
 |---|---|
 | `Instance.id` / `.name` | Recursive walk of `scopes[k].instantiates[]`; `id` freshly assigned per instance, `name` from `Instantiation.as` |
 | `Variable.name` / `.value` | `variables[k].representations["<hdl-role>"].name` / `.value.sigName` |
-| `Generator Variable` | variables with `bindKind: "literal"` |
+| `Generator Variable` | one row per `(variable, instance)` pair carrying the authoring-language name -> bound HDL signal; covers every variable participating in the scope, not just `bindKind: "literal"` (hgdb uses this table as the source-vs-HDL name index, not a literal pool) |
 | `Scope Variable` | variables whose `ownerScopeRef` equals the breakpoint's enclosing scope |
 | `Breakpoint.filename` / `.line_num` / `.column` | `Statement.locations["<source-role>"]` |
 | `Breakpoint.instance` | enclosing scope's instance ID |
@@ -2826,6 +2867,7 @@ hgdb requires split form. If the `uhdi` input uses consolidated form (§6.7), th
 
 - `bp.watchpoint`, `bp.throttle`, `bp.category`, `bp.message` -- no hgdb field (partial exception: `watchpoint { kind: "change" }` can be approximated by the `target` attribute).
 - §10 dataflow, §12 provenance -- entirely.
+- §11 temporal -- entirely, including `delay FIFOs`. hgdb's runtime `history` table can in principle replay register pasts, but the reference projector does not walk §11 today; multi-clock domain assignments and reset polarity / kind are also not surfaced. Re-introduction is a Phase 3+ item.
 - Rich types -- hgdb variables carry `rtl: bool` and name only; struct / vector / enum type information is discarded.
 - `status: "reconstructed"` / `"lost"` -- hgdb has no such notion; variables in these states are omitted from the `Variable` table unless they have a `sigName` in some repr.
 - Verification statements (`assert` / `assume` / `cover`) -- dropped, or converted to `Breakpoint` rows with `steppable: false` and `enable = "!(condRef)"` (break on assertion violation). Emitter-policy decision.
@@ -2846,7 +2888,7 @@ The dual of PDG -> `uhdi` ingestion. Where ingestion required lifting a flat CFG
 | `variables[k]` `bindKind: "wire"` / `"node"` | `DataDefinition` vertex |
 | `variables[k]` `bindKind: "reg"` / `"mem"` | `Definition` vertex |
 | `variables[k]` `bindKind: "probe"` / `"rwprobe"` | push into PDG `predicates[]` list (not regular vertex list) |
-| `variables[k]` `bindKind: "literal"` | `DataDefinition` with constant attribute |
+| `variables[k]` `bindKind: "literal"` | `DataDefinition` vertex (the reference projector does not attach a separate constant attribute; literals are surfaced via the `kind` field plus their authoring name) |
 | `StmtConnect` | `Connection` vertex |
 | `StmtBlock.guardRef` | `ControlFlow` vertex |
 | `dataflow.edges[]` | PDG edges (kind names match 1:1) |
@@ -2913,7 +2955,7 @@ The second mode is slower and may produce less precise conditional edges (a deri
 #### 15.5.5 Dropped fields
 
 - §9 breakpoint metadata -- entirely.
-- §11 temporal -- multi-clock domains, delays, reset polarity / kind / `initialValue` all lost. PDG retains only per-edge `clocked` bits.
+- §11 temporal -- multi-clock domains, delays, reset polarity / kind / `initialValue` all lost. The reference projector additionally drops dataflow edges of `kind: "Clock"` / `"Reset"` entirely (a register's clock and reset hookups are implicit in PDG-consuming slicers, which infer "clocked" from per-edge bits on `Data` edges instead). PDG retains the per-edge `clocked` Boolean on the edges that survive; no domain id, no delay depth, no reset metadata.
 - §12 provenance -- collapsed into a single `isChiselStatement` Boolean.
 - `status: "reconstructed"` / `"lost"` -- PDG treats all variables as present.
 
@@ -2954,7 +2996,7 @@ What each projected format supports, when projecting from a maximally-annotated 
 | §9 breakpoints | ✗ | ✓ | ✗ |
 | §9 watchpoints | ✗ | partial (`change` only) | ✗ |
 | §10 dataflow | ✗ | ✗ | ✓ |
-| §11 temporal (clocks / resets) | Tywaves only | delays only | `clocked` bit only |
+| §11 temporal (clocks / resets) | Tywaves only | not consumed | `clocked` bit only |
 | §12 provenance | ✗ | ✗ | single bit (source vs not) |
 
 This matrix is the practical answer to "which `uhdi` features can I rely on if my consumer is X?" -- reference for emitter authors writing `uhdi` with a known downstream target.
@@ -2973,6 +3015,7 @@ This matrix is the practical answer to "which `uhdi` features can I rely on if m
 - **0.8** (2026-04-22) -- MLIR-implementability review pass. Breaking changes: (a) §6 -- `status` moved into per-representation record; previously-global status is no longer accepted by schema. (b) §6.2 -- added `probe` / `rwprobe` BindKinds; §6.8 models XMRs. (c) §7.2 -- added `layer_block` scope kind. (d) §7.3 -- added verification statement kinds `assert`, `assume`, `cover`. (e) §5.3 -- opcodes partitioned into IR/HDL-level, HDL-only (4-state), and source-only groups; opcode/repr-level consistency added as §5.6 invariant 7. Non-breaking changes: (f) §9.3 -- added CIRCT implementation note on `enableRef` computation via `ExpandWhensPass`; watchpoint semantics on aggregates clarified. (g) §9.6 -- removed invariant 5 (redundant with schema). (h) §10.4 -- `Clock`/`Reset` edges now MAY be omitted when temporal layer is authoritative; resolves the main §14 open question on dataflow/temporal redundancy. (i) §10.8 -- chunking protocol specified (per-top-scope files with CBOR option). (j) §11.3 -- `edge` field documented as HDL-repr-specific. (k) §11.5 -- explicit emitter requirement for `withClock` overrides. (l) §12.5 -- new subsection: Minimum Viable Provenance (four-pass MVP); remaining subsections 12.5->12.14 renumbered. (m) §13 linter updated; resolved items moved out of §14 open questions.
 - **0.9** (2026-04-22) -- Added §15 Conversion to Legacy Formats. Specifies canonical projections `uhdi` -> HGLDD / hgdb / PDG: field-level mappings, required transformations (source-level opcode lowering; AST-to-SV-string serialization with SV precedence table; guard AND-reduction for hgdb; body-flattening pre-order traversal for PDG), dropped fields per target, effort estimates (3-5 days / ~2 weeks / ~2 weeks respectively). §15.2 fixes the pre-condition that `uhdi` -> PDG requires §10 dataflow (explicitly or via derivation pre-pass). §15.6 formalises the round-trip contract: `X -> uhdi -> X` is the regression-test invariant, `uhdi -> X -> uhdi` is not. §15.7 compatibility matrix summarises per-layer coverage per target format. No schema changes; additive documentation only.
 - **0.9.1** (2026-04-24) -- Audit-driven alignment of spec text with the bundled JSON Schemas and reference emitter (`circt:fk-sc/uhdi-pool` / `EmitUHDI`): (a) §7.2 -- documented optional `containerScopeRef` on `inline`-kind scopes (already accepted by `schemas/scopes.schema.json`, emitted by `EmitUHDI::emitInlineScope`). (b) §7.3 -- documented optional `negated: boolean` on `StmtBlock` for the `else` branch of a paired when/else (emitted by `firrtl-uhdi-capture-when` and serialised by `EmitUHDI::emitStatementList`). (c) §7.4 -- JSON-Schema snippet refreshed to list both fields. (d) §7.6 -- added invariants 11 (containerScopeRef target kind) and 12 (when/else negation pairing). No schema-file change; no breaking change for emitters or consumers.
+- **0.9.2** (2026-05-15) -- Second audit-driven alignment pass against the bundled JSON Schemas and the three reference projectors (`uhdi_to_hgldd` / `uhdi_to_hgdb` / `uhdi_to_pdg`). Spec text changes: (a) §3.1 -- `version` schema snippet switched from a `pattern` to `enum: ["1.0"]`, matching the shipped `document.schema.json` and rejecting stale producers immediately. (b) §6.1, §6.4 -- `sourceLangType` listed in the Per-representation enumeration; schema snippet adds a `SourceLangType` `$def`; §6.9 (new) describes the field. (c) §6.9 -- new subsection on source-language type info as carried by Tywaves-aware producers. (d) §7.4 -- `enableRef` / `guardRef` / `matchRef` retyped from `ExprRef` to `ExprOrVarRef`; `negated`'s spec-only `default: false` removed; `Statement` snippet keeps the equivalent `oneOf` form with a note that the shipped schema dispatches via `allOf` + `if/then/else` for better error reporting. (e) §9.3 -- enlarged the MVP-shape note: the `&`-joined predicate string is the schema-legal form during the transition, with an explicit `<complex>` sentinel; long-term target retains the `expressions`-pool indirection. (f) §9.6 -- removed invariant 5 (the line resurrected in earlier merges; 0.8 changelog already documented its retirement, the schema does not list `bp` on `StmtBlock`). (g) §10.8 -- noted that no projector consumes `dataflowChunks` today, so the CBOR option is reserved rather than active. (h) §12.8 -- `Origin` pattern snippet anchored on both sides, matching the shipped `provenance.schema.json` (previously the unanchored prefix admitted `sourceXYZZY`-style typos). (i) §13 -- exempted the §9.3 MVP `&`-joined / `<complex>` form from the every-`*Ref`-resolves rule; added a linter check for the §11.5 `domains[V]` override invariant. (j) §15.2 -- removed the spurious "§11 delays" precondition from the `uhdi -> hgdb` row; the reference projector does not consume §11 today. (k) §15.3.1 -- new row maps `sourceLangType` -> Tywaves `source_lang_type_info`; the `Instantiation` row split so it no longer claims `hdl_obj_name` is emitted; `layer_block` row admits it falls through to a plain inline-scope record. (l) §15.4.1 -- `Generator Variable` row rewritten: per (variable, instance) row, not "literals only". (m) §15.4.5 -- explicit drop of §11 temporal (delays, multi-clock, reset metadata) by the reference projector. (n) §15.5.1 -- `bindKind: "literal"` row no longer claims a constant attribute the reference projector does not emit. (o) §15.5.5 -- documents that `Clock` / `Reset` edges are dropped entirely; only per-edge `clocked` Booleans on the surviving edges remain. (p) §15.7 -- `§11 temporal` cell for hgdb column now reads "not consumed" instead of "delays only". (q) Appendix B -- added B.9 (why not extend HGLDD as base), B.10 (why Python projectors), B.11 (relationship to DWARF). Schema files: `variables.schema.json` carries the new `SourceLangType` `$def` and `sourceLangType` property on `PerRepresentation`. Open work routed to `docs/uhdi-action-plan.md` rather than this changelog: the §9.3 long-term `enableRef` shape (move the AND-reduced predicate into the `expressions` pool, retire the `&`-joined transitional string) is captured there.
 
 ---
 
@@ -3025,3 +3068,28 @@ HGLDD uses a fixed `hgl_loc` + `hdl_loc` pair. **Rejected** as too restrictive. 
 ### B.8 Strings vs ASTs for conditions
 
 hgdb stores conditions as strings (`"!reset && (opcode == 3)"`), pre-AND-reduced by the SSA pass. **Rejected** for `uhdi` -- strings are not programmatically analyzable (cannot be normalized, compared, used for symbolic execution, or converted to PDG-style CFG predicates). Decision: conditions are ASTs (expressions with `uint<1>` result); the string form can be re-derived trivially when needed.
+
+### B.9 Layering atop HGLDD as base
+
+Considered: take HGLDD's `objects`/`variables`/`scopes` shape and add `body[]` / `bp` / `dataflow` / `temporal` keys to it. Cheaper to implement than a from-scratch format. **Rejected** because:
+
+- *Narrative collapse.* The §1.2 claim is "unified format as a superset of three legacy formats". An HGLDD-rooted document reads as "HGLDD plus debugger extensions" -- a hybrid, not an independent format. The N-way `representations` map (§3.2) and the pool-based layout (B.1) only make sense in a from-scratch design; bolting them onto HGLDD's fixed HGL/HDL pair (B.7) breaks HGLDD's own contract.
+- *Phase 3+ extensibility.* Dataflow / temporal / provenance (§10 / §11 / §12) sit naturally as optional sibling pools under the document root. Layered onto HGLDD they become extension keys hanging off a foreign object model, harder to evolve independently.
+- *Defence framing.* "Built a format and projected it back to HGLDD as one of three targets" (§15.3) is stronger than "extended HGLDD with our use case", which would require defending the asymmetry of one consumer being privileged.
+
+### B.10 Python projectors vs in-tree CIRCT-native converters
+
+Considered: write the projections (`uhdi -> HGLDD`, `uhdi -> hgdb`, `uhdi -> PDG`) as C++ MLIR passes inside CIRCT rather than as standalone Python tools. **Rejected** because:
+
+- *Format-independence claim.* A C++ projector inside CIRCT would erase the line between "uhdi the format" and "uhdi the CIRCT-internal IR shape". Python projectors reading the same JSON any external tool would read demonstrate that the format is portable, not coupled to CIRCT lifetimes.
+- *Surface area.* The three Python projectors (`uhdi_to_hgldd`, `uhdi_to_hgdb`, `uhdi_to_pdg`) are ~3000 LOC total; in-tree CIRCT projectors would be larger and slower to iterate on. Scope fit for a thesis-sized deliverable.
+- *Where the C++ does live.* The emitter that *produces* `uhdi` from CIRCT (`EmitUHDI.cpp` plus the two passes `firrtl-uhdi-init` / `hw-uhdi-verilog-snapshot`) is C++ MLIR -- that part is intrinsically tied to CIRCT IR walks. The emitter / projector split mirrors the IR / format split.
+
+### B.11 Relationship to DWARF
+
+Considered: use DWARF (the SW-debug ELF section format) as the carrier for hardware debug info, on the theory that DWARF is a mature, tool-rich standard. **Rejected** because:
+
+- *Domain mismatch.* DWARF models call stacks, lexical scopes, and register-resident variables under the assumption that a program counter drives execution. Hardware has no PC; multiple clocks may be live simultaneously; "variables" are state-holding registers, ports, and wires distinguished by `bindKind` (§6.2) -- a categorization DWARF lacks.
+- *No native consumer.* The three real consumers in this work (Tywaves waveform viewer, hgdb debugger, ChiselTrace PDG slicer) read HGLDD / hgdb-SQLite / PDG-JSON respectively. Producing DWARF would require building all three consumer integrations from scratch.
+- *Type system.* Hardware ground types (`uint<W>`, `sint<W>`, `clock`, `reset`, `analog`; §4) and the parameterized aggregates (`struct`, `vector`, `enum`) do not map cleanly onto the C / Fortran / Ada type system DWARF was designed for. The mapping exists but is information-lossy in both directions.
+- *Adoption barrier.* Any extension `uhdi` would need is a hardware-DWARF variant; defending such a proposal under the §1.1 problem statement (existing formats are siloed) just adds a fourth silo rather than unifying the three.

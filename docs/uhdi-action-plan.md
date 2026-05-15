@@ -315,6 +315,20 @@ walkRegion(region, condStack, intoRegion):
 
 **Объём:** ~200–400 LOC поверх существующего emitter'а.
 
+#### 3.4.1 Post-defense workstream: long-term `enableRef` shape
+
+Текущий MVP (см. spec §9.3 MVP note) сериализует `enableRef` как `&`-joined predicate string (`var_a_id&!var_b_id`, sentinel `<complex>` для unresolvable leaves). Это transitional форма: schema-typed `ExprOrVarRef` принимает её как string без pattern, конвертер `uhdi-to-hgdb` парсит её inline в §15.4.3 AND-reduction.
+
+Long-term target: эмиттер собирает AND-reduced predicate как `expressions`-pool entry (один `Conjunction` opcode с массивом operand'ов) и пишет `enableRef` как single id, разрешаемый в expressions pool. Шаги, когда придёт время:
+
+1. В `firrtl-uhdi-capture-when` хук: вместо string-concatenation предикатов, материализовать AND-reduced дерево как набор `expressions` объектов с `opcode: "&&"` (или `Conjunction` source-level opcode); leaf'ы по-прежнему могут быть `varRef` для single-signal sample case.
+2. В `EmitUHDI.cpp` `serializeEnable`: писать `enableRef: "<expr_id>"` вместо joined-string.
+3. В `uhdi_to_hgdb/convert.py`: дропнуть branch который парсит `&`-joined string; читать через стандартный expression walk (`§15.4.2` SV pretty-printer уже умеет обрабатывать `&&` opcode → `(a) && (b)`).
+4. Удалить sentinel `<complex>` exception из §13 linter (spec уже описывает удаление как cleanup при retiring MVP).
+5. Удалить упоминание joined-формы из §9.3 MVP note + §7.4 ExprOrVarRef description + 0.9.2 changelog (или оставить historical note).
+
+Out of scope для защиты: requires C++ MLIR работу в `circt:fk-sc/uhdi-pool` (~½ дня C++ + ½ дня converter sync + regenerate fixtures). Решение отложено намеренно — schema принимает оба варианта одновременно, текущий emitter и projector корректны, перепиcка не блокирует ни M1 ни M2.
+
 ### 3.5 CLI tool `uhdi-to-hgdb` (Python)
 
 Python, как и `uhdi-to-hgldd`. Converters decoupled от CIRCT, единый шаблон tooling.
@@ -327,7 +341,7 @@ Python, как и `uhdi-to-hgldd`. Converters decoupled от CIRCT, единый
 |---|---|
 | Instance | Рекурсивный walk `scopes[*].instantiates[]`, fresh id per instance |
 | Variable | variables pool, только те, у кого есть verilog-repr entry |
-| Generator Variable | variables с `bindKind == "literal"` |
+| Generator Variable | по одной row на (variable, instance) — мапит authoring-language имя в bound HDL-сигнал (см. spec §15.4.1); это name-index hgdb, не literal-pool. |
 | Scope Variable | variables с `ownerScopeRef == текущий scope` |
 | Breakpoint | по одной row на `dbg.connect_stmt` на каждую instance host-scope'а |
 

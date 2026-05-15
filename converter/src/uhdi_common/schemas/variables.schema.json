@@ -123,6 +123,16 @@
         }
       ]
     },
+    "SourceLangType": {
+      "description": "Surface-language type info (e.g. Chisel `Wire[UInt<8>]` or `IO[Bundle]`) for waveform / GUI consumers that render authoring-language types alongside the bound HDL signal. `typeName` is the rendered string. `params` is an opaque escape hatch reserved for parameterized-type metadata; emitters may attach an arbitrary JSON value, but no consumer reads it today.",
+      "type": "object",
+      "required": ["typeName"],
+      "additionalProperties": false,
+      "properties": {
+        "typeName": { "type": "string" },
+        "params": {}
+      }
+    },
     "PerRepresentation": {
       "type": "object",
       "additionalProperties": false,
@@ -138,6 +148,9 @@
         },
         "status": {
           "$ref": "#/$defs/Status"
+        },
+        "sourceLangType": {
+          "$ref": "#/$defs/SourceLangType"
         }
       }
     },
