@@ -7,7 +7,8 @@ use lib/common.nu *
 
 const REPO = "fkhaidari/uhdi"
 
-# Install firtool, hgdb-py, tywaves, and print the chisel JitPack snippet.
+# Install firtool, hgdb-py, tywaves, chiseltrace, and print the chisel
+# JitPack snippet.
 def "main all" [
   --prefix: path = ""
   --release-tag: string = ""
@@ -19,7 +20,9 @@ def "main all" [
   let work_root = (mktemp -d | str trim)
   let did = (
     # hgdb-cli runs after hgdb-py because it symlinks the bindings.
-    ["firtool" "hgdb-py" "chisel" "tywaves" "hgdb-cli"]
+    # chiseltrace consumes uhdi-to-pdg output, so its order vs. hgdb-cli
+    # doesn't matter -- but keep it grouped with the other viewers.
+    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "hgdb-cli"]
     | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
     | flatten
     | uniq
@@ -43,6 +46,11 @@ def "main tywaves" [--prefix: path = "" --release-tag: string = "" --force] {
   run-single "tywaves" $prefix $release_tag $force
 }
 
+# Install chiseltrace only (CLI + GUI viewer for PDG slicing).
+def "main chiseltrace" [--prefix: path = "" --release-tag: string = "" --force] {
+  run-single "chiseltrace" $prefix $release_tag $force
+}
+
 # Install the upstream `hgdb` console debugger (Kuree/hgdb-debugger).
 # Builds a 3.12 venv, pip-installs hgdb-debugger + deps, links the
 # uhdi-tools hgdb python bindings into it, exposes `bin/hgdb` on the
@@ -61,6 +69,7 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
     "firtool" => { install-firtool $p $release_tag $force $work_root }
     "hgdb-py" => { install-hgdb-py $p $release_tag $force $work_root }
     "tywaves" => { install-tywaves $p $release_tag $force $work_root }
+    "chiseltrace" => { install-chiseltrace $p $release_tag $force $work_root }
     "hgdb-cli" => { install-hgdb-cli $p $force }
   }
   rm -rf $work_root
@@ -135,6 +144,9 @@ def dispatch [
     }
     "tywaves" => {
       try { install-tywaves $p $release_tag $force $work_root; ["tywaves"] } catch { [] }
+    }
+    "chiseltrace" => {
+      try { install-chiseltrace $p $release_tag $force $work_root; ["chiseltrace"] } catch { [] }
     }
     "hgdb-cli" => {
       try { install-hgdb-cli $p $force; ["hgdb-cli"] } catch { [] }
@@ -353,12 +365,51 @@ def install-tywaves [p: path release_tag: string force: bool work_root: path] {
   } $p $release_tag $force $work_root
 }
 
+# ---- chiseltrace (PDG CLI + Tauri GUI viewer) -----------------------------
+
+# Two binaries in one tarball: `chiseltrace-cli` (slice / DynPDG / convert-
+# to-source) and `chiseltrace` (Tauri GUI). The CLI consumes the output of
+# `uhdi-to-pdg`; the GUI renders the same graph interactively.
+#
+# install-tarball-component's `chmod_rel` is single-file, so we open-code
+# the extract + per-binary chmod here. The presence of `bin/chiseltrace-cli`
+# is the "already installed?" probe (the CLI is the must-have; the GUI
+# might be platform-skipped in a future release).
+def install-chiseltrace [p: path release_tag: string force: bool work_root: path] {
+  print "=== chiseltrace ==="
+  let platform = (detect-platform)
+  let tag = (resolve-release-tag $REPO $release_tag)
+  print $"  Repo:       ($REPO)"
+  print $"  Tag:        ($tag)"
+  print $"  Platform:   ($platform)"
+
+  let target = ($p | path join "bin/chiseltrace-cli")
+  if not (ensure-writable $target $force) { return }
+
+  let pattern = $"chiseltrace-($platform)-*.tar.gz"
+  let tmp = ($work_root | path join "chiseltrace")
+  let tarball = (dl-release-asset $REPO $tag $pattern $tmp)
+
+  let extract_to = ($p | path join "bin")
+  mkdir $extract_to
+  ^tar -xzf $tarball -C $extract_to
+  chmod +x ($p | path join "bin/chiseltrace-cli")
+  # The Tauri GUI may be skipped on platforms that can't build it -- only
+  # chmod if it actually shipped, so a CLI-only tarball doesn't error here.
+  let gui = ($p | path join "bin/chiseltrace")
+  if ($gui | path exists) {
+    chmod +x $gui
+    print $"  Installed:  ($gui)"
+  }
+  print $"  Installed:  ($target)"
+}
+
 # ---- hgdb-cli (hgdb console debugger + uhdi converters) -------------------
 
 # Shared $prefix/cli-venv with: hgdb-debugger (console + linked _hgdb.so),
 # libhgdb (hgdb-replay / hgdb-db as prebuilt console_scripts -- cheaper
 # than building from upstream cmake), and in-tree uhdi-converter
-# (editable; provides uhdi-to-hgldd / uhdi-to-hgdb).
+# (editable; provides uhdi-to-hgldd / uhdi-to-hgdb / uhdi-to-pdg).
 def install-hgdb-cli [p: path force: bool] {
   print "=== hgdb-cli ==="
   let hgdb_bin = ($p | path join "bin/hgdb")
@@ -387,7 +438,7 @@ def install-hgdb-cli [p: path force: bool] {
     ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" "websockets<11" prompt-toolkit pygments "jsonschema>=4.18" "referencing>=0.30"
     ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" --no-deps hgdb-debugger
     ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" libhgdb
-    ^$pip install --quiet --disable-pip-version-check --no-deps -e ($REPO_ROOT | path join "converter")
+    ^$pip install --quiet --disable-pip-version-check --index-url "https://pypi.org/simple" --no-deps -e ($REPO_ROOT | path join "converter")
   }
 
   let sp = ($venv | path join "lib/python3.12/site-packages")
@@ -398,11 +449,13 @@ def install-hgdb-cli [p: path force: bool] {
   ^ln -sfn ($venv | path join "bin/hgdb-db")       ($p | path join "bin/hgdb-db")
   ^ln -sfn ($venv | path join "bin/uhdi-to-hgldd") ($p | path join "bin/uhdi-to-hgldd")
   ^ln -sfn ($venv | path join "bin/uhdi-to-hgdb")  ($p | path join "bin/uhdi-to-hgdb")
+  ^ln -sfn ($venv | path join "bin/uhdi-to-pdg")   ($p | path join "bin/uhdi-to-pdg")
   print $"  Installed:  ($hgdb_bin)"
   print $"  Installed:  ($p | path join "bin/hgdb-replay")"
   print $"  Installed:  ($p | path join "bin/hgdb-db")"
   print $"  Installed:  ($p | path join "bin/uhdi-to-hgldd")"
   print $"  Installed:  ($p | path join "bin/uhdi-to-hgdb")"
+  print $"  Installed:  ($p | path join "bin/uhdi-to-pdg")"
 }
 
 # ---- end-of-run summary ----------------------------------------------------
@@ -429,13 +482,14 @@ export def env-hint-lines [
         "firtool" => $"  export FIRTOOL=\"($p)/bin/firtool\""
         "hgdb-py" => $"  export HGDB_PY=\"($p)/lib/hgdb/bindings/python\""
         "tywaves" => $"  export TYWAVES=\"($p)/bin/tywaves\""
+        "chiseltrace" => $"  export CHISELTRACE=\"($p)/bin/chiseltrace-cli\""
         "hgdb-cli" => $"  export HGDB_DEBUGGER=\"($p)/bin/hgdb\""
         _ => null
       }
     }
     | where {|x| $x != null }
   )
-  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) or ("hgdb-cli" in $did) {
+  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) or ("chiseltrace" in $did) or ("hgdb-cli" in $did) {
     let bin = ($p | path join "bin" | into string)
     if ($bin not-in $path_segments) {
       [$"  export PATH=\"($bin):$PATH\""]

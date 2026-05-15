@@ -117,8 +117,13 @@ the C extension is built against glibc; cross-compiles are out of scope"
       }
       let vpy = ($venv | path join "bin/python")
       let vpip = ($venv | path join "bin/pip")
-      ^$vpip install --no-cache-dir --upgrade pip
-      ^$vpip install --no-cache-dir pybind11 setuptools wheel
+      # PIP_CONFIG_FILE override + explicit --index-url sidestep any
+      # site-wide artifactory proxy (Yadro corp env routes pip through
+      # an artifactory mirror that fails SSL outside the intranet).
+      with-env {PIP_CONFIG_FILE: "/dev/null"} {
+        ^$vpip install --no-cache-dir --index-url "https://pypi.org/simple" --upgrade pip
+        ^$vpip install --no-cache-dir --index-url "https://pypi.org/simple" pybind11 setuptools wheel
+      }
       cd ($hgdb_dir | path join "bindings/python")
       # The C extension needs Python.h (apt: python3-dev / python3.X-dev).
       # Surface a clear precondition error rather than letting cmake fail

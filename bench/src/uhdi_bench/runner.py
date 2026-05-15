@@ -313,6 +313,14 @@ def run_target(fir: pathlib.Path, target: str,
                 fir, workdir, toolchain.hgdb_firrtl_jar,
                 toolchain.hgdb_python)
             return ours, native
+        # PDG (uhdi_to_pdg / chiseltrace) is intentionally absent: the
+        # bench's contract is "uhdi-side projection vs native reference",
+        # and PDG has no native reference -- ChiselTrace is the sole
+        # producer of PDG documents on this side of the toolchain. PDG
+        # is validated by `converter/test/test_pdg_internals.py` plus
+        # the golden fixtures under `converter/test/fixtures/expected/pdg/`,
+        # not by the bench's diff-against-native loop. See bench/README.md
+        # "Targets" section for the rationale.
         raise ValueError(
             f"unknown target {target!r}; have tywaves, hgdb_circt, "
             f"hgdb_firrtl")

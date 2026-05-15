@@ -75,3 +75,25 @@ reason = "post-DCE: native pool entry for q has value=q (pre-DCE port wire); our
 path_regex = "/table/[0-9]+"
 kind = "missing"
 reason = "post-DCE: module entry's nested body shape differs because hgdb-circt+legacy firtool walks pre-DCE FIRRTL with sparse dbg.* ops, while our walker emits one entry per UHDI body statement.  Same content, different structure"
+
+# ---- GCD / Fifo / TrafficLight ----------------------------------------------
+#
+# Lifted from demo/{gcd,fifo,fsm}/app/src/*.scala into bench/fixtures/ so the
+# bench matrix exercises more than Counter's single-when shape.  No expected
+# blocks yet -- the bench has not been re-run against these fixtures since the
+# lift; on first run the diff harness will report "unexpected delta", and the
+# remediation is to either tighten the converter or land a justified
+# expectation here.  Same `[[fixtures.X.expected.Y]]` schema as Counter.
+#
+# Suggested first-run order: GCD (closest in shape to Counter), then Fifo,
+# then TrafficLight (introduces ChiselEnum and is the only one stressing
+# the §4 enum pool / Tywaves dbg.enumdef projection).
+
+[fixtures.GCD]
+scala = "GCD.scala"
+
+[fixtures.Fifo]
+scala = "Fifo.scala"
+
+[fixtures.TrafficLight]
+scala = "TrafficLight.scala"

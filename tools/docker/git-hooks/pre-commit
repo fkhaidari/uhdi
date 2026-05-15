@@ -3,7 +3,7 @@
 # tools/image-tag.txt, refuse the commit unless the tag is up to date.
 #
 # Enable once per clone:
-#   git config core.hooksPath tools/git-hooks
+#   git config core.hooksPath tools/docker/git-hooks
 #
 # Disable for a single commit (rarely needed):
 #   git commit --no-verify
@@ -36,6 +36,6 @@ if [ "$relevant" -eq 0 ]; then
 fi
 
 if ! nu tools/docker/check-tag.nu; then
-    echo "(commit aborted by tools/git-hooks/pre-commit)" >&2
+    echo "(commit aborted by tools/docker/git-hooks/pre-commit)" >&2
     exit 1
 fi

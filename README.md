@@ -6,9 +6,12 @@ This repository hosts the out-of-tree pieces of the uhdi work:
 
 - **`converter/`** -- `uhdi-converter`: `uhdi_common` shared base
   (BaseContext, refs, diff, validate, Backend registry, CLI scaffold)
-  plus three backends: `uhdi_to_hgldd`, `uhdi_to_hgdb` (SQLite), and
+  plus four backends: `uhdi_to_hgldd`, `uhdi_to_hgdb` (SQLite),
   `uhdi_to_hgdb_json` (the JSON shape hgdb-circt's `firtool --hgdb`
-  emits). JSON Schemas extracted from the spec ship with `uhdi_common`.
+  emits), and `uhdi_to_pdg` (chiseltrace's Program Dependency Graph
+  format -- third arm of the §15 projection trio, with optional
+  `--derive-dataflow` pass for inputs that omit §10).  JSON Schemas
+  extracted from the spec ship with `uhdi_common`.
 - **`bench/`** -- `uhdi-bench`: integration harness
   `Scala/Chisel → FIR → UHDI → projection → diff vs native`. Test
   matrix per `(fixture × target)` over targets `tywaves`,
@@ -17,17 +20,16 @@ This repository hosts the out-of-tree pieces of the uhdi work:
   `fifo`, `pipeline`, `bus`) wired end-to-end through
   `firtool --emit-uhdi` + the converters. Copy any one out and use
   it as a starter template; see [`demo/README.md`](demo/README.md).
-- **`docs/`** -- format specification (`uhdi-spec.md`), action plan
-  (`uhdi-action-plan.md`), downstream-consumer roadmap
-  (`consumer-roadmap.md`).
+- **`docs/`** -- format specification (`uhdi-spec.md`) and action
+  plan (`uhdi-action-plan.md`).
 - **`tools/`** -- consumer-side installer (`install.sh` /
-  `install.nu`) that pulls firtool, hgdb-py, and tywaves from a
-  GitHub Release and provisions a shared cli-venv with the upstream
-  hgdb console (`hgdb-debugger`), the libhgdb runtime tools
+  `install.nu`) that pulls firtool, hgdb-py, tywaves, and chiseltrace
+  from a GitHub Release and provisions a shared `cli-venv` with the
+  upstream hgdb console (`hgdb-debugger`), the libhgdb runtime tools
   (`hgdb-replay`, `hgdb-db`), and the in-tree `uhdi-converter`
-  (`uhdi-to-hgldd`, `uhdi-to-hgdb`); bench-side toolchain Docker image
-  (`ghcr.io/fkhaidari/uhdi-tools`) recipe pinned via
-  `tools/versions.env`; per-component release scripts in
+  (`uhdi-to-hgldd`, `uhdi-to-hgdb`, `uhdi-to-pdg`); bench-side
+  toolchain Docker image (`ghcr.io/fkhaidari/uhdi-tools`) recipe
+  pinned via `tools/versions.env`; per-component release scripts in
   `tools/release/`.
 
 The compiler side (CIRCT passes and `EmitUHDI.cpp`) lives in the sibling `circt/` fork on branch `fk-sc/uhdi-pool`, not here.
@@ -43,8 +45,9 @@ uhdi/
 │   │   │   └── schemas/        # JSON Schemas (sec.3-12 of the spec)
 │   │   ├── uhdi_to_hgldd/      # tywaves projection
 │   │   ├── uhdi_to_hgdb/       # hgdb SQLite projection
-│   │   └── uhdi_to_hgdb_json/  # hgdb JSON projection
-│   └── test/                   # unit + golden tests (~300 tests, no toolchain)
+│   │   ├── uhdi_to_hgdb_json/  # hgdb JSON projection
+│   │   └── uhdi_to_pdg/        # chiseltrace PDG projection
+│   └── test/                   # unit + golden tests (~340 tests, no toolchain)
 ├── bench/           # uhdi-bench: Scala -> FIR -> UHDI -> diff vs native
 │   ├── pyproject.toml
 │   ├── manifest.toml           # per-fixture allowed deltas
@@ -72,13 +75,24 @@ uv pip install -e ./converter -e ./bench --index-url https://pypi.org/simple --n
 
 `--no-config` / `--index-url` bypass any site-wide artifactory proxy.
 
+For `tools/install.sh` (firtool / hgdb-py / tywaves / chiseltrace
+download from GitHub Releases), export a `GITHUB_TOKEN` first --
+otherwise the anonymous api.github.com limit (60 req/h) is exhausted
+after a few asset lookups:
+
+```sh
+export GITHUB_TOKEN=$(gh auth token)   # or any personal-access token with public_repo read
+tools/install.sh all --prefix ~/.local/uhdi-tools
+```
+
 ## Quick reference
 
 ```sh
-# Converter CLIs (the first two ship as console scripts; the third
-# runs as a module since hgdb-circt's JSON shape is bench-only today).
+# Converter CLIs (three ship as console scripts; hgdb_json runs as a
+# module since hgdb-circt's JSON shape is bench-only today).
 uhdi-to-hgldd                 input.uhdi.json -o input.dd
 uhdi-to-hgdb                  input.uhdi.json -o input.db
+uhdi-to-pdg                   input.uhdi.json -o input.pdg.json
 python -m uhdi_to_hgdb_json   input.uhdi.json -o input.json
 
 # Tests

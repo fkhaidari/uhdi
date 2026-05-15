@@ -17,6 +17,15 @@ Three reference emitters are diffed against the UHDI projections:
 | `hgdb_circt` | hgdb-circt `firtool --hgdb=<file>` (JSON) | `uhdi_to_hgdb_json` (JSON dict) |
 | `hgdb_firrtl` | legacy Scala FIRRTL 1.x `hgdb-firrtl.jar` + `toml2hgdb` (SQLite) | `uhdi_to_hgdb` (SQLite, `canonical_dump` for diff) |
 
+**PDG (ChiselTrace) is intentionally absent from this list.**  The
+bench's contract is *"uhdi-side projection vs native reference"*, and
+PDG has no native reference: ChiselTrace is the sole producer of PDG
+documents on this side of the toolchain, so there is nothing to diff
+against.  The `uhdi_to_pdg` projector is validated by
+`converter/test/test_pdg_internals.py` plus the golden fixtures under
+`converter/test/fixtures/expected/pdg/*.pdg.json.json`, which together
+cover the §15.5 mapping rows end-to-end.
+
 ## What runs
 
 For each `(fixture × target)` cell:
@@ -117,6 +126,30 @@ fresh checkout, `pytest` is green-by-default and only flips to
    cells run end-to-end.
 3. Adjust expectations in `manifest.toml` if specific (fixture × target)
    cells are expected to diverge.
+
+## Pending fixtures
+
+`GCD.scala`, `Fifo.scala`, and `TrafficLight.scala` are lifted from
+`demo/` so the bench matrix can grow beyond `Counter`'s single-`when`
+shape (lifted on 2026-05-15).  On first run these expose three
+existing UHDI-projector gaps that `Counter` does not surface:
+
+- `uhdi_to_hgldd` does not project `io` Bundle scopes into HGLDD
+  `objects[]` -- native firtool emits one entry per Bundle field;
+  ours emits nothing.  Affects `GCD-tywaves`, `Fifo-tywaves`,
+  `TrafficLight-tywaves`.
+- `uhdi_to_hgdb` and `uhdi_to_hgdb_json` emit zero rows for
+  multi-arm `when`/`elsewhen` chains where Counter (single `when`)
+  works.  Affects `GCD-hgdb_circt`, `GCD-hgdb_firrtl`.
+- `TrafficLight` additionally exercises `ChiselEnum` + `switch` --
+  enum type projection is partially implemented in `uhdi_to_hgldd`
+  (`source_lang_type_info` / `enum_def_ref`), but not stress-tested
+  on real FSMs.
+
+`test_pipeline.py` skips these fixtures via `_PENDING_FIXTURES` until
+the projector work lands.  The skip is intentional: the *fixtures*
+ship now so the gap is surfaced and bisectable; the *fixes* belong
+to a separate workstream (post-defense).
 
 ## Adding a target
 

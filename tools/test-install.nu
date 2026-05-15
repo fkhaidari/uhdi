@@ -128,7 +128,75 @@ def main [] {
       fail $"tywaves at ($ty) does not respond to --help/--version"
     }
 
-    # ---- 6. (optional) end-to-end JitPack -> firtool -------------
+    # ---- 6. chiseltrace ------------------------------------------
+    section "chiseltrace"
+    let ct_cli = ($prefix | path join "bin/chiseltrace-cli")
+    if ($ct_cli | path exists) {
+      # chiseltrace-cli is a clap-based binary; --help is reliable.
+      let ct_responds = (
+        try {
+          ^$ct_cli --help o> /dev/null e> /dev/null
+          true
+        } catch { false }
+      )
+      if $ct_responds {
+        ok $"chiseltrace-cli installed at ($ct_cli) \(--help exits 0\)"
+      } else {
+        fail $"chiseltrace-cli at ($ct_cli) does not respond to --help"
+      }
+      let ct_gui = ($prefix | path join "bin/chiseltrace")
+      if ($ct_gui | path exists) {
+        ok $"chiseltrace GUI also installed at ($ct_gui)"
+      } else {
+        skip "chiseltrace GUI binary missing (CLI-only tarball)"
+      }
+    } else {
+      skip "chiseltrace not installed (release artifact missing for this tag?)"
+    }
+
+    # ---- 7. hgdb-cli venv ----------------------------------------
+    # install.nu's --build-cli-venv path is the riskiest install step:
+    # pip install from PyPI (websockets / prompt-toolkit / hgdb-debugger
+    # / libhgdb), symlink _hgdb C extension into site-packages,
+    # editable-install the in-tree converter, then 6 console-script
+    # symlinks. Hits the corp PyPI mirror unless PIP_CONFIG_FILE
+    # override fires; missing console scripts go unnoticed otherwise.
+    section "hgdb-cli"
+    let cli_bins = [
+      "hgdb"
+      "hgdb-replay"
+      "hgdb-db"
+      "uhdi-to-hgldd"
+      "uhdi-to-hgdb"
+      "uhdi-to-pdg"
+    ]
+    let missing_bins = (
+      $cli_bins
+      | each {|name|
+        let path = ($prefix | path join "bin" $name)
+        if not ($path | path exists) { $name } else { null }
+      }
+      | compact
+    )
+    if not ($missing_bins | is-empty) {
+      fail $"hgdb-cli venv missing console scripts: ($missing_bins | str join ', ')"
+    }
+    # `--help` is the per-tool cheap liveness check. `hgdb` (the
+    # console) and `uhdi-to-*` (converters) all support it; for the
+    # libhgdb tools we fall back to `--version` since some builds
+    # bail on `--help` with a non-zero exit by design.
+    for name in ["uhdi-to-hgldd" "uhdi-to-hgdb" "uhdi-to-pdg"] {
+      let bin = ($prefix | path join "bin" $name)
+      let responds = (
+        try { ^$bin --help o> /dev/null e> /dev/null; true } catch { false }
+      )
+      if not $responds {
+        fail $"($name) installed but does not respond to --help"
+      }
+    }
+    ok $"hgdb-cli venv installed ((($cli_bins | length)) console scripts respond)"
+
+    # ---- 8. (optional) end-to-end JitPack -> firtool -------------
     if (($env.UHDI_E2E? | default "0") == "1") {
       run-e2e $snippet
     }
