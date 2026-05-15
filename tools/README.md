@@ -12,6 +12,14 @@ prebuilt copies of every fork the bench needs:
 | `/opt/ivy2-local/` (-> `~/.ivy2/local/`) | mill publishLocal of both Chisel forks | `CHISEL_TYWAVES_*` + `CHISEL_UHDI_*` |
 | `/opt/coursier-cache/` | seeded Maven cache w/ stock chisel | `CHISEL_STOCK_VERSION` |
 
+Chiseltrace (`CHISELTRACE_URL` / `CHISELTRACE_REV` in `versions.env`)
+is **not** baked into the image -- it's a consumer-only viewer with a
+heavy GUI build chain (Tauri + webkit2gtk + npm). Release tarballs are
+produced by `tools/release/release-chiseltrace.nu` running on a host
+with `cargo`, `npm`, and `cargo tauri` installed; `install.sh
+chiseltrace` then downloads the tarball alongside firtool/hgdb-py/
+tywaves.
+
 The image also has `python3` (3.12 on Ubuntu 24.04), `pip`,
 `scala-cli`, JRE 21, and `git` on `PATH`. It deliberately does
 **not** preinstall `uhdi_converter` / `uhdi_bench` -- the converter
@@ -21,12 +29,13 @@ ships from the workspace via
 ## Installing the toolchain in a downstream Chisel project
 
 `tools/install.sh` is the consumer-side installer. It pulls firtool,
-hgdb-py, and tywaves from a single GitHub Release on `fkhaidari/uhdi`,
-provisions a shared `<prefix>/cli-venv` with the upstream hgdb console
-(`hgdb-debugger`), the libhgdb runtime (`hgdb-replay` / `hgdb-db`), and
-the in-tree `uhdi-converter` (`uhdi-to-hgldd` / `uhdi-to-hgdb`), and
-prints the JitPack snippet for the chisel fork. **No Docker required
-on the consumer side.**
+hgdb-py, tywaves, and chiseltrace (CLI + Tauri GUI) from a single
+GitHub Release on `fkhaidari/uhdi`, provisions a shared
+`<prefix>/cli-venv` with the upstream hgdb console (`hgdb-debugger`),
+the libhgdb runtime (`hgdb-replay` / `hgdb-db`), and the in-tree
+`uhdi-converter` (`uhdi-to-hgldd` / `uhdi-to-hgdb` / `uhdi-to-pdg`),
+and prints the JitPack snippet for the chisel fork. **No Docker
+required on the consumer side.**
 
 Host prerequisites (preflighted by the installer with apt hints):
 `curl` + `tar` (used to bootstrap `nu` and fetch tarballs) and
@@ -46,12 +55,12 @@ curl-pipe-bash is no longer supported (the install spans multiple
 `.nu` files).
 
 Subcommands: `firtool`, `hgdb-py`, `chisel` (prints snippet only),
-`tywaves`, `hgdb-cli`, `all`. Each accepts `--prefix DIR` (default
-`$HOME/.local/uhdi-tools`); pin a release with `--release-tag` (one
-release on `fkhaidari/uhdi` carries firtool, hgdb-py, and tywaves) or
-`--chisel-tag` (separate, JitPack tag on `fkhaidari/chisel`). Hint
-exports are printed at the end so the same install plugs into
-`bench/runner.py`'s env-var discovery.
+`tywaves`, `chiseltrace`, `hgdb-cli`, `all`. Each accepts `--prefix DIR`
+(default `$HOME/.local/uhdi-tools`); pin a release with `--release-tag`
+(one release on `fkhaidari/uhdi` carries firtool, hgdb-py, tywaves, and
+chiseltrace) or `--chisel-tag` (separate, JitPack tag on
+`fkhaidari/chisel`). Hint exports are printed at the end so the same
+install plugs into `bench/runner.py`'s env-var discovery.
 
 Caveats:
 
@@ -70,14 +79,21 @@ Caveats:
   `fkhaidari/surfer-tywaves`. Currently linux-x86_64 only. Other
   platforms fall back to `tools/release/release-tywaves.nu build`
   (needs Rust 1.75+).
+- `chiseltrace` ships two binaries in one tarball:
+  `chiseltrace-cli` (slice / DynPDG / convert-to-source -- consumes the
+  output of `uhdi-to-pdg`) and `chiseltrace` (Tauri GUI rendering the
+  same graph interactively). Mirrored from `jarlb/chiseltrace` at
+  `fkhaidari/chiseltrace`. Currently linux-x86_64 only. Other
+  platforms fall back to `tools/release/release-chiseltrace.nu build`
+  (needs Rust 1.75+, npm, and `cargo install tauri-cli`).
 - `hgdb-cli` depends on `hgdb-py` (links the cpython-3.12 `_hgdb.so`
   into the venv), so it inherits the linux-x86_64 restriction. It
   pip-installs `hgdb-debugger` + `libhgdb` from PyPI into
   `<prefix>/cli-venv` and exposes `hgdb`, `hgdb-replay`, `hgdb-db`,
-  `uhdi-to-hgldd`, and `uhdi-to-hgdb` as `<prefix>/bin/*` symlinks.
-  `install.sh all` runs preflight on `python3` (3.12 required) before
-  dispatching components, so a missing/wrong python fails fast rather
-  than silently skipping hgdb-cli.
+  `uhdi-to-hgldd`, `uhdi-to-hgdb`, and `uhdi-to-pdg` as `<prefix>/bin/*`
+  symlinks. `install.sh all` runs preflight on `python3` (3.12 required)
+  before dispatching components, so a missing/wrong python fails fast
+  rather than silently skipping hgdb-cli.
 
 ## Running the image
 
@@ -193,12 +209,16 @@ operates on its own artifact and tags so the workflow scales:
 | `nu release-firtool.nu build --from-docker --release <tag>` | `firtool-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | `firtool-vX.Y.Z` |
 | `nu release-hgdb-py.nu build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
 | `nu release-tywaves.nu build --from-docker --release <tag>` | `tywaves-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
+| `nu release-chiseltrace.nu build --release <tag>` | `chiseltrace-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` (CLI + GUI) | upload to firtool's tag |
 | `nu release-chisel.nu <tag>` | JitPack build at `https://jitpack.io/#fkhaidari/chisel/<tag>` | `vX.Y.Z-uhdi` |
 
-`release-hgdb-py.nu` and `release-tywaves.nu` both use
-`gh release upload --clobber` if the tag exists, so attaching
+`release-hgdb-py.nu`, `release-tywaves.nu`, and `release-chiseltrace.nu`
+all use `gh release upload --clobber` if the tag exists, so attaching
 their tarballs to firtool's release is just running them with the
-same tag.
+same tag. `release-chiseltrace.nu` is source-only for now (the
+uhdi-tools Docker image doesn't include chiseltrace, so `--from-docker`
+is intentionally rejected); the host needs Rust 1.75+, npm, and
+`cargo install tauri-cli`.
 
 `tools/test-install.nu` runs `install.sh all` against a throwaway
 prefix and asserts each component landed correctly. Use it as a

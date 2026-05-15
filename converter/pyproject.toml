@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "uhdi-converter"
 version = "0.1.0"
-description = "Pool-based UHDI -> HGLDD / hgdb SQLite converters."
+description = "Pool-based UHDI -> HGLDD / hgdb SQLite / PDG converters."
 requires-python = ">=3.11"
 # `referencing` is imported directly in uhdi_common.validate; pin it
 # instead of relying on jsonschema's transitive dep.
@@ -17,6 +17,7 @@ dev = ["pytest>=7"]
 [project.scripts]
 uhdi-to-hgldd = "uhdi_to_hgldd.__main__:main"
 uhdi-to-hgdb = "uhdi_to_hgdb.__main__:main"
+uhdi-to-pdg = "uhdi_to_pdg.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

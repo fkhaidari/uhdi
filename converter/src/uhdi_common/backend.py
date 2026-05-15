@@ -34,7 +34,8 @@ class Backend(abc.ABC):
 
 _REGISTRY: Dict[str, Backend] = {}
 
-_KNOWN_PACKAGES = ("uhdi_to_hgldd", "uhdi_to_hgdb", "uhdi_to_hgdb_json")
+_KNOWN_PACKAGES = ("uhdi_to_hgldd", "uhdi_to_hgdb", "uhdi_to_hgdb_json",
+                   "uhdi_to_pdg")
 
 
 def register(cls: Type[Backend]) -> Type[Backend]:

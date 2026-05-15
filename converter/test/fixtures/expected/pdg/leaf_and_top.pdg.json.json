@@ -1,0 +1,142 @@
+{
+  "cfg": [
+    {
+      "stmtRef": 4
+    },
+    {
+      "stmtRef": 5
+    }
+  ],
+  "edges": [
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 4,
+      "kind": "Data",
+      "to": 0
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 4,
+      "kind": "Declaration",
+      "to": 1
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 5,
+      "kind": "Data",
+      "to": 2
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 5,
+      "kind": "Declaration",
+      "to": 3
+    }
+  ],
+  "predicates": [],
+  "vertices": [
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "LeafAndTop.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 12,
+      "modulePath": [
+        "Top"
+      ],
+      "name": "input_a",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "LeafAndTop.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 13,
+      "modulePath": [
+        "Top"
+      ],
+      "name": "output_b",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "LeafAndTop.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 4,
+      "modulePath": [
+        "Top",
+        "l"
+      ],
+      "name": "input_x",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "LeafAndTop.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 5,
+      "modulePath": [
+        "Top",
+        "l"
+      ],
+      "name": "output_y",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "b",
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "LeafAndTop.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 15,
+      "modulePath": [
+        "Top"
+      ],
+      "name": "connect_b",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "y",
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "LeafAndTop.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 6,
+      "modulePath": [
+        "Top",
+        "l"
+      ],
+      "name": "connect_y",
+      "relatedSignal": null
+    }
+  ]
+}

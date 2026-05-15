@@ -178,5 +178,33 @@ def main [] {
         assert equal $lines ["=== Done ==="]
       }
     }
+    {
+      name: "env-hint-lines chiseltrace only triggers PATH hint"
+      body: {||
+        # chiseltrace lives under bin/; PATH hint must fire even if it's
+        # the only component installed.
+        let lines = (env-hint-lines "/p" ["chiseltrace"] ["/usr/bin"])
+        assert equal $lines [
+          "=== Done ==="
+          '  export CHISELTRACE="/p/bin/chiseltrace-cli"'
+          '  export PATH="/p/bin:$PATH"'
+        ]
+      }
+    }
+    {
+      name: "env-hint-lines all five components"
+      body: {||
+        let lines = (env-hint-lines "/p" ["firtool" "hgdb-py" "tywaves" "chiseltrace" "hgdb-cli"] ["/usr/bin"])
+        assert equal $lines [
+          "=== Done ==="
+          '  export FIRTOOL="/p/bin/firtool"'
+          '  export HGDB_PY="/p/lib/hgdb/bindings/python"'
+          '  export TYWAVES="/p/bin/tywaves"'
+          '  export CHISELTRACE="/p/bin/chiseltrace-cli"'
+          '  export HGDB_DEBUGGER="/p/bin/hgdb"'
+          '  export PATH="/p/bin:$PATH"'
+        ]
+      }
+    }
   ]
 }

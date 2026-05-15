@@ -1,0 +1,172 @@
+{
+  "cfg": [
+    {
+      "falseBranch": null,
+      "stmtRef": 5,
+      "trueBranch": [
+        {
+          "stmtRef": 6
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 5,
+      "kind": "Data",
+      "to": 2
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 5,
+      "kind": "Data",
+      "to": 3
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Data",
+      "to": 0
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Data",
+      "to": 1
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Declaration",
+      "to": 4
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Conditional",
+      "to": 5
+    }
+  ],
+  "predicates": [],
+  "vertices": [
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Adder.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 4,
+      "modulePath": [
+        "Adder"
+      ],
+      "name": "input_a",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Adder.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 5,
+      "modulePath": [
+        "Adder"
+      ],
+      "name": "input_b",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Adder.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 6,
+      "modulePath": [
+        "Adder"
+      ],
+      "name": "input_en",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Adder.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 7,
+      "modulePath": [
+        "Adder"
+      ],
+      "name": "input_force",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Adder.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 8,
+      "modulePath": [
+        "Adder"
+      ],
+      "name": "output_sum",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 0,
+      "clocked": false,
+      "condition": null,
+      "file": "",
+      "isChiselStatement": true,
+      "kind": "ControlFlow",
+      "line": 0,
+      "modulePath": [
+        "Adder"
+      ],
+      "name": "cond_on_[or_of_inputs]",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "sum",
+      "char": 7,
+      "clocked": false,
+      "condition": null,
+      "file": "Adder.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 11,
+      "modulePath": [
+        "Adder"
+      ],
+      "name": "connect_sum",
+      "relatedSignal": null
+    }
+  ]
+}

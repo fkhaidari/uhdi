@@ -1,0 +1,83 @@
+{
+  "cfg": [
+    {
+      "stmtRef": 2
+    }
+  ],
+  "edges": [
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 2,
+      "kind": "Data",
+      "to": 0
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 2,
+      "kind": "Declaration",
+      "to": 1
+    }
+  ],
+  "predicates": [],
+  "vertices": [
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "BundleTest.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 4,
+      "modulePath": [
+        "BundleTest"
+      ],
+      "name": "input_io.in",
+      "relatedSignal": {
+        "fieldPath": ".in",
+        "signalPath": "io"
+      }
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "BundleTest.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 5,
+      "modulePath": [
+        "BundleTest"
+      ],
+      "name": "output_io.out",
+      "relatedSignal": {
+        "fieldPath": ".out",
+        "signalPath": "io"
+      }
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "io.out",
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "BundleTest.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 7,
+      "modulePath": [
+        "BundleTest"
+      ],
+      "name": "connect_io.out",
+      "relatedSignal": {
+        "fieldPath": ".out",
+        "signalPath": "io"
+      }
+    }
+  ]
+}
