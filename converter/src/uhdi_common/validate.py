@@ -78,6 +78,10 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
         print(f"{source}: warning: unknown representation: {rep_err}",
               file=sys.stderr)
 
+    for enum_err in enum_width_errors(uhdi):
+        print(f"{source}: warning: enum invariant: {enum_err}",
+              file=sys.stderr)
+
     errs = list(iter_errors(uhdi))
     if not errs:
         return 0
@@ -131,6 +135,56 @@ def representations_errors(uhdi: Dict[str, Any]) -> List[str]:
                 errs.append(
                     f"scopes.{scope_id}.representations[{key!r}] "
                     f"(not in document representations)")
+
+    return sorted(errs)
+
+
+def enum_width_errors(uhdi: Dict[str, Any]) -> List[str]:
+    """Diagnostics for enum variant keys that overflow underlyingTypeRef width.
+
+    Spec §4.4 invariants 3 (underlying must be ground integer) and 4
+    (variant keys must fit width)."""
+    types = uhdi.get("types") or {}
+    errs: List[str] = []
+
+    for type_id, t in types.items():
+        if not isinstance(t, dict) or t.get("kind") != "enum":
+            continue
+        underlying_ref = t.get("underlyingTypeRef")
+        if not isinstance(underlying_ref, str):
+            continue
+        underlying = types.get(underlying_ref)
+        if not isinstance(underlying, dict):
+            continue
+        kind = underlying.get("kind")
+        if kind not in ("uint", "sint"):
+            errs.append(
+                f"types.{type_id}.underlyingTypeRef -> "
+                f"types[{underlying_ref!r}] is kind={kind!r}, "
+                f"must be uint or sint")
+            continue
+        width = underlying.get("width")
+        if not isinstance(width, int) or width < 0:
+            continue
+        if kind == "uint":
+            lo = 0
+            hi = (1 << width) - 1 if width > 0 else 0
+        else:
+            if width == 0:
+                continue
+            half = 1 << (width - 1)
+            lo, hi = -half, half - 1
+
+        for key in (t.get("variants") or {}):
+            try:
+                k = int(key)
+            except (TypeError, ValueError):
+                continue
+            if not (lo <= k <= hi):
+                errs.append(
+                    f"types.{type_id}.variants[{key!r}] = {k} "
+                    f"out of range [{lo}, {hi}] for "
+                    f"underlying {kind}<{width}>")
 
     return sorted(errs)
 

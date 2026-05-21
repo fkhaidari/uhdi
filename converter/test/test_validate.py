@@ -302,6 +302,85 @@ def test_iter_errors_accepts_fieldname_on_dot_opcode():
     )
 
 
+# ---- enum_width_errors ----------------------------------------------------
+
+
+def test_enum_width_errors_empty_for_clean_doc():
+    assert validate.enum_width_errors(_minimal_valid_doc()) == []
+
+
+def test_enum_width_errors_flags_uint_overflow():
+    """Variant key exceeds 2^width - 1 for uint<W> (F-U1.9, spec §4.4 inv 4)."""
+    doc = _minimal_valid_doc()
+    doc["types"]["uint2"] = {"kind": "uint", "width": 2}
+    doc["types"]["MyEnum"] = {
+        "kind": "enum",
+        "underlyingTypeRef": "uint2",
+        "variants": {"0": "A", "3": "OK", "99": "BIG"},
+    }
+    errs = validate.enum_width_errors(doc)
+    assert any("99" in e and "out of range" in e for e in errs)
+    assert not any("'0'" in e for e in errs)
+    assert not any("'3'" in e for e in errs)
+
+
+def test_enum_width_errors_flags_negative_on_uint():
+    """Negative variant key invalid for uint (F-U1.9)."""
+    doc = _minimal_valid_doc()
+    doc["types"]["uint4"] = {"kind": "uint", "width": 4}
+    doc["types"]["MyEnum"] = {
+        "kind": "enum",
+        "underlyingTypeRef": "uint4",
+        "variants": {"-1": "NEG"},
+    }
+    errs = validate.enum_width_errors(doc)
+    assert any("-1" in e and "out of range" in e for e in errs)
+
+
+def test_enum_width_errors_flags_sint_overflow():
+    """Variant key outside [-2^(W-1), 2^(W-1)-1] for sint<W> (F-U1.9)."""
+    doc = _minimal_valid_doc()
+    doc["types"]["sint4"] = {"kind": "sint", "width": 4}
+    doc["types"]["MyEnum"] = {
+        "kind": "enum",
+        "underlyingTypeRef": "sint4",
+        "variants": {"-8": "MIN", "7": "MAX", "8": "TOO_BIG"},
+    }
+    errs = validate.enum_width_errors(doc)
+    assert any("'8'" in e and "out of range" in e for e in errs)
+    assert not any("'-8'" in e for e in errs)
+    assert not any("'7'" in e for e in errs)
+
+
+def test_enum_width_errors_flags_non_ground_underlying():
+    """Underlying must be uint or sint (F-U1.9 / spec §4.4 inv 3)."""
+    doc = _minimal_valid_doc()
+    doc["types"]["MyStruct"] = {"kind": "struct", "members": []}
+    doc["types"]["MyEnum"] = {
+        "kind": "enum",
+        "underlyingTypeRef": "MyStruct",
+        "variants": {"0": "A"},
+    }
+    errs = validate.enum_width_errors(doc)
+    assert any("MyStruct" in e and "must be uint or sint" in e for e in errs)
+
+
+def test_validate_or_exit_warns_on_enum_overflow(capsys):
+    doc = _minimal_valid_doc()
+    doc["types"]["uint2"] = {"kind": "uint", "width": 2}
+    doc["types"]["MyEnum"] = {
+        "kind": "enum",
+        "underlyingTypeRef": "uint2",
+        "variants": {"99": "BIG"},
+    }
+    rc = validate.validate_or_exit(doc, pathlib.Path("d.uhdi.json"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "warning" in captured.err
+    assert "enum invariant" in captured.err
+    assert "99" in captured.err
+
+
 def test_validate_or_exit_warns_on_dangling_refs_without_failing(capsys):
     doc = _minimal_valid_doc()
     doc["top"].append("ghost_scope")
