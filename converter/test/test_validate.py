@@ -252,6 +252,56 @@ def test_validate_or_exit_warns_on_unknown_representation(capsys):
     assert "unknown representation" in captured.err
 
 
+# ---- schema if/then/else (F-U1.6, F-U1.8) -----------------------------------
+
+
+def test_iter_errors_flags_direction_on_non_port_variable():
+    """Schema rejects `direction` when bindKind != 'port' (F-U1.6, spec §6.6 inv 2)."""
+    doc = _minimal_valid_doc()
+    # var_Counter_r has bindKind='reg' — add direction to make it invalid
+    doc["variables"]["var_Counter_r"]["direction"] = "input"
+    errs = list(validate.iter_errors(doc))
+    assert any("direction" in e.message or "direction" in str(e.absolute_path)
+               for e in errs)
+
+
+def test_iter_errors_flags_missing_direction_on_port():
+    """Schema requires `direction` when bindKind == 'port' (F-U1.6, spec §6.6 inv 2)."""
+    doc = _minimal_valid_doc()
+    # var_Counter_clock is a port — remove its direction
+    doc["variables"]["var_Counter_clock"].pop("direction", None)
+    errs = list(validate.iter_errors(doc))
+    assert any("direction" in e.message for e in errs)
+
+
+def test_iter_errors_flags_fieldname_on_non_dot_opcode():
+    """Schema rejects `fieldName` when opcode != '.' (F-U1.8, spec §5.6 inv 5)."""
+    doc = _minimal_valid_doc()
+    doc["expressions"]["bad_expr"] = {
+        "opcode": "+",
+        "operands": [],
+        "fieldName": "x",
+    }
+    errs = list(validate.iter_errors(doc))
+    assert any("fieldName" in e.message or "fieldName" in str(e.absolute_path)
+               for e in errs)
+
+
+def test_iter_errors_accepts_fieldname_on_dot_opcode():
+    """Schema allows `fieldName` on opcode '.' (F-U1.8, spec §5.6 inv 5)."""
+    doc = _minimal_valid_doc()
+    doc["expressions"]["dot_expr"] = {
+        "opcode": ".",
+        "operands": [{"varRef": "var_Counter_r"}],
+        "fieldName": "valid",
+    }
+    errs = list(validate.iter_errors(doc))
+    assert not any(
+        ("fieldName" in e.message and "not allowed" in e.message.lower())
+        for e in errs
+    )
+
+
 def test_validate_or_exit_warns_on_dangling_refs_without_failing(capsys):
     doc = _minimal_valid_doc()
     doc["top"].append("ghost_scope")

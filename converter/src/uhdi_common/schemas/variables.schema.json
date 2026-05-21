@@ -185,7 +185,17 @@
           "type": "integer",
           "minimum": 0
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "bindKind": { "const": "port" } },
+            "required": ["bindKind"]
+          },
+          "then": { "required": ["direction"] },
+          "else": { "not": { "required": ["direction"] } }
+        }
+      ]
     }
   },
   "type": "object",

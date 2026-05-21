@@ -140,7 +140,17 @@
         "fieldName": {
           "type": "string"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "opcode": { "const": "." } },
+            "required": ["opcode"]
+          },
+          "then": {},
+          "else": { "not": { "required": ["fieldName"] } }
+        }
+      ]
     },
     "Operand": {
       "oneOf": [
