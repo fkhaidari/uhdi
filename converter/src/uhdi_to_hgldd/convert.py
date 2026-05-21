@@ -383,16 +383,16 @@ def _struct_objects(ctx):
             # source-language metadata. Resolve it lazily so structs
             # whose producer didn't emit synthetics still get the
             # legacy (type-only) port_var.
+            # enum_def_ref derives from the member's typeRef on the struct
+            # itself -- no synthetic Variable needed.
+            mref = m.get("typeRef", "")
+            if (eid := ctx.enum_id_by_type.get(mref)) is not None:
+                pv["enum_def_ref"] = eid
             if (sub := subfields.get(name)):
                 sub_hgl = ((sub.get("representations", {}) or {})
                            .get(ctx.authoring_repr, {}) or {})
                 if slti := _source_lang_type(sub_hgl):
                     pv["source_lang_type_info"] = slti
-                # enum_def_ref pulled from the member's own typeRef via
-                # the global id map -- stable across all scopes.
-                mref = m.get("typeRef", "")
-                if (eid := ctx.enum_id_by_type.get(mref)) is not None:
-                    pv["enum_def_ref"] = eid
             port_vars.append(pv)
         obj = {"kind": "struct", "obj_name": tid, "port_vars": port_vars}
         if struct_loc:

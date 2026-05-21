@@ -1611,3 +1611,42 @@ def test_loc_to_hgldd_drops_source_location_with_empty_file_path():
     mod = _module_object(out)
     pv = next(p for p in mod["port_vars"] if p["var_name"] == "v")
     assert "hgl_loc" not in pv
+
+
+def test_struct_member_enum_def_ref_emitted_without_synthetic_subfields():
+    """Struct member's enum_def_ref must emit even when the producer
+    did not emit synthetic per-field Variables (extmodule path)."""
+    doc = _doc_skeleton()
+    doc["top"] = ["Top"]
+    doc["types"]["uint2"] = {"kind": "uint", "width": 2}
+    doc["types"]["AluOp"] = {
+        "kind": "enum", "underlyingTypeRef": "uint2",
+        "variants": {"0": "ADD", "1": "SUB"},
+    }
+    doc["types"]["B"] = {
+        "kind": "struct",
+        "members": [{"name": "op", "typeRef": "AluOp"}],
+    }
+    # NO synthetic Variable for `op` -- just the aggregate.
+    doc["variables"]["bun"] = {
+        "typeRef": "B", "bindKind": "node", "ownerScopeRef": "Top",
+        "representations": {
+            "chisel": {"name": "bun"},
+            "verilog": {"value": {"sigName": "bun"}},
+        },
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["bun"],
+    }
+    out = hgldd_convert(doc)
+    struct_b = _struct_object(out, "B")
+    op_pv = next(pv for pv in struct_b["port_vars"]
+                 if pv["var_name"] == "op")
+    assert "enum_def_ref" in op_pv
+    # The enum is the only one referenced globally -> id 0.
+    assert op_pv["enum_def_ref"] == 0
+    # source_lang_type_info remains absent (no synthetic to source it).
+    assert "source_lang_type_info" not in op_pv
