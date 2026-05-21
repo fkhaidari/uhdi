@@ -224,6 +224,9 @@ def _type_description(type_ref, ctx):
         if (size := int(descriptor.get("size", 0))) > 0:
             elem.setdefault("unpacked_range", [size - 1, 0])
         return elem
+    if kind == "enum":
+        underlying = descriptor.get("underlyingTypeRef", "")
+        return _type_description(underlying, ctx)
     return {"type_name": "logic"}
 
 

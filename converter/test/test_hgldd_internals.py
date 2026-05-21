@@ -1394,6 +1394,81 @@ def test_convert_omits_sourcelangtype_when_typename_missing():
     assert "source_lang_type_info" not in pv
 
 
+def test_type_description_enum_resolves_packed_range_from_underlying():
+    """Enum-typed values must carry the storage width drawn from
+    underlyingTypeRef. Width is otherwise unrecoverable from HGLDD
+    output -- enum_defs payload omits the underlying type."""
+    out = hgldd_convert(_alu_with_sourcelang_and_enum())
+    inner = _struct_object(out, "Alu_io_in")
+    op_pv = next(pv for pv in inner["port_vars"] if pv["var_name"] == "op")
+    # AluOp's underlyingTypeRef is uint2 -> packed_range [1, 0].
+    assert op_pv["packed_range"] == [1, 0]
+
+
+def test_type_description_enum_one_bit_elides_packed_range():
+    """1-bit enum elides packed_range, matching the uint/sint convention."""
+    doc = _doc_skeleton()
+    doc["top"] = ["Top"]
+    doc["types"]["uint1"] = {"kind": "uint", "width": 1}
+    doc["types"]["Toggle"] = {
+        "kind": "enum", "underlyingTypeRef": "uint1",
+        "variants": {"0": "OFF", "1": "ON"},
+    }
+    doc["variables"]["var_t"] = {
+        "typeRef": "Toggle", "bindKind": "port",
+        "direction": "input", "ownerScopeRef": "Top",
+        "representations": {
+            "chisel": {"name": "t"},
+            "verilog": {"value": {"sigName": "t"}},
+        },
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["var_t"],
+    }
+    out = hgldd_convert(doc)
+    mod = _module_object(out)
+    pv = next(p for p in mod["port_vars"] if p["var_name"] == "t")
+    assert "packed_range" not in pv
+    assert pv["type_name"] == "logic"
+
+
+def test_type_description_vec_of_enum_carries_element_width():
+    """Vec(N, Enum) port: packed_range from the enum's underlying type,
+    unpacked_range from the vector size."""
+    doc = _doc_skeleton()
+    doc["top"] = ["Top"]
+    doc["types"]["uint2"] = {"kind": "uint", "width": 2}
+    doc["types"]["AluOp"] = {
+        "kind": "enum", "underlyingTypeRef": "uint2",
+        "variants": {"0": "ADD", "1": "SUB"},
+    }
+    doc["types"]["AluOpVec"] = {
+        "kind": "vector", "elementRef": "AluOp", "size": 4,
+    }
+    doc["variables"]["var_ops"] = {
+        "typeRef": "AluOpVec", "bindKind": "port",
+        "direction": "input", "ownerScopeRef": "Top",
+        "representations": {
+            "chisel": {"name": "ops"},
+            "verilog": {"value": {"sigName": "ops"}},
+        },
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["var_ops"],
+    }
+    out = hgldd_convert(doc)
+    mod = _module_object(out)
+    pv = next(p for p in mod["port_vars"] if p["var_name"] == "ops")
+    assert pv["packed_range"] == [1, 0]
+    assert pv["unpacked_range"] == [3, 0]
+
+
 def test_convert_global_enum_ids_stable_across_scopes_sharing_struct():
     """A struct shared between two modules must have a single
     enum_def_ref on its members that resolves to the same variants
