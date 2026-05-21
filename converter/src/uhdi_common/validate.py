@@ -87,16 +87,18 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
 # Reference key -> acceptable pools.  enable/guard/matchRef are polymorphic:
 # emitters put either an expression id or a bare variable id there.
 _REF_TO_POOLS: Dict[str, Tuple[str, ...]] = {
-    "typeRef":           ("types",),
-    "elementRef":        ("types",),
-    "underlyingTypeRef": ("types",),
-    "varRef":            ("variables",),
-    "exprRef":           ("expressions",),
-    "scopeRef":          ("scopes",),
-    "ownerScopeRef":     ("scopes",),
-    "guardRef":          ("expressions", "variables"),
-    "enableRef":         ("expressions", "variables"),
-    "matchRef":          ("expressions", "variables"),
+    "typeRef":            ("types",),
+    "elementRef":         ("types",),
+    "underlyingTypeRef":  ("types",),
+    "varRef":             ("variables",),
+    "exprRef":            ("expressions",),
+    "condRef":            ("expressions",),
+    "scopeRef":           ("scopes",),
+    "ownerScopeRef":      ("scopes",),
+    "containerScopeRef":  ("scopes",),
+    "guardRef":           ("expressions", "variables"),
+    "enableRef":          ("expressions", "variables"),
+    "matchRef":           ("expressions", "variables"),
 }
 
 

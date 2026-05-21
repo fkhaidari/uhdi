@@ -173,6 +173,28 @@ def test_referential_errors_does_not_flag_attributes():
     assert validate.referential_errors(doc) == []
 
 
+def test_referential_errors_flags_dangling_cond_ref():
+    doc = _minimal_valid_doc()
+    doc["scopes"]["s_assert"] = {
+        "name": "assert_scope",
+        "kind": "inline",
+        "body": [{"kind": "assert", "condRef": "ghost_expr"}],
+    }
+    errs = validate.referential_errors(doc)
+    assert any("condRef" in e and "ghost_expr" in e for e in errs)
+
+
+def test_referential_errors_flags_dangling_container_scope_ref():
+    doc = _minimal_valid_doc()
+    doc["scopes"]["s_inline"] = {
+        "name": "inline_scope",
+        "kind": "inline",
+        "containerScopeRef": "ghost_scope",
+    }
+    errs = validate.referential_errors(doc)
+    assert any("containerScopeRef" in e and "ghost_scope" in e for e in errs)
+
+
 def test_validate_or_exit_warns_on_dangling_refs_without_failing(capsys):
     doc = _minimal_valid_doc()
     doc["top"].append("ghost_scope")
