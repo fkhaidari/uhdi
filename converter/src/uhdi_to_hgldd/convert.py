@@ -180,7 +180,13 @@ def _resolve_hdl_file_path(ctx) -> Optional[str]:
     sim = (top_scope.get("representations", {}) or {}).get(
         ctx.simulation_repr, {}) or {}
     hdl_name = sim.get("name") or top_scope.get("name") or top_ids[0]
-    ext = _HDL_LANGUAGE_EXTENSIONS.get(sim_repr.get("language", ""), ".sv")
+    lang = sim_repr.get("language", "")
+    if lang and lang not in _HDL_LANGUAGE_EXTENSIONS:
+        raise HGLDDConversionError(
+            f"unknown HDL language '{lang}'; "
+            f"expected one of {sorted(_HDL_LANGUAGE_EXTENSIONS)}"
+        )
+    ext = _HDL_LANGUAGE_EXTENSIONS.get(lang, ".sv")
     return f"{hdl_name}{ext}"
 
 

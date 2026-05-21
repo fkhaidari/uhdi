@@ -1666,3 +1666,52 @@ def test_convert_omits_hdl_file_index_when_file_info_empty():
     out = hgldd_convert(doc)
     assert out["HGLDD"]["file_info"] == []
     assert "hdl_file_index" not in out["HGLDD"]
+
+
+# ---- unknown HDL language guard (FU3.7) ---------------------------------
+
+
+def test_resolve_hdl_file_path_raises_on_unknown_language():
+    """Explicit but unrecognized HDL language must surface as a
+    conversion error, not silently fall back to .sv."""
+    doc = _doc_skeleton()
+    doc["top"] = ["Top"]
+    doc["representations"]["verilog"]["language"] = "VHDL"
+    doc["representations"]["verilog"]["files"] = []
+    doc["types"]["uint8"] = {"kind": "uint", "width": 8}
+    doc["variables"]["v"] = {
+        "typeRef": "uint8", "bindKind": "wire", "ownerScopeRef": "Top",
+        "representations": {"chisel": {"name": "v"},
+                            "verilog": {"value": {"sigName": "v"}}},
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["v"],
+    }
+    with pytest.raises(HGLDDConversionError, match="unknown HDL language"):
+        hgldd_convert(doc)
+
+
+def test_resolve_hdl_file_path_keeps_sv_default_when_language_empty():
+    """When language is absent/empty (current firtool --emit-uhdi),
+    the .sv default still fires."""
+    doc = _doc_skeleton()
+    doc["top"] = ["Top"]
+    doc["representations"]["verilog"].pop("language", None)
+    doc["representations"]["verilog"]["files"] = []
+    doc["types"]["uint8"] = {"kind": "uint", "width": 8}
+    doc["variables"]["v"] = {
+        "typeRef": "uint8", "bindKind": "wire", "ownerScopeRef": "Top",
+        "representations": {"chisel": {"name": "v"},
+                            "verilog": {"value": {"sigName": "v"}}},
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["v"],
+    }
+    out = hgldd_convert(doc)
+    assert "Top.sv" in out["HGLDD"]["file_info"]
