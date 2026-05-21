@@ -85,6 +85,7 @@ def discover_toolchain() -> Toolchain:
                 pathlib.Path("/opt/hgdb/bindings/python"),
                 practice / "hgdb" / "bindings" / "python"):
             if (candidate / "scripts" / "toml2hgdb").is_file() and \
+                    (candidate / "hgdb").is_dir() and \
                     any((candidate / "build").glob("lib.*")):
                 hgdb_py = candidate
                 break
