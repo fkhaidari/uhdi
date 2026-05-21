@@ -195,6 +195,8 @@ def _loc_to_hgldd(loc, repr_key, ctx):
     is_hdl = repr_info.get("kind") == "hdl"
     if is_hdl and not raw_path and ctx.hdl_file_path:
         raw_path = ctx.hdl_file_path
+    if not raw_path:
+        return None
     add = ctx.files.add_hdl if is_hdl else ctx.files.add_source
     out = {"file": add(raw_path) + 1}  # HGLDD is 1-indexed.
     if "beginLine" in loc:

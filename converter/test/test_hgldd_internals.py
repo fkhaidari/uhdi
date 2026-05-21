@@ -1579,3 +1579,35 @@ def test_convert_global_enum_ids_stable_across_scopes_sharing_struct():
     assert mod_b["enum_defs"][str(op_ref)] == {"0": "ADD", "1": "SUB"}
     assert mod_a["enum_defs"][str(mode_ref)] == {"0": "RUN", "1": "HALT"}
     assert mod_b["enum_defs"][str(mode_ref)] == {"0": "RUN", "1": "HALT"}
+
+
+def test_loc_to_hgldd_drops_source_location_with_empty_file_path():
+    """When representations.<src>.files contains an empty string and a
+    Variable's location points at that entry, the converter must drop
+    the location rather than insert '' into file_info."""
+    doc = _doc_skeleton()
+    doc["representations"]["chisel"]["files"] = [""]
+    doc["representations"]["verilog"]["files"] = ["Top.sv"]
+    doc["top"] = ["Top"]
+    doc["types"]["uint8"] = {"kind": "uint", "width": 8}
+    doc["variables"]["v"] = {
+        "typeRef": "uint8", "bindKind": "wire", "ownerScopeRef": "Top",
+        "representations": {
+            "chisel": {
+                "name": "v",
+                "location": {"file": 0, "beginLine": 5},
+            },
+            "verilog": {"value": {"sigName": "v"}},
+        },
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["v"],
+    }
+    out = hgldd_convert(doc)
+    assert "" not in out["HGLDD"]["file_info"]
+    mod = _module_object(out)
+    pv = next(p for p in mod["port_vars"] if p["var_name"] == "v")
+    assert "hgl_loc" not in pv
