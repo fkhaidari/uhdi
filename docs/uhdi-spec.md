@@ -2353,7 +2353,7 @@ Considered: take HGLDD's `objects`/`variables`/`scopes` shape and add `body[]` /
 
 - *Narrative collapse.* The §1.2 claim is "unified format as a superset of three legacy formats". An HGLDD-rooted document reads as "HGLDD plus debugger extensions" -- a hybrid, not an independent format. The N-way `representations` map (§3.2) and the pool-based layout (B.1) only make sense in a from-scratch design; bolting them onto HGLDD's fixed HGL/HDL pair (B.7) breaks HGLDD's own contract.
 - *Phase 3+ extensibility.* Dataflow (§10) and future optional layers sit naturally as optional sibling pools under the document root. Layered onto HGLDD they become extension keys hanging off a foreign object model, harder to evolve independently.
-- *Defence framing.* "Built a format and projected it back to HGLDD as one of three targets" (§15.3) is stronger than "extended HGLDD with our use case", which would require defending the asymmetry of one consumer being privileged.
+- *Defence framing.* "Built a format and projected it back to HGLDD as one of three targets" (§13.3) is stronger than "extended HGLDD with our use case", which would require defending the asymmetry of one consumer being privileged.
 
 ### B.10 Python projectors vs in-tree CIRCT-native converters
 
