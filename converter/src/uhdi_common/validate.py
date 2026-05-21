@@ -67,7 +67,12 @@ def iter_errors(uhdi: Dict[str, Any]) -> Iterator[Any]:
 
 
 def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
-    """CLI helper: print violations to stderr; 0 clean, 2 on violations.
+    """CLI helper: print violations to stderr.
+
+    Exit codes: 0 clean, 1 on cross-pool id collision (semantic hazard:
+    backends resolve a colliding id in opposite orders, see
+    `cross_pool_collision_errors`), 2 on schema violations. Schema
+    violations dominate -- if both fire, rc=2.
 
     Dangling refs surface as warnings only -- partial pools are common in
     emitter intermediates, and converters cope via fallback resolution."""
@@ -86,18 +91,21 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
         print(f"{source}: warning: duplicate authoring name: {dup_err}",
               file=sys.stderr)
 
-    for col_err in cross_pool_collision_errors(uhdi):
-        print(f"{source}: warning: cross-pool id collision: {col_err}",
+    collisions = cross_pool_collision_errors(uhdi)
+    for col_err in collisions:
+        print(f"{source}: error: cross-pool id collision: {col_err}",
               file=sys.stderr)
 
     errs = list(iter_errors(uhdi))
-    if not errs:
-        return 0
-    print(f"{source}: {len(errs)} schema violation(s)", file=sys.stderr)
-    for e in errs:
-        path = "/".join(str(p) for p in e.absolute_path) or "<root>"
-        print(f"  at {path}: {e.message}", file=sys.stderr)
-    return 2
+    if errs:
+        print(f"{source}: {len(errs)} schema violation(s)", file=sys.stderr)
+        for e in errs:
+            path = "/".join(str(p) for p in e.absolute_path) or "<root>"
+            print(f"  at {path}: {e.message}", file=sys.stderr)
+        return 2
+    if collisions:
+        return 1
+    return 0
 
 
 # Reference key -> acceptable pools.  enable/guard/matchRef are polymorphic:
@@ -259,14 +267,16 @@ def referential_errors(uhdi: Dict[str, Any]) -> List[str]:
 
 
 def cross_pool_collision_errors(uhdi: Dict[str, Any]) -> List[str]:
-    """Diagnostics for ids present in both `expressions` and `variables`.
+    """Hard errors for ids present in both `expressions` and `variables`.
 
     Polymorphic refs (guardRef/enableRef/matchRef) accept either pool,
     and the two backends resolve a colliding id in opposite orders:
     PDG `_expand_guard` checks variables first, HGLDD `walk_expression`
     dispatches on exprRef first. The same document yields different
-    edges per backend with no diagnostic. Spec is silent on pool-id
-    namespacing, so surface the latent hazard at validation time."""
+    edges per backend with no diagnostic. `validate_or_exit` upgrades a
+    non-empty return to rc=1 (enforced as of FU2.12 follow-up); the spec
+    treats pool ids as namespace-disjoint, and no bench fixture exercises
+    the collision path, so enforcement carries no compatibility cost."""
     exprs = uhdi.get("expressions") or {}
     vars_ = uhdi.get("variables") or {}
     if not isinstance(exprs, dict) or not isinstance(vars_, dict):

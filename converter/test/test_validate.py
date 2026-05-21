@@ -328,7 +328,7 @@ def test_cross_pool_collision_errors_flags_shared_id():
     _ = first_var
 
 
-def test_validate_or_exit_warns_on_cross_pool_collision(capsys):
+def test_validate_or_exit_errors_on_cross_pool_collision(capsys):
     doc = _minimal_valid_doc()
     first_var_id = next(iter(doc["variables"]))
     doc.setdefault("expressions", {})[first_var_id] = {
@@ -337,9 +337,25 @@ def test_validate_or_exit_warns_on_cross_pool_collision(capsys):
     }
     rc = validate.validate_or_exit(doc, pathlib.Path("d.uhdi.json"))
     captured = capsys.readouterr()
-    assert rc == 0
-    assert "cross-pool id collision" in captured.err
+    assert rc == 1
+    assert "error: cross-pool id collision" in captured.err
     assert first_var_id in captured.err
+
+
+def test_validate_or_exit_schema_violation_dominates_collision(capsys):
+    """Schema-level violations (rc=2) outrank cross-pool collisions (rc=1)."""
+    doc = _minimal_valid_doc()
+    first_var_id = next(iter(doc["variables"]))
+    doc.setdefault("expressions", {})[first_var_id] = {
+        "opcode": "neg",
+        "operands": [{"varRef": first_var_id}],
+    }
+    doc["format"] = {"name": "uhdi"}  # missing required `version` -> schema fail
+    rc = validate.validate_or_exit(doc, pathlib.Path("d.uhdi.json"))
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "error: cross-pool id collision" in captured.err
+    assert "schema violation" in captured.err
 
 
 # ---- schema if/then/else (F-U1.6, F-U1.8) -----------------------------------
