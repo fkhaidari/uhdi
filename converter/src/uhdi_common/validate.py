@@ -74,6 +74,10 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
     for ref_err in referential_errors(uhdi):
         print(f"{source}: warning: dangling ref: {ref_err}", file=sys.stderr)
 
+    for rep_err in representations_errors(uhdi):
+        print(f"{source}: warning: unknown representation: {rep_err}",
+              file=sys.stderr)
+
     errs = list(iter_errors(uhdi))
     if not errs:
         return 0
@@ -100,6 +104,35 @@ _REF_TO_POOLS: Dict[str, Tuple[str, ...]] = {
     "enableRef":          ("expressions", "variables"),
     "matchRef":           ("expressions", "variables"),
 }
+
+
+def representations_errors(uhdi: Dict[str, Any]) -> List[str]:
+    """Diagnostics for per-entity representations keys not declared at top level.
+
+    Spec §6.6 invariant 3 and §7.6 invariant 9 require per-entity
+    `representations` keys to be a subset of top-level `representations`."""
+    top_keys = set((uhdi.get("representations") or {}).keys())
+    errs: List[str] = []
+
+    for var_id, var in (uhdi.get("variables") or {}).items():
+        if not isinstance(var, dict):
+            continue
+        for key in (var.get("representations") or {}):
+            if key not in top_keys:
+                errs.append(
+                    f"variables.{var_id}.representations[{key!r}] "
+                    f"(not in document representations)")
+
+    for scope_id, scope in (uhdi.get("scopes") or {}).items():
+        if not isinstance(scope, dict):
+            continue
+        for key in (scope.get("representations") or {}):
+            if key not in top_keys:
+                errs.append(
+                    f"scopes.{scope_id}.representations[{key!r}] "
+                    f"(not in document representations)")
+
+    return sorted(errs)
 
 
 def referential_errors(uhdi: Dict[str, Any]) -> List[str]:

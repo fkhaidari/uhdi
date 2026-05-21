@@ -208,6 +208,50 @@ def test_referential_errors_flags_dangling_dataflow_ref():
     assert any("varRef" in e and "ghost_src" in e for e in errs)
 
 
+# ---- representations_errors -----------------------------------------------
+
+
+def test_representations_errors_empty_for_clean_doc():
+    assert validate.representations_errors(_minimal_valid_doc()) == []
+
+
+def test_representations_errors_flags_unknown_variable_key():
+    doc = _minimal_valid_doc()
+    first_var_id = next(iter(doc["variables"]))
+    doc["variables"][first_var_id].setdefault("representations", {})
+    doc["variables"][first_var_id]["representations"]["chiSel"] = {
+        "name": "io_en"
+    }
+    errs = validate.representations_errors(doc)
+    assert any("chiSel" in e and first_var_id in e for e in errs)
+
+
+def test_representations_errors_flags_unknown_scope_key():
+    doc = _minimal_valid_doc()
+    first_scope_id = next(iter(doc["scopes"]))
+    doc["scopes"][first_scope_id].setdefault("representations", {})
+    doc["scopes"][first_scope_id]["representations"]["verylog"] = {
+        "name": "Counter"
+    }
+    errs = validate.representations_errors(doc)
+    assert any("verylog" in e and first_scope_id in e for e in errs)
+
+
+def test_validate_or_exit_warns_on_unknown_representation(capsys):
+    doc = _minimal_valid_doc()
+    first_var_id = next(iter(doc["variables"]))
+    doc["variables"][first_var_id].setdefault("representations", {})
+    doc["variables"][first_var_id]["representations"]["chiSel"] = {
+        "name": "io_en"
+    }
+    rc = validate.validate_or_exit(doc, pathlib.Path("d.uhdi.json"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "warning" in captured.err
+    assert "chiSel" in captured.err
+    assert "unknown representation" in captured.err
+
+
 def test_validate_or_exit_warns_on_dangling_refs_without_failing(capsys):
     doc = _minimal_valid_doc()
     doc["top"].append("ghost_scope")
