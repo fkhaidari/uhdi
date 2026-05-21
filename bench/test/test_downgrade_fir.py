@@ -36,6 +36,14 @@ def test_banned_token_in_string_literal_does_not_trigger():
     assert "intrinsic fired" in out
 
 
+def test_semicolon_inside_string_literal_does_not_open_comment():
+    # A `;` inside the payload would, under naive ordering, strip the
+    # closing quote and leave `intrinsic` exposed to the banned-tokens
+    # regex.
+    out = downgrade('    printf(clock, en, "intrinsic; fired")\n')
+    assert "intrinsic; fired" in out
+
+
 def test_connect_lowered_to_arrow():
     out = downgrade("    connect a, b\n")
     assert "a <= b" in out

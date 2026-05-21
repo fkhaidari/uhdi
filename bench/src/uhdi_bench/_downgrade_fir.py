@@ -47,10 +47,11 @@ def downgrade(text: str) -> str:
             continue
         ln = re.sub(r'^(\s*)public\s+module\b', r'\1module', ln)
         ln = re.sub(r'^(\s*)public\s+extmodule\b', r'\1extmodule', ln)
-        # Strip `;` comments and "..." string contents before scanning
-        # so commentary or string-literal payload doesn't trip the guard.
-        scan_target = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', '""',
-                             re.sub(r';.*$', '', ln))
+        # Mask "..." string contents first, then strip `;` comments, so
+        # a `;` inside a string literal doesn't swallow the closing quote
+        # and leave a `intrinsic`-bearing substring unmasked.
+        scan_target = re.sub(r';.*$', '',
+                             re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', '""', ln))
         if m := _BANNED.search(scan_target):
             raise DowngradeError(
                 f"unsupported in legacy FIRRTL ({m.group(1)}): {ln.strip()!r}")
