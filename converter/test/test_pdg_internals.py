@@ -142,14 +142,27 @@ def test_collect_expr_vars_flattens_nested_exprrefs():
     assert acc == ["a", "b", "c"]
 
 
-def test_collect_expr_vars_terminates_on_exprref_cycle():
-    """Self-referencing exprRef would loop forever without the seen-set guard."""
+def test_collect_expr_vars_raises_on_exprref_cycle():
+    """Back-edge raises PDGConversionError; HGLDD's walk_expression does the
+    same, so cyclic guards fail consistently across backends (FU2.6)."""
     doc = _doc(expressions={
         "loop": {"opcode": "id", "operands": [{"exprRef": "loop"}]}})
     ctx = _Ctx.from_uhdi(doc)
     acc: list[str] = []
-    _collect_expr_vars(ctx.expressions["loop"], ctx, acc, set())
-    assert acc == []
+    with pytest.raises(PDGConversionError, match="cycle in expression graph"):
+        _collect_expr_vars(ctx.expressions["loop"], ctx, acc, set())
+
+
+def test_collect_expr_vars_raises_on_mutual_cycle():
+    """A -> B -> A back-edge also raises."""
+    doc = _doc(expressions={
+        "a": {"opcode": "id", "operands": [{"exprRef": "b"}]},
+        "b": {"opcode": "id", "operands": [{"exprRef": "a"}]},
+    })
+    ctx = _Ctx.from_uhdi(doc)
+    acc: list[str] = []
+    with pytest.raises(PDGConversionError, match="cycle in expression graph"):
+        _collect_expr_vars(ctx.expressions["a"], ctx, acc, set())
 
 
 def test_expand_guard_handles_var_and_expr_refs():

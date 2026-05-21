@@ -443,7 +443,7 @@ def _project_explicit_edges(ctx: _Ctx) -> List[Dict[str, Any]]:
 def _collect_expr_vars(operand: Any, ctx: _Ctx,
                        acc: List[str], seen_exprs: Set[str]) -> None:
     """Flatten an §5 expression / endpoint into the list of varRefs it touches.
-    Cycle guard via seen_exprs (matches uhdi_common.expressions.walk)."""
+    Cycle guard raises on back-edge to match uhdi_common.expressions.walk."""
     if not isinstance(operand, dict):
         return
     if (vref := operand.get("varRef")):
@@ -451,7 +451,8 @@ def _collect_expr_vars(operand: Any, ctx: _Ctx,
         return
     if (eref := operand.get("exprRef")):
         if eref in seen_exprs:
-            return
+            raise PDGConversionError(
+                f"cycle in expression graph at exprRef {eref!r}")
         target = ctx.expressions.get(eref)
         if target is None:
             return
