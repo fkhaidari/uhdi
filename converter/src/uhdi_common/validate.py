@@ -86,6 +86,10 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
         print(f"{source}: warning: duplicate authoring name: {dup_err}",
               file=sys.stderr)
 
+    for col_err in cross_pool_collision_errors(uhdi):
+        print(f"{source}: warning: cross-pool id collision: {col_err}",
+              file=sys.stderr)
+
     errs = list(iter_errors(uhdi))
     if not errs:
         return 0
@@ -252,3 +256,21 @@ def referential_errors(uhdi: Dict[str, Any]) -> List[str]:
         walk(uhdi.get(name) or {}, name)
 
     return sorted(errs)
+
+
+def cross_pool_collision_errors(uhdi: Dict[str, Any]) -> List[str]:
+    """Diagnostics for ids present in both `expressions` and `variables`.
+
+    Polymorphic refs (guardRef/enableRef/matchRef) accept either pool,
+    and the two backends resolve a colliding id in opposite orders:
+    PDG `_expand_guard` checks variables first, HGLDD `walk_expression`
+    dispatches on exprRef first. The same document yields different
+    edges per backend with no diagnostic. Spec is silent on pool-id
+    namespacing, so surface the latent hazard at validation time."""
+    exprs = uhdi.get("expressions") or {}
+    vars_ = uhdi.get("variables") or {}
+    if not isinstance(exprs, dict) or not isinstance(vars_, dict):
+        return []
+    collisions = set(exprs.keys()) & set(vars_.keys())
+    return [f"id {cid!r} in both expressions and variables pools"
+            for cid in sorted(collisions)]

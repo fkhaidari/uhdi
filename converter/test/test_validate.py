@@ -306,6 +306,42 @@ def test_validate_or_exit_warns_on_duplicate_authoring_name(capsys):
     assert name in captured.err
 
 
+# ---- cross_pool_collision_errors (FU2.12) -----------------------------------
+
+
+def test_cross_pool_collision_errors_empty_for_clean_doc():
+    assert validate.cross_pool_collision_errors(_minimal_valid_doc()) == []
+
+
+def test_cross_pool_collision_errors_flags_shared_id():
+    """An id present in both expressions and variables resolves to a
+    different pool per backend (FU2.12); surface the latent divergence."""
+    doc = _minimal_valid_doc()
+    first_var_id, first_var = next(iter(doc["variables"].items()))
+    doc.setdefault("expressions", {})[first_var_id] = {
+        "opcode": "neg",
+        "operands": [{"varRef": first_var_id}],
+    }
+    errs = validate.cross_pool_collision_errors(doc)
+    assert any(first_var_id in e and "expressions" in e and "variables" in e
+               for e in errs)
+    _ = first_var
+
+
+def test_validate_or_exit_warns_on_cross_pool_collision(capsys):
+    doc = _minimal_valid_doc()
+    first_var_id = next(iter(doc["variables"]))
+    doc.setdefault("expressions", {})[first_var_id] = {
+        "opcode": "neg",
+        "operands": [{"varRef": first_var_id}],
+    }
+    rc = validate.validate_or_exit(doc, pathlib.Path("d.uhdi.json"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "cross-pool id collision" in captured.err
+    assert first_var_id in captured.err
+
+
 # ---- schema if/then/else (F-U1.6, F-U1.8) -----------------------------------
 
 
