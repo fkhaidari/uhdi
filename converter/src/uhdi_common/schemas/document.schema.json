@@ -138,12 +138,6 @@
         "minLength": 1
       }
     },
-    "temporal": {
-      "$ref": "https://uhdi/temporal.schema.json"
-    },
-    "provenance": {
-      "$ref": "https://uhdi/provenance.schema.json"
-    },
     "attributes": {
       "type": "object",
       "additionalProperties": true
