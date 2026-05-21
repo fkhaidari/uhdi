@@ -425,6 +425,13 @@ def install-hgdb-cli [p: path force: bool] {
     error make {msg: "missing hgdb-py bindings"}
   }
 
+  let converter = ($REPO_ROOT | path join "converter")
+  if not ($converter | path join "pyproject.toml" | path exists) {
+    print -e $"  converter source tree not found at ($converter)."
+    print -e "  Run install.sh from a clone of fkhaidari/uhdi, not a vendored layer."
+    error make {msg: "missing converter source"}
+  }
+
   if not (ensure-writable $hgdb_bin $force) { return }
   rm -rf $venv
 
