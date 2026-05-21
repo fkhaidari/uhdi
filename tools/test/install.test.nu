@@ -59,15 +59,24 @@ def main [] {
       name: "auth-curl-args without GITHUB_TOKEN"
       body: {||
         with-env {GITHUB_TOKEN: ""} {
-          assert equal (auth-curl-args) ["-fsSL"]
+          assert equal (auth-curl-args "https://api.github.com/repos/o/r") ["-fsSL"]
         }
       }
     }
     {
-      name: "auth-curl-args with GITHUB_TOKEN"
+      name: "auth-curl-args attaches token only for api.github.com"
       body: {||
         with-env {GITHUB_TOKEN: "abc123"} {
-          assert equal (auth-curl-args) ["-fsSL" "-H" "Authorization: Bearer abc123"]
+          assert equal (auth-curl-args "https://api.github.com/repos/o/r") ["-fsSL" "-H" "Authorization: Bearer abc123"]
+        }
+      }
+    }
+    {
+      name: "auth-curl-args drops token for release CDN URLs"
+      body: {||
+        with-env {GITHUB_TOKEN: "abc123"} {
+          assert equal (auth-curl-args "https://github.com/o/r/releases/download/v1/x.tar.gz") ["-fsSL"]
+          assert equal (auth-curl-args "https://objects.githubusercontent.com/path") ["-fsSL"]
         }
       }
     }

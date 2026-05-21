@@ -188,20 +188,24 @@ def dl-release-asset [
   let filename = ($url | path basename)
   mkdir $dest_dir
   print -e $"  Download:   ($url)"
-  let curl_args = (auth-curl-args)
+  let curl_args = (auth-curl-args $url)
   let dest = ($dest_dir | path join $filename)
   ^curl ...$curl_args -o $dest $url
   $dest
 }
 
-# Append `Authorization: Bearer ...` if GITHUB_TOKEN is set; the
-# unauthenticated 60/hr rate limit blows through fast on test-install.
-export def auth-curl-args []: nothing -> list<string> {
+# Append `Authorization: Bearer ...` only for api.github.com; release
+# asset CDN URLs (github.com/.../releases/download, objects.github-
+# usercontent.com) don't share the 60/hr rate limit and a bearer there
+# just leaks the token into redirect logs.
+export def auth-curl-args [url: string]: nothing -> list<string> {
   let base = ["-fsSL"]
-  if (($env.GITHUB_TOKEN? | default "") | is-empty) {
+  let token = ($env.GITHUB_TOKEN? | default "")
+  let host = ($url | url parse | get host)
+  if ($token | is-empty) or ($host != "api.github.com") {
     $base
   } else {
-    $base | append ["-H" $"Authorization: Bearer ($env.GITHUB_TOKEN)"]
+    $base | append ["-H" $"Authorization: Bearer ($token)"]
   }
 }
 
