@@ -538,3 +538,119 @@ def test_resolve_predicate_index_rejects_multi_probe_expr():
     out = pdg_convert(doc)
     block_cfg = out["cfg"][0]
     assert block_cfg.get("predStmtRef") is None
+
+
+# ---------------------------------------------------------------------------
+# _endpoint_to_vertices / _project_explicit_edges: compound exprRef fan-out (FU4.8)
+# ---------------------------------------------------------------------------
+
+
+def test_project_explicit_edges_fans_out_compound_exprref_endpoint():
+    """A §10 edge whose `from` is an exprRef with two varRef operands must
+    emit one Data edge per constituent varRef (FU4.8)."""
+    variables = {
+        "a":   _port("a"),
+        "b":   _port("b"),
+        "out": _port("out", direction="output"),
+    }
+    expressions = {
+        "sum": {"opcode": "+", "operands": [{"varRef": "a"}, {"varRef": "b"}]},
+    }
+    doc = _doc(
+        variables=variables,
+        expressions=expressions,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": []}},
+        dataflow={"edges": [
+            {"from": {"exprRef": "sum"}, "to": {"varRef": "out"}, "kind": "Data"},
+        ]},
+    )
+    out = pdg_convert(doc)
+    data_edges = [e for e in out["edges"] if e["kind"] == "Data"]
+    assert len(data_edges) == 2
+    # IO vertices get name "input_<chisel-name>" / "output_<chisel-name>".
+    a_idx = next(i for i, v in enumerate(out["vertices"])
+                 if v.get("name") == "input_a")
+    b_idx = next(i for i, v in enumerate(out["vertices"])
+                 if v.get("name") == "input_b")
+    out_idx = next(i for i, v in enumerate(out["vertices"])
+                   if v.get("name") == "output_out")
+    frm_set = {e["from"] for e in data_edges}
+    to_set = {e["to"] for e in data_edges}
+    assert frm_set == {a_idx, b_idx}
+    assert to_set == {out_idx}
+
+
+def test_project_explicit_edges_compound_exprref_dedupes_repeated_var():
+    """`sum = a + a` must produce only one a->out edge, not two (FU4.8)."""
+    variables = {
+        "a":   _port("a"),
+        "out": _port("out", direction="output"),
+    }
+    expressions = {
+        "sum": {"opcode": "+", "operands": [{"varRef": "a"}, {"varRef": "a"}]},
+    }
+    doc = _doc(
+        variables=variables,
+        expressions=expressions,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": []}},
+        dataflow={"edges": [
+            {"from": {"exprRef": "sum"}, "to": {"varRef": "out"}, "kind": "Data"},
+        ]},
+    )
+    out = pdg_convert(doc)
+    data_edges = [e for e in out["edges"] if e["kind"] == "Data"]
+    assert len(data_edges) == 1
+
+
+def test_project_explicit_edges_skips_self_edge_after_fanout():
+    """When an exprRef endpoint includes the same variable as the target,
+    the self-edge (from == to) must be skipped (FU4.8)."""
+    variables = {
+        "a":   _port("a"),
+        "b":   _port("b"),
+    }
+    expressions = {
+        "sum": {"opcode": "+", "operands": [{"varRef": "a"}, {"varRef": "b"}]},
+    }
+    # Edge from {exprRef: sum} to {varRef: a} — the 'a' constituent maps to
+    # the same vertex as the 'to', producing a self-edge that must be dropped.
+    doc = _doc(
+        variables=variables,
+        expressions=expressions,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": []}},
+        dataflow={"edges": [
+            {"from": {"exprRef": "sum"}, "to": {"varRef": "a"}, "kind": "Data"},
+        ]},
+    )
+    out = pdg_convert(doc)
+    data_edges = [e for e in out["edges"] if e["kind"] == "Data"]
+    # Only b->a should survive; a->a (self-edge) must be dropped.
+    assert len(data_edges) == 1
+    a_idx = next(i for i, v in enumerate(out["vertices"]) if v.get("name") == "input_a")
+    b_idx = next(i for i, v in enumerate(out["vertices"]) if v.get("name") == "input_b")
+    assert data_edges[0]["from"] == b_idx
+    assert data_edges[0]["to"] == a_idx
+
+
+def test_project_explicit_edges_single_varref_endpoint_still_works():
+    """Regression: single-varRef endpoint (the pre-existing path) continues
+    to emit exactly one edge after the fan-out refactor (FU4.8)."""
+    variables = {
+        "a": _port("a"),
+        "b": _port("b", direction="output"),
+    }
+    doc = _doc(
+        variables=variables,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": []}},
+        dataflow={"edges": [
+            {"from": {"varRef": "a"}, "to": {"varRef": "b"}, "kind": "Data"},
+        ]},
+    )
+    out = pdg_convert(doc)
+    data_edges = [e for e in out["edges"] if e["kind"] == "Data"]
+    assert len(data_edges) == 1
+    assert data_edges[0]["kind"] == "Data"

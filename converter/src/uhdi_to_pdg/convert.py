@@ -400,34 +400,34 @@ def _resolve_predicate_index(ref: Optional[str], ctx: _Ctx) -> Optional[int]:
 # ---------------------------------------------------------------------------
 
 
-def _endpoint_to_vertex(endpoint: Dict[str, Any], ctx: _Ctx) -> Optional[int]:
-    """An §10 EndpointRef is `{varRef}` or `{exprRef}`. Variables map directly;
-    expressions only resolve when the inlined operand is a pure varRef (we
-    don't materialise vertex IDs for arbitrary expression nodes)."""
+def _endpoint_to_vertices(endpoint: Dict[str, Any], ctx: _Ctx) -> List[int]:
+    """An §10 EndpointRef is `{varRef}` or `{exprRef}`. A varRef resolves to
+    at most one vertex; an exprRef fans out over its constituent varRefs
+    (mirrors _derive_edges's _collect_expr_vars fan-out for §5 expressions)."""
     if not isinstance(endpoint, dict):
-        return None
+        return []
     if (vref := endpoint.get("varRef")):
-        canonical = _resolve_var_id(vref, ctx)
-        if canonical is None:
-            return None
-        var = ctx.variables.get(canonical) or {}
-        owner = var.get("ownerScopeRef")
-        if owner is None:
-            return None
-        return ctx.var_to_vertex.get((owner, canonical))
+        idx = _vertex_for_varref(vref, ctx)
+        return [idx] if idx is not None else []
     if (eref := endpoint.get("exprRef")):
-        expr = ctx.expressions.get(eref) or {}
-        # Single-operand pass-through ('alias'): try to peek into operand.
-        operands = expr.get("operands") or []
-        if len(operands) == 1:
-            return _endpoint_to_vertex(operands[0], ctx)
-        return None
-    return None
+        vrefs: List[str] = []
+        _collect_expr_vars({"exprRef": eref}, ctx, vrefs, set())
+        out: List[int] = []
+        seen: Set[int] = set()
+        for vref in vrefs:
+            idx = _vertex_for_varref(vref, ctx)
+            if idx is not None and idx not in seen:
+                seen.add(idx)
+                out.append(idx)
+        return out
+    return []
 
 
 def _project_explicit_edges(ctx: _Ctx) -> List[Dict[str, Any]]:
     """Direct copy of §10 edges, with kind filtering (§15.7) and condition
-    dropped when it isn't already in PDG `{probeName, probeValue}` shape."""
+    dropped when it isn't already in PDG `{probeName, probeValue}` shape.
+    Compound exprRef endpoints fan out over their constituent varRefs
+    (§10 allows compound named exprRefs as EndpointRef per spec §10)."""
     dataflow = ctx.uhdi.get("dataflow") or {}
     edges_in = dataflow.get("edges") or []
     out: List[Dict[str, Any]] = []
@@ -437,20 +437,25 @@ def _project_explicit_edges(ctx: _Ctx) -> List[Dict[str, Any]]:
         kind = edge.get("kind")
         if kind in _DROPPED_EDGE_KINDS or kind is None:
             continue
-        frm = _endpoint_to_vertex(edge.get("from") or {}, ctx)
-        to = _endpoint_to_vertex(edge.get("to") or {}, ctx)
-        if frm is None or to is None:
+        frm_vs = _endpoint_to_vertices(edge.get("from") or {}, ctx)
+        to_vs = _endpoint_to_vertices(edge.get("to") or {}, ctx)
+        if not frm_vs or not to_vs:
             continue
         cond = edge.get("condition")
         if not (isinstance(cond, dict) and "probeName" in cond):
             cond = None
-        out.append({
-            "from": frm,
-            "to": to,
-            "kind": kind,
-            "clocked": bool(edge.get("clocked", False)),
-            "condition": cond,
-        })
+        clocked = bool(edge.get("clocked", False))
+        for frm in frm_vs:
+            for to in to_vs:
+                if frm == to:
+                    continue  # self-edge on flattened compound: skip
+                out.append({
+                    "from": frm,
+                    "to": to,
+                    "kind": kind,
+                    "clocked": clocked,
+                    "condition": cond,
+                })
     return out
 
 
