@@ -252,6 +252,60 @@ def test_validate_or_exit_warns_on_unknown_representation(capsys):
     assert "unknown representation" in captured.err
 
 
+# ---- duplicate_authoring_name_errors (FU2.8) --------------------------------
+
+
+def test_duplicate_authoring_name_errors_empty_for_clean_doc():
+    assert validate.duplicate_authoring_name_errors(_minimal_valid_doc()) == []
+
+
+def test_duplicate_authoring_name_errors_flags_cross_scope_collision():
+    """Two variables sharing the same chisel.name collapse to a first-wins
+    resolution in BaseContext._var_id_by_authoring_name (FU2.8)."""
+    doc = _minimal_valid_doc()
+    first_var_id, first_var = next(iter(doc["variables"].items()))
+    name = first_var["representations"]["chisel"]["name"]
+    doc["variables"]["var_dup"] = {
+        "bindKind": "wire",
+        "typeRef": first_var["typeRef"],
+        "ownerScopeRef": first_var["ownerScopeRef"],
+        "representations": {"chisel": {"name": name}},
+    }
+    errs = validate.duplicate_authoring_name_errors(doc)
+    assert any(name in e and first_var_id in e and "var_dup" in e
+               for e in errs)
+
+
+def test_duplicate_authoring_name_errors_ignores_distinct_names():
+    """Different names in the same repr are not a collision."""
+    doc = _minimal_valid_doc()
+    doc["variables"]["var_extra"] = {
+        "bindKind": "wire",
+        "typeRef": next(iter(doc["variables"].values()))["typeRef"],
+        "ownerScopeRef": next(iter(doc["variables"].values()))[
+            "ownerScopeRef"],
+        "representations": {"chisel": {"name": "totally_new_name"}},
+    }
+    assert validate.duplicate_authoring_name_errors(doc) == []
+
+
+def test_validate_or_exit_warns_on_duplicate_authoring_name(capsys):
+    doc = _minimal_valid_doc()
+    first_var = next(iter(doc["variables"].values()))
+    name = first_var["representations"]["chisel"]["name"]
+    doc["variables"]["var_dup"] = {
+        "bindKind": "wire",
+        "typeRef": first_var["typeRef"],
+        "ownerScopeRef": first_var["ownerScopeRef"],
+        "representations": {"chisel": {"name": name}},
+    }
+    rc = validate.validate_or_exit(doc, pathlib.Path("d.uhdi.json"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "duplicate authoring name" in captured.err
+    assert name in captured.err
+
+
 # ---- schema if/then/else (F-U1.6, F-U1.8) -----------------------------------
 
 

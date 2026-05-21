@@ -82,6 +82,10 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
         print(f"{source}: warning: enum invariant: {enum_err}",
               file=sys.stderr)
 
+    for dup_err in duplicate_authoring_name_errors(uhdi):
+        print(f"{source}: warning: duplicate authoring name: {dup_err}",
+              file=sys.stderr)
+
     errs = list(iter_errors(uhdi))
     if not errs:
         return 0
@@ -186,6 +190,34 @@ def enum_width_errors(uhdi: Dict[str, Any]) -> List[str]:
                     f"out of range [{lo}, {hi}] for "
                     f"underlying {kind}<{width}>")
 
+    return sorted(errs)
+
+
+def duplicate_authoring_name_errors(uhdi: Dict[str, Any]) -> List[str]:
+    """Diagnostics for variables that share a representation-level `name`.
+
+    `resolve_var_by_ref` falls back to a flat authoring-name index whose
+    first-wins policy silently masks the second variable. Spec §6.6.8
+    requires names to be unique per scope, not document-wide, so cross-scope
+    collisions are spec-legal but resolver-hostile."""
+    name_to_ids: Dict[Tuple[str, str], List[str]] = {}
+    for var_id, var in (uhdi.get("variables") or {}).items():
+        if not isinstance(var, dict):
+            continue
+        for repr_key, repr_val in (var.get("representations") or {}).items():
+            if not isinstance(repr_val, dict):
+                continue
+            name = repr_val.get("name")
+            if isinstance(name, str) and name:
+                name_to_ids.setdefault((repr_key, name), []).append(var_id)
+
+    errs: List[str] = []
+    for (repr_key, name), ids in name_to_ids.items():
+        if len(ids) > 1:
+            joined = ", ".join(sorted(ids))
+            errs.append(
+                f"representations[{repr_key!r}].name={name!r} on "
+                f"variables {{{joined}}}")
     return sorted(errs)
 
 
