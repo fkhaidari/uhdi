@@ -201,6 +201,19 @@ def test_loc_file_path_none_when_repr_missing():
     assert loc_file_path({"file": 0}, "firrtl", ctx) is None
 
 
+def test_loc_file_path_none_when_file_key_absent():
+    """Missing `file` key must not silently default to files[0] (FU2.4)."""
+    ctx = _ctx(representations={"chisel": {"files": ["a.scala", "b.scala"]}})
+    assert loc_file_path({"beginLine": 5, "beginColumn": 3}, "chisel", ctx) is None
+
+
+def test_loc_file_path_handles_string_index():
+    """Emitter may write `file` as a string; int() coercion matches loc_line (FU2.5)."""
+    ctx = _ctx(representations={"chisel": {"files": ["a.scala", "b.scala"]}})
+    assert loc_file_path({"file": "1"}, "chisel", ctx) == "b.scala"
+    assert loc_file_path({"file": "not-a-number"}, "chisel", ctx) is None
+
+
 def test_loc_line_and_column_default_to_zero():
     """hgdb stores INTEGER NOT NULL, so missing fields must normalise to 0, not None."""
     assert loc_line(None) == 0

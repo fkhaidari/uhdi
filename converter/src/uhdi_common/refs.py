@@ -64,11 +64,15 @@ def loc_file_path(loc: Optional[Dict[str, Any]], repr_key: str,
                   ctx: BaseContext) -> Optional[str]:
     """Resolve `loc.file` index into representations[repr_key].files string.
 
-    Returns None on missing loc, out-of-range index, or missing files list."""
-    if not loc:
+    Returns None on missing loc, absent `file` key, non-int-coercible index,
+    out-of-range index, or missing files list."""
+    if not loc or "file" not in loc:
         return None
     files = (ctx.representations.get(repr_key, {}) or {}).get("files") or []
-    idx = loc.get("file", 0)
+    try:
+        idx = int(loc["file"])
+    except (TypeError, ValueError):
+        return None
     if not (0 <= idx < len(files)):
         return None
     return str(files[idx])
