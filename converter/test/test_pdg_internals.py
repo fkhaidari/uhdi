@@ -368,3 +368,67 @@ def test_bind_to_kind_covers_all_non_probe_bindkinds():
     """If §6 adds a bindKind, this test fails until convert.py opts in;
     silent fallthrough to "skip the variable" used to lose mem cells."""
     assert set(_BIND_TO_KIND) == {"port", "wire", "node", "literal", "reg", "mem"}
+
+
+# ---------------------------------------------------------------------------
+# _resolve_predicate_index: exprRef-shaped guardRef (FU4.3)
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_predicate_index_handles_exprref_shaped_guardref():
+    """When guardRef is an exprRef id whose single operand is a probe varRef,
+    the block CFG entry must get predStmtRef wired (FU4.3)."""
+    variables = {
+        "v_probe": {"typeRef": "bool", "bindKind": "probe", "ownerScopeRef": "X",
+                    "representations": {"chisel": {"name": "p"}}},
+        "v_target": {"typeRef": "u8", "bindKind": "reg", "ownerScopeRef": "X",
+                     "representations": {"chisel": {"name": "r"}}},
+    }
+    # Expression "p_alias" wraps the probe variable in a single-operand exprRef.
+    expressions = {
+        "p_alias": {"opcode": "id", "operands": [{"varRef": "v_probe"}]},
+    }
+    body = [{"kind": "block", "guardRef": "p_alias", "body": [
+        {"kind": "connect", "varRef": "v_target",
+         "valueRef": {"constant": 0}}]}]
+    doc = _doc(
+        variables=variables,
+        expressions=expressions,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": body}},
+    )
+    out = pdg_convert(doc)
+    # The probe must end up in predicates[], not vertices[].
+    assert [v["kind"] for v in out["predicates"]] == ["DataDefinition"]
+    # The block CFG entry must reference predicates[0] via predStmtRef.
+    block_cfg = out["cfg"][0]
+    assert block_cfg.get("predStmtRef") == 0
+
+
+def test_resolve_predicate_index_rejects_multi_probe_expr():
+    """When the exprRef guardRef touches TWO probe variables, predStmtRef must
+    stay unset — no single predStmtRef slot can represent a multi-probe guard."""
+    variables = {
+        "v_probe1": {"typeRef": "bool", "bindKind": "probe", "ownerScopeRef": "X",
+                     "representations": {"chisel": {"name": "p1"}}},
+        "v_probe2": {"typeRef": "bool", "bindKind": "probe", "ownerScopeRef": "X",
+                     "representations": {"chisel": {"name": "p2"}}},
+        "v_target": {"typeRef": "u8", "bindKind": "reg", "ownerScopeRef": "X",
+                     "representations": {"chisel": {"name": "r"}}},
+    }
+    expressions = {
+        "both": {"opcode": "||",
+                 "operands": [{"varRef": "v_probe1"}, {"varRef": "v_probe2"}]},
+    }
+    body = [{"kind": "block", "guardRef": "both", "body": [
+        {"kind": "connect", "varRef": "v_target",
+         "valueRef": {"constant": 0}}]}]
+    doc = _doc(
+        variables=variables,
+        expressions=expressions,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": body}},
+    )
+    out = pdg_convert(doc)
+    block_cfg = out["cfg"][0]
+    assert block_cfg.get("predStmtRef") is None

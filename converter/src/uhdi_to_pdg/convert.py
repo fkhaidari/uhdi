@@ -369,9 +369,23 @@ def _resolve_var_id(ref: str, ctx: _Ctx) -> Optional[str]:
 def _resolve_predicate_index(ref: Optional[str], ctx: _Ctx) -> Optional[int]:
     if not ref:
         return None
+    # Direct varRef / authoring-name case.
     canonical = _resolve_var_id(ref, ctx)
     if canonical is None:
-        return None
+        # exprRef case: resolve through the expression, accept iff it points
+        # at exactly one probe variable. Multi-probe expressions cannot map
+        # to a single predStmtRef slot in the PDG schema.
+        candidates = _expand_guard(ref, ctx)
+        probes = [
+            c for c in candidates
+            if (rid := _resolve_var_id(c, ctx)) is not None
+            and (ctx.variables.get(rid) or {}).get("bindKind") in _PROBE_BINDKINDS
+        ]
+        if len(probes) != 1:
+            return None
+        canonical = _resolve_var_id(probes[0], ctx)
+        if canonical is None:
+            return None
     var = ctx.variables.get(canonical) or {}
     if var.get("bindKind") not in _PROBE_BINDKINDS:
         return None
