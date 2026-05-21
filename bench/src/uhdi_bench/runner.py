@@ -40,6 +40,24 @@ def _prepend_pythonpath(*entries: pathlib.Path) -> str:
     return os.pathsep.join(parts)
 
 
+def _pick_native_lib(hgdb_python: pathlib.Path) -> pathlib.Path:
+    """Pick `build/lib.*` matching the running interpreter's ABI tag.
+
+    _hgdb.so is built for one minor; filesystem iteration order would
+    otherwise pick a stale build at random when two `lib.*` coexist."""
+    abi_tag = f"cpython-{sys.version_info.major}{sys.version_info.minor}"
+    build = hgdb_python / "build"
+    candidates = sorted(d for d in build.glob("lib.*") if abi_tag in d.name)
+    if candidates:
+        return candidates[0]
+    present = sorted(d.name for d in build.glob("lib.*"))
+    raise RuntimeError(
+        f"hgdb python bindings under {build} have no lib.* matching "
+        f"{abi_tag} (running {sys.executable}); present: "
+        f"{present or '<none>'} -- did `python setup.py build_ext` run "
+        f"under this interpreter?")
+
+
 def discover_toolchain() -> Toolchain:
     """Resolve env var -> /opt baked path -> sibling-checkout path.
 
@@ -217,11 +235,7 @@ def _emit_native_hgdb_firrtl(fir: pathlib.Path, workdir: pathlib.Path,
         encoding="utf-8")
 
     db = workdir / f"{fir.stem}.firrtl.db"
-    native_lib = next(iter((hgdb_python / "build").glob("lib.*")), None)
-    if native_lib is None:
-        raise RuntimeError(
-            f"hgdb python bindings present but no lib.* under "
-            f"{hgdb_python / 'build'} -- did `python setup.py build_ext` run?")
+    native_lib = _pick_native_lib(hgdb_python)
     env = dict(os.environ,
                PYTHONPATH=_prepend_pythonpath(shim, native_lib, hgdb_python))
     # Use pytest's interpreter -- _hgdb.so is ABI-tagged for one minor
