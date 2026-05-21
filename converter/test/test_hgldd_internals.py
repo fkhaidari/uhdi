@@ -133,6 +133,32 @@ def test_type_description_unknown_kind_falls_back_to_logic():
     assert _type_description("odd", ctx) == {"type_name": "logic"}
 
 
+def test_type_description_nested_vector_emits_multi_dim_unpacked_range():
+    """Vec(M, Vec(N, T)): outer dim first, inner dim last in flat list.
+
+    Mirrors native HGLDD convention (EmitHGLDD::emitDims pushes each
+    dim as [hi, lo] reversed, so outermost lands first in the array)."""
+    ctx = _ctx_with_types({
+        "u1": {"kind": "uint", "width": 1},
+        "VInner": {"kind": "vector", "elementRef": "u1", "size": 8},
+        "VV": {"kind": "vector", "elementRef": "VInner", "size": 4},
+    })
+    out = _type_description("VV", ctx)
+    assert out == {"type_name": "logic", "unpacked_range": [3, 0, 7, 0]}
+
+
+def test_type_description_three_dim_vector():
+    """Vec(2, Vec(3, Vec(4, T))): outer-to-inner order in the flat list."""
+    ctx = _ctx_with_types({
+        "u1": {"kind": "uint", "width": 1},
+        "V4":  {"kind": "vector", "elementRef": "u1", "size": 4},
+        "V3":  {"kind": "vector", "elementRef": "V4", "size": 3},
+        "VVV": {"kind": "vector", "elementRef": "V3", "size": 2},
+    })
+    out = _type_description("VVV", ctx)
+    assert out == {"type_name": "logic", "unpacked_range": [1, 0, 2, 0, 3, 0]}
+
+
 # ---- _expression_to_hgldd ----------------------------------------------
 
 

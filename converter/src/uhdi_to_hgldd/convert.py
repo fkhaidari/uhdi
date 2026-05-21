@@ -222,7 +222,8 @@ def _type_description(type_ref, ctx):
     if kind == "vector":
         elem = dict(_type_description(descriptor.get("elementRef", ""), ctx))
         if (size := int(descriptor.get("size", 0))) > 0:
-            elem.setdefault("unpacked_range", [size - 1, 0])
+            existing = elem.get("unpacked_range") or []
+            elem["unpacked_range"] = [size - 1, 0, *existing]
         return elem
     if kind == "enum":
         underlying = descriptor.get("underlyingTypeRef", "")
