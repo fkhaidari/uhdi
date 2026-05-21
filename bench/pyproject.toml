@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "uhdi-bench"
-version = "0.1.0"
+version = "0.9.3"
 description = "Integration harness: Scala/Chisel -> FIR -> UHDI -> projection vs native references."
 # `uhdi_bench.manifest` uses `tomllib` (stdlib, 3.11+).  Floor must
 # match -- a 3.9/3.10 install would crash on the unconditional
