@@ -57,10 +57,10 @@ class _Context(BaseContext):
     files: _FileInfo = field(default_factory=_FileInfo)
     aggregated_leaves: set = field(default_factory=set)
     hdl_file_path: Optional[str] = None
-    # Per-scope enum-id pool: `(scope_id, enum_type_ref) -> int`. Reset
-    # while emitting each scope_object so two modules referencing the
-    # same enum each number from 0 (mirrors rameloni HGLDD output).
-    enum_id_by_scope_type: Dict[Tuple[str, str], int] = field(default_factory=dict)
+    # Global enum-id pool: `enum_type_ref -> int`. One id per enum type
+    # across all scopes so shared struct port_vars reference a stable id
+    # regardless of which scope first encountered the enum.
+    enum_id_by_type: Dict[str, int] = field(default_factory=dict)
     # Mirror of enum_id_by_scope_type as the HGLDD `enum_defs` payload
     # per scope: `scope_id -> {"<int>": {"<int>": "<name>", ...}, ...}`.
     enum_defs_by_scope: Dict[str, Dict[str, Any]] = field(default_factory=dict)
@@ -87,17 +87,16 @@ def _source_lang_type(repr_obj: Optional[Dict[str, Any]]) -> Optional[Dict[str, 
 
 
 def _populate_enum_index(ctx: "_Context") -> None:
-    """Walk every scope's variables (and their struct members) to find
-    enum-typed references; assign sequential per-scope ids; cache both
-    `(scope_id, type_ref) -> id` and the inverse `scope_id -> enum_defs`
-    HGLDD payload. Runs once in convert() before struct/scope emission
-    so _struct_objects (which renders before _scope_object) can read
-    enum_def_ref from the same index."""
+    """Walk every scope's variables (and their struct/vector descendants)
+    to find enum-typed references; assign a global id per enum type
+    (stable across scopes so shared struct port_vars resolve
+    consistently), and cache a per-scope `enum_defs` payload listing
+    only the enums actually referenced from that scope."""
+    next_eid = 0
     for scope_id, scope in ctx.scopes.items():
         if scope.get("kind") not in ("module", "extmodule"):
             continue
         defs: Dict[str, Any] = {}
-        next_eid = 0
 
         def _register(type_ref: str) -> None:
             nonlocal next_eid
@@ -106,12 +105,12 @@ def _populate_enum_index(ctx: "_Context") -> None:
             td = ctx.types.get(type_ref) or {}
             if td.get("kind") != "enum":
                 return
-            key = (scope_id, type_ref)
-            if key in ctx.enum_id_by_scope_type:
-                return
-            ctx.enum_id_by_scope_type[key] = next_eid
-            defs[str(next_eid)] = dict(td.get("variants") or {})
-            next_eid += 1
+            eid = ctx.enum_id_by_type.get(type_ref)
+            if eid is None:
+                eid = next_eid
+                ctx.enum_id_by_type[type_ref] = eid
+                next_eid += 1
+            defs[str(eid)] = dict(td.get("variants") or {})
 
         for vid, v in _ordered_scope_vars(scope, scope_id, ctx):
             vref = v.get("typeRef", "")
@@ -364,14 +363,6 @@ def _struct_objects(ctx):
         struct_parent = struct_parent_by_tid.get(tid)
         subfields = (ctx.subfields_by_parent.get(struct_parent, {})
                      if struct_parent else {})
-        # Fallback owner for enum_def_ref lookup: the struct may have no
-        # struct-with-hgl_loc owner (struct_info empty when none of its
-        # Variables expose a chisel location), but its parent Variable
-        # always carries an ownerScopeRef. Use that to find the right
-        # enum_defs table on the owning scope.
-        enum_owner = owner or (
-            ctx.variables.get(struct_parent, {}).get("ownerScopeRef", "")
-            if struct_parent else "")
         port_vars = []
         for m in d.get("members") or []:
             name = m.get("name", "")
@@ -391,13 +382,10 @@ def _struct_objects(ctx):
                            .get(ctx.authoring_repr, {}) or {})
                 if slti := _source_lang_type(sub_hgl):
                     pv["source_lang_type_info"] = slti
-                # enum_def_ref pulled from the member's own typeRef
-                # (more reliable than the synthetic's typeRef, which
-                # matches but is also more rewriteable in future).
+                # enum_def_ref pulled from the member's own typeRef via
+                # the global id map -- stable across all scopes.
                 mref = m.get("typeRef", "")
-                if enum_owner and (
-                        eid := ctx.enum_id_by_scope_type.get((enum_owner, mref))
-                ) is not None:
+                if (eid := ctx.enum_id_by_type.get(mref)) is not None:
                     pv["enum_def_ref"] = eid
             port_vars.append(pv)
         obj = {"kind": "struct", "obj_name": tid, "port_vars": port_vars}
@@ -472,13 +460,10 @@ def _variable_to_port_var(var_id, var, ctx):
         out["hdl_loc"] = loc
     if slti := _source_lang_type(hgl):
         out["source_lang_type_info"] = slti
-    # enum_def_ref: cross-reference into the owning scope's enum_defs
-    # table. The numeric id is assigned per-scope in _scope_object, so
-    # only a port_var whose owner scope already populated the index
-    # gets the ref.
-    owner = var.get("ownerScopeRef", "")
+    # enum_def_ref: cross-reference into the scope's enum_defs table via
+    # the global id map -- stable across all scopes.
     type_ref = var.get("typeRef", "")
-    if owner and (eid := ctx.enum_id_by_scope_type.get((owner, type_ref))) is not None:
+    if (eid := ctx.enum_id_by_type.get(type_ref)) is not None:
         out["enum_def_ref"] = eid
     return out
 

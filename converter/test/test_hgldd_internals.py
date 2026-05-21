@@ -1392,3 +1392,89 @@ def test_convert_omits_sourcelangtype_when_typename_missing():
     assert "source_lang_type_info" not in mod
     pv = next(p for p in mod["port_vars"] if p["var_name"] == "v")
     assert "source_lang_type_info" not in pv
+
+
+def test_convert_global_enum_ids_stable_across_scopes_sharing_struct():
+    """A struct shared between two modules must have a single
+    enum_def_ref on its members that resolves to the same variants
+    in every scope. Per-scope numbering would flip variants when the
+    second module references the same enums in a different order."""
+    doc = _doc_skeleton()
+    doc["top"] = ["A", "B_mod"]
+    doc["types"]["uint2"] = {"kind": "uint", "width": 2}
+    doc["types"]["uint1"] = {"kind": "uint", "width": 1}
+    doc["types"]["AluOp"] = {
+        "kind": "enum", "underlyingTypeRef": "uint2",
+        "variants": {"0": "ADD", "1": "SUB"},
+    }
+    doc["types"]["Mode"] = {
+        "kind": "enum", "underlyingTypeRef": "uint1",
+        "variants": {"0": "RUN", "1": "HALT"},
+    }
+    doc["types"]["B"] = {
+        "kind": "struct",
+        "members": [
+            {"name": "op",   "typeRef": "AluOp"},
+            {"name": "mode", "typeRef": "Mode"},
+        ],
+    }
+    # scope A: AluOp encountered first (would get id 0 under old per-scope).
+    doc["variables"]["a_bun"] = {
+        "typeRef": "B", "bindKind": "node", "ownerScopeRef": "A",
+        "representations": {"chisel": {"name": "bun"},
+                            "verilog": {"value": {"sigName": "bun"}}},
+    }
+    doc["variables"]["a_bun__op"] = {
+        "typeRef": "AluOp", "bindKind": "synthetic", "ownerScopeRef": "A",
+        "representations": {"chisel": {"name": "op"}},
+    }
+    doc["variables"]["a_bun__mode"] = {
+        "typeRef": "Mode", "bindKind": "synthetic", "ownerScopeRef": "A",
+        "representations": {"chisel": {"name": "mode"}},
+    }
+    # scope B_mod: order reversed -- Mode encountered first.
+    doc["variables"]["b_mode_wire"] = {
+        "typeRef": "Mode", "bindKind": "wire", "ownerScopeRef": "B_mod",
+        "representations": {"chisel": {"name": "m"},
+                            "verilog": {"value": {"sigName": "m"}}},
+    }
+    doc["variables"]["b_bun"] = {
+        "typeRef": "B", "bindKind": "node", "ownerScopeRef": "B_mod",
+        "representations": {"chisel": {"name": "bun"},
+                            "verilog": {"value": {"sigName": "bun2"}}},
+    }
+    doc["variables"]["b_bun__op"] = {
+        "typeRef": "AluOp", "bindKind": "synthetic", "ownerScopeRef": "B_mod",
+        "representations": {"chisel": {"name": "op"}},
+    }
+    doc["variables"]["b_bun__mode"] = {
+        "typeRef": "Mode", "bindKind": "synthetic", "ownerScopeRef": "B_mod",
+        "representations": {"chisel": {"name": "mode"}},
+    }
+    doc["scopes"]["A"] = {
+        "name": "A", "kind": "module",
+        "representations": {"chisel": {"name": "A"},
+                            "verilog": {"name": "A"}},
+        "variableRefs": ["a_bun", "a_bun__op", "a_bun__mode"],
+    }
+    doc["scopes"]["B_mod"] = {
+        "name": "B_mod", "kind": "module",
+        "representations": {"chisel": {"name": "B_mod"},
+                            "verilog": {"name": "B_mod"}},
+        "variableRefs": ["b_mode_wire", "b_bun", "b_bun__op", "b_bun__mode"],
+    }
+    out = hgldd_convert(doc)
+    struct_b = _struct_object(out, "B")
+    op_ref = next(pv for pv in struct_b["port_vars"]
+                  if pv["var_name"] == "op")["enum_def_ref"]
+    mode_ref = next(pv for pv in struct_b["port_vars"]
+                    if pv["var_name"] == "mode")["enum_def_ref"]
+    mod_a = next(o for o in out["objects"]
+                 if o.get("kind") == "module" and o.get("obj_name") == "A")
+    mod_b = next(o for o in out["objects"]
+                 if o.get("kind") == "module" and o.get("obj_name") == "B_mod")
+    # Both modules see the same variants under the shared struct's ref ids.
+    assert mod_a["enum_defs"][str(op_ref)] == {"0": "ADD", "1": "SUB"}
+    assert mod_b["enum_defs"][str(op_ref)] == {"0": "ADD", "1": "SUB"}
+    assert mod_a["enum_defs"][str(mode_ref)] == {"0": "RUN", "1": "HALT"}
+    assert mod_b["enum_defs"][str(mode_ref)] == {"0": "RUN", "1": "HALT"}
