@@ -529,6 +529,12 @@ def print_expr(expr, parent_prec=0):
 
 ---
 
+### Removed from format (deferred)
+
+- **Temporal layer**, **Provenance layer**: previously specified as §11 and §12 in `docs/uhdi-spec.md`; removed in changelog 0.9.3. No emitter or consumer existed. Reinstate from git history (`git log --diff-filter=D -- docs/uhdi-spec.md`) when a first emitter/consumer ships.
+
+---
+
 *— конец документа —*
 
 ---
