@@ -29,6 +29,8 @@ for a in "$@"; do
         prev=""
     elif [[ "$a" == "--prefix" ]]; then
         prev="--prefix"
+    elif [[ "$a" == --prefix=* ]]; then
+        prefix="${a#--prefix=}"
     fi
 done
 prefix="${prefix:-$HOME/.local/uhdi-tools}"
