@@ -1650,3 +1650,19 @@ def test_struct_member_enum_def_ref_emitted_without_synthetic_subfields():
     assert op_pv["enum_def_ref"] == 0
     # source_lang_type_info remains absent (no synthetic to source it).
     assert "source_lang_type_info" not in op_pv
+
+
+# ---- hdl_file_index empty file_info regression (FU3.11) ----------------
+
+
+def test_convert_omits_hdl_file_index_when_file_info_empty():
+    """Degenerate input (top=[], no Variables with locations) must not
+    emit hdl_file_index=1 against file_info=[]; the consumer would
+    dereference past the end. Omit the key entirely."""
+    doc = _doc_skeleton()
+    doc["top"] = []
+    doc["representations"]["chisel"]["files"] = []
+    doc["representations"]["verilog"]["files"] = []
+    out = hgldd_convert(doc)
+    assert out["HGLDD"]["file_info"] == []
+    assert "hdl_file_index" not in out["HGLDD"]

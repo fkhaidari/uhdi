@@ -649,10 +649,13 @@ def convert(uhdi):
         hdl_start = (ctx.files.hdl_start
                      if ctx.files.hdl_start is not None
                      else len(ctx.files.ordered))
-        return {"HGLDD": {"version": "1.0",
-                          "file_info": list(ctx.files.ordered),
-                          "hdl_file_index": hdl_start + 1},
-                "objects": objects}
+        hgldd: Dict[str, Any] = {
+            "version": "1.0",
+            "file_info": list(ctx.files.ordered),
+        }
+        if ctx.files.ordered:
+            hgldd["hdl_file_index"] = hdl_start + 1
+        return {"HGLDD": hgldd, "objects": objects}
     except RecursionError:
         raise HGLDDConversionError(
             "recursion limit exceeded (deep exprRef chain or nested type)"
