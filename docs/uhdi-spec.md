@@ -1999,19 +1999,8 @@ Recommended: warn on unreachable expressions, duplicate `priority` within one so
 - Explicit CFG block is not stored (control flow is already in §7 scope body). Revisit if PDG -> `uhdi` lossless conversion is required.
 - Chunking validated on real designs -- current §10.8 recommendation (one chunk per top-scope) needs benchmarking on RocketChip-scale targets.
 
-### Temporal layer (§11)
-- Whether to inline `clockRef`/`resetRef` on variables directly (instead of separate `domains` map). Current decision: separate map for compactness. May revisit if most variables end up with distinct domains (unlikely in practice).
-- `initialValue` on reset vs per-variable -- current compromise: reset-level default + per-variable override through `value` field. Works for common cases; edge cases with mixed init values in one reset domain may be awkward.
-
-### Provenance layer (§12)
-Implementation barriers are the dominant open issue -- the specification is complete but emitters require systematic pass instrumentation that does not yet exist. MVP (§12.5) lowers the barrier to four passes, but full coverage remains research work. Most research-grade questions in this layer are flagged in §12.13; a short recap:
-
-- Complete taxonomy of `transform` kinds beyond MVP (current set is a working draft based on informal pass review; full CIRCT/Chisel survey needed).
-- Whether explicit `chain` arrays are needed for deep transformation histories.
-- Merge semantics when documents from independent tools are joined.
 
 ### Resolved in 0.8 (no longer open)
-- ~~Whether to keep `Clock` / `Reset` as explicit edge kinds, or derive them from a separate clock-domain layer.~~ Resolved: §10.4 allows either; emitter picks one authoritative source.
 - ~~Probe signals as ordinary synthetic variables.~~ Resolved: added dedicated `bindKind: "probe"` / `"rwprobe"` (§6.2) with distinct dataflow semantics (§6.8).
 
 ---
@@ -2030,11 +2019,11 @@ Ingestion (the reverse direction: hgdb / HGLDD / PDG -> `uhdi`) is a separate co
 
 | Projection | `uhdi` layers required on input | Auxiliary inputs |
 |---|---|---|
-| `uhdi` -> HGLDD | §3-§7 core; §11 only for Tywaves-extended HGLDD (enum types, module info) | None |
+| `uhdi` -> HGLDD | §3-§7 core; enum types and module info for Tywaves-extended HGLDD | None |
 | `uhdi` -> hgdb | §3-§7 core + §9 breakpoint metadata | None |
 | `uhdi` -> PDG | §3-§7 core + **§10 dataflow** | None, or dataflow derivation pass if §10 absent |
 
-A `uhdi` document emitted for a source-level consumer (e.g., a Tywaves-targeted emitter that skipped §10) cannot be converted to PDG without first running a dataflow derivation pass. This is a pipeline step, not a limitation; it is documented in §15.5.4.
+A `uhdi` document emitted for a source-level consumer (e.g., a Tywaves-targeted emitter that skipped §10) cannot be converted to PDG without first running a dataflow derivation pass. This is a pipeline step, not a limitation; it is documented in §13.5.4.
 
 ### 13.3 `uhdi` -> HGLDD
 
