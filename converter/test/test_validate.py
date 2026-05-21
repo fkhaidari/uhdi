@@ -195,6 +195,19 @@ def test_referential_errors_flags_dangling_container_scope_ref():
     assert any("containerScopeRef" in e and "ghost_scope" in e for e in errs)
 
 
+def test_referential_errors_flags_dangling_dataflow_ref():
+    doc = _minimal_valid_doc()
+    doc["dataflow"] = {
+        "edges": [
+            {"from": {"varRef": "ghost_src"},
+             "to":   {"varRef": "ghost_dst"},
+             "kind": "Data"}
+        ]
+    }
+    errs = validate.referential_errors(doc)
+    assert any("varRef" in e and "ghost_src" in e for e in errs)
+
+
 def test_validate_or_exit_warns_on_dangling_refs_without_failing(capsys):
     doc = _minimal_valid_doc()
     doc["top"].append("ghost_scope")

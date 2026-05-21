@@ -129,7 +129,7 @@ def referential_errors(uhdi: Dict[str, Any]) -> List[str]:
         if isinstance(sid, str) and sid not in pools["scopes"]:
             errs.append(f"top[{i}] -> scopes[{sid!r}] (not in pool)")
 
-    for name in ("types", "variables", "expressions", "scopes"):
+    for name in ("types", "variables", "expressions", "scopes", "dataflow"):
         walk(uhdi.get(name) or {}, name)
 
     return sorted(errs)
