@@ -254,6 +254,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # hgdb-cli install path runs `check-python-312` which errors
+          # on anything else; pin so the job isn't tied to whatever
+          # ubuntu-latest defaults to today.
+          python-version: "3.12"
       - uses: ./.github/actions/setup-nu
 
       - name: Run tools/test-install.nu
