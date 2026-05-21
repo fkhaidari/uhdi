@@ -167,7 +167,10 @@ The format addresses the gaps above via a layered structure. Seven categories ar
 
 ## 3. Top-Level Document Structure
 
-A `uhdi` document is a JSON object with the following top-level shape:
+A `uhdi` document is a JSON object with the following top-level shape.
+The `"version": "1.0"` inside `"format"` is the on-disk **format
+version** (schema-enforced via `enum: ["1.0"]` in §3.1); the spec
+document itself is at **0.9.3** (see changelog).
 
 ```jsonc
 {
