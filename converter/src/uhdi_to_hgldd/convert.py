@@ -660,7 +660,9 @@ def convert(uhdi):
                           "hdl_file_index": hdl_start + 1},
                 "objects": objects}
     except RecursionError:
-        raise HGLDDConversionError("input too deeply nested") from None
+        raise HGLDDConversionError(
+            "recursion limit exceeded (deep exprRef chain or nested type)"
+        ) from None
 
 
 @register

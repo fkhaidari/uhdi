@@ -462,7 +462,9 @@ def convert(uhdi, output_path):
         conn.commit()
         committed = True
     except RecursionError:
-        raise HGDBConversionError("input too deeply nested") from None
+        raise HGDBConversionError(
+            "recursion limit exceeded (deep exprRef chain or nested type)"
+        ) from None
     finally:
         conn.close()
         if committed:

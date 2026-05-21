@@ -631,7 +631,9 @@ def convert(uhdi: Dict[str, Any], *,
             "cfg": cfg,
         }
     except RecursionError:
-        raise PDGConversionError("input too deeply nested") from None
+        raise PDGConversionError(
+            "recursion limit exceeded (deep exprRef chain or nested type)"
+        ) from None
 
 
 def _flatten_stmts(body: List[Dict[str, Any]],

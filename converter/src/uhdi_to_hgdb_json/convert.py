@@ -222,7 +222,9 @@ def convert(uhdi: Dict[str, Any]) -> Dict[str, Any]:
             "table": table,
         }
     except RecursionError:
-        raise HGDBJsonConversionError("input too deeply nested") from None
+        raise HGDBJsonConversionError(
+            "recursion limit exceeded (deep exprRef chain or nested type)"
+        ) from None
 
 
 @register
