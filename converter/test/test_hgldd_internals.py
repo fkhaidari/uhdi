@@ -1339,6 +1339,38 @@ def test_convert_omits_enum_defs_when_no_enum_types_referenced():
     assert "enum_defs" not in mod
 
 
+def test_populate_enum_index_descends_vector_element():
+    """Vec(N, Enum) port must register the element enum in enum_defs."""
+    doc = _doc_skeleton()
+    doc["top"] = ["Top"]
+    doc["types"]["uint2"] = {"kind": "uint", "width": 2}
+    doc["types"]["AluOp"] = {
+        "kind": "enum",
+        "underlyingTypeRef": "uint2",
+        "variants": {"0": "ADD", "1": "SUB"},
+    }
+    doc["types"]["AluOpVec"] = {
+        "kind": "vector", "elementRef": "AluOp", "size": 4,
+    }
+    doc["variables"]["var_ops"] = {
+        "typeRef": "AluOpVec", "bindKind": "port",
+        "direction": "input", "ownerScopeRef": "Top",
+        "representations": {
+            "chisel": {"name": "ops"},
+            "verilog": {"value": {"sigName": "ops"}},
+        },
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": ["var_ops"],
+    }
+    out = hgldd_convert(doc)
+    mod = _module_object(out)
+    assert mod["enum_defs"] == {"0": {"0": "ADD", "1": "SUB"}}
+
+
 def test_convert_omits_sourcelangtype_when_typename_missing():
     """A repr-record without `sourceLangType` (legacy / not-yet-updated
     UHDI) must not surface source_lang_type_info in HGLDD."""

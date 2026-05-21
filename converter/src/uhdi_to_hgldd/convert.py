@@ -114,21 +114,24 @@ def _populate_enum_index(ctx: "_Context") -> None:
             next_eid += 1
 
         for vid, v in _ordered_scope_vars(scope, scope_id, ctx):
-            _register(v.get("typeRef", ""))
-            td = ctx.types.get(v.get("typeRef", "") or "") or {}
-            stack = [td] if td.get("kind") == "struct" else []
+            vref = v.get("typeRef", "")
+            stack = [vref] if vref else []
             seen_types: set = set()
             while stack:
-                cur = stack.pop()
-                for m in cur.get("members") or []:
-                    mt = m.get("typeRef", "")
-                    _register(mt)
-                    if mt in seen_types:
-                        continue
-                    seen_types.add(mt)
-                    nested = ctx.types.get(mt) or {}
-                    if nested.get("kind") == "struct":
-                        stack.append(nested)
+                tref = stack.pop()
+                if tref in seen_types:
+                    continue
+                seen_types.add(tref)
+                _register(tref)
+                cur = ctx.types.get(tref) or {}
+                kind = cur.get("kind")
+                if kind == "struct":
+                    for m in cur.get("members") or []:
+                        if mt := m.get("typeRef", ""):
+                            stack.append(mt)
+                elif kind == "vector":
+                    if eref := cur.get("elementRef", ""):
+                        stack.append(eref)
         if defs:
             ctx.enum_defs_by_scope[scope_id] = defs
 
