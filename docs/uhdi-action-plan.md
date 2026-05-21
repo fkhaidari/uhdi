@@ -32,7 +32,7 @@ uhdi — унифицированный формат отладочной инф
 Альтернатива — взять HGLDD как базу и наращивать к нему ключи `body[]`/`bp` для hgdb-use-case. Короче, но:
 
 - narrative "unified format как суперсет" размывается — формат остаётся гибридом.
-- Phase 3+ заделы (dataflow, temporal, provenance) становятся пристроем к HGLDD-shape, а не естественным расширением pool-based структуры.
+- Phase 3+ заделы (temporal, provenance) становятся пристроем к HGLDD-shape, а не естественным расширением pool-based структуры.
 - thesis-defence слабее: "выполнили одну проекцию поверх чужого формата" против "формат — независимая сущность, две проекции это демонстрируют".
 
 Pool-based path тяжелее, но даёт прочную основу. Сознательный выбор.
@@ -42,7 +42,7 @@ Pool-based path тяжелее, но даёт прочную основу. Со�
 - Базовая ветка — `fk-sc/debug-info` (Chisel intrinsics + расширение `dbg` dialect). От неё отпочковываемся, uhdi-работа начинается с чистого листа.
 - Минимум новых passes: **два** в Phase 1, **один-два** в Phase 2.
 - Минимум нового в dialect: attributes (Phase 1) + statement-ops с регионами (Phase 2).
-- **Никакого Phase 3+ задела**: representations фиксирована как пара `(chisel, verilog)`, status не эмитится, dataflow/temporal/provenance не трогаем.
+- **Никакого Phase 3+ задела**: representations фиксирована как пара `(chisel, verilog)`, status не эмитится, temporal/provenance не трогаем.
 - Emitter — один файл `EmitUHDI.cpp` с флагом `--emit-uhdi`.
 - Converters (`uhdi-to-hgldd`, `uhdi-to-hgdb`) — Python-скрипты, decoupled от CIRCT build.
 
@@ -421,7 +421,7 @@ def print_expr(expr, parent_prec=0):
 - **Решение:** layered unified format, consumer выбирает нужные layers.
 - **Демонстрация:** один emitter из CIRCT, две независимые Python-проекции работают на одном документе.
 - **Вклад:** формат (spec), два CIRCT-passes, один pool-based emitter, две projection tools.
-- **Ограничения:** Phase 3+ (dataflow, temporal, provenance) — future work.
+- **Ограничения:** Phase 3+ (temporal, provenance) — future work.
 
 ---
 
@@ -474,7 +474,7 @@ def print_expr(expr, parent_prec=0):
 
 - Phase 2 code — present as work-in-progress в главе 4.
 - Глава 5 evaluation покрывает только Phase 1 (Tywaves).
-- Глава 6 future work: Phase 2 доделка, Phase 3+ dataflow/temporal/provenance.
+- Глава 6 future work: Phase 2 доделка, Phase 3+ temporal/provenance.
 - Тезис переформулируется: *«формат разработан и частично реализован; реализация Tywaves-projection демонстрирует практичность pool-based архитектуры; hgdb-projection — next immediate step»*.
 
 Это не провал. uhdi spec сам по себе — сильный thesis contribution. Phase 1 demo его валидирует.
@@ -510,7 +510,7 @@ def print_expr(expr, parent_prec=0):
 - [ ] Репетиция вслух — минимум 2 раза
 - [ ] Ответы на очевидные вопросы:
   - «Почему не расширили HGLDD, а сделали новый формат?»
-  - «Почему не dataflow/provenance в текущей версии?»
+  - «Почему не provenance в текущей версии?»
   - «Почему Python-конвертеры, а не CIRCT-native?»
   - «Почему не сравнение с DWARF?»
 
@@ -530,3 +530,9 @@ def print_expr(expr, parent_prec=0):
 ---
 
 *— конец документа —*
+
+---
+
+### Removed from format (deferred to future)
+
+- **§11 Temporal layer**, **§12 Provenance layer**: previously specified in uhdi-spec.md; removed because no emitter/consumer existed. Reinstate from git history (`git log --diff-filter=D -- docs/uhdi-spec.md`) when a first emitter or consumer ships.

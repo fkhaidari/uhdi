@@ -62,7 +62,7 @@ The format deliberately does **not** store:
 
 1. **Flat ID-keyed pools for shared entities**, inline structures for unique-per-site data. Rationale: shared entities (types, expressions) repeat hundreds of times in large designs; inlining bloats documents and prevents dedup.
 2. **Reference by ID through named fields** (`typeRef`, `varRef`, etc.) -- no prefix encoding, no JSON paths. Field name encodes the target pool. Rationale: O(1) resolution, no parsing, orthogonal to physical layout.
-3. **Layered optionality** -- consumers pick the layers they need. Required core: `scopes`. Commonly useful: `types`, `expressions`, `variables`. Optional: `dataflow`, `temporal`, `provenance`.
+3. **Layered optionality** -- consumers pick the layers they need. Required core: `scopes`. Commonly useful: `types`, `expressions`, `variables`. Optional: `dataflow`.
 4. **N-way representations** via top-level `representations` map with arbitrary string keys, not a fixed HGL/HDL pair. Rationale: CIRCT has 4-5 meaningful IR levels; dual pair is a special case.
 5. **Honest status reporting** -- `preserved | reconstructed | lost` tells consumers what actually happened to each variable after compiler passes. Rationale: filling a gap none of the existing formats address.
 6. **Strict validation** -- `additionalProperties: false` everywhere; unknown fields are errors, not silently ignored. Rationale: catches typos and drift at parse time, not runtime.
@@ -86,7 +86,7 @@ Prior work distributes debug information across thirteen orthogonal axes. No sin
 | 7 | Control flow | ✓ nested blocks | ✓ CF vertices + edges | ✗ |
 | 8 | Breakpoint / stepping | ✓ **primary** | implicit | implicit |
 | 9 | Dataflow / dependencies | ✗ | ✓ **primary** | implicit via operands |
-| 10 | Temporal / clocking | ✓ `delay` | ✓ `clocked` + `assignDelay` | ✗ |
+| 10 | Clock / timing info | ✓ `delay` | ✓ `clocked` + `assignDelay` | ✗ |
 | 11 | Arrays / memory indexing | ✓ `indices` | ✓ unrolled | ✓ `unpacked_range` |
 | 12 | Probe instrumentation | ✗ (has `target`) | ✓ **primary** | ✗ |
 | 13 | Metadata | `attributes` | -- | `HGLDD.version` |
@@ -140,7 +140,7 @@ Features **only HGLDD** has:
 
 3. **Multi-stage location mapping.** HGLDD gives HGL↔HDL; hgdb uses a two-pass High/Low FIRRTL approach internally but loses intermediate levels in the final table. Neither tracks all four to five meaningful IR levels in CIRCT pipelines.
 
-4. **Provenance.** No format logs which compiler pass generated a synthetic signal. This is crucial for debugging the compiler itself and for tracing optimized outputs back to source constructs.
+4. **Pass origin.** No format logs which compiler pass generated a synthetic signal. This is crucial for debugging the compiler itself and for tracing optimized outputs back to source constructs.
 
 5. **Unified memory/array model.** Three different approaches exist (hgdb compact `indices`; PDG eager per-cell vertex expansion; HGLDD hybrid pattern + range). No canonical form exists to derive all three from.
 
@@ -161,9 +161,7 @@ The format addresses the gaps above via a layered structure. Seven categories ar
 #### Optional
 
 8. **Dataflow graph** -- typed edges (Data/Conditional/Index/Declaration) for slicing (axis 9).
-9. **Temporal info** -- clock domains, reset info, history FIFO depths (axis 10).
-10. **Breakpoint metadata** -- inline on statements and scopes; covers steppability, dynamic enable conditions, priority, watchpoints, throttling, categorization, and entry/exit breakpoints (axis 8, see §9).
-11. **Provenance** -- origin pass and derivation chain for synthetic entities (filling §2.4 gap 4).
+9. **Breakpoint metadata** -- inline on statements and scopes; covers steppability, dynamic enable conditions, priority, watchpoints, throttling, categorization, and entry/exit breakpoints (axis 8, see §9).
 
 ---
 
@@ -187,8 +185,6 @@ A `uhdi` document is a JSON object with the following top-level shape:
 
   "dataflow":        { /* optional; see §10 */ },
   "dataflowChunks":  [ /* optional; relative paths to per-scope chunks, see §10.8 */ ],
-  "temporal":        { /* optional; see §11 */ },
-  "provenance":      { /* optional; see §12 */ },
   "attributes":      { /* optional free-form metadata */ }
 }
 ```
@@ -271,8 +267,6 @@ A `uhdi` document is a JSON object with the following top-level shape:
 
     "dataflow":       { "$ref": "https://uhdi/dataflow.schema.json" },
     "dataflowChunks": { "type": "array", "items": { "type": "string" } },
-    "temporal":       { "$ref": "https://uhdi/temporal.schema.json" },
-    "provenance":     { "$ref": "https://uhdi/provenance.schema.json" },
     "attributes":     { "type": "object", "additionalProperties": true }
   }
 }
@@ -905,7 +899,6 @@ A variable without a `status` in some repr is implicitly `preserved` -- a conser
 6. `bindKind: "probe"` and `"rwprobe"` incompatible with `value.sigName` in an `hdl`-kind repr -- probes have no electrical signal. Their value, if provided, must be an expression (`value.exprRef`) describing the path from which they read.
 7. Bi-directional consistency with scope `variableRefs` **if the scope emits that field**. When `scope.variableRefs` is absent, consumers derive the index from variable `ownerScopeRef`.
 8. Unique `name` within a scope at each representation.
-9. If a variable has a `delay` value and the temporal layer is present, there should be a matching entry in `temporal.delays[]`.
 
 ### 6.7 Bundle flattening
 
@@ -936,11 +929,11 @@ When a Chisel `Bundle` (e.g. `io` with three fields) is lowered to Verilog, the 
 "io_valid": { "typeRef": "bool",  ... }
 ```
 
-Tywaves-style waveform viewers prefer the consolidated form (preserves structure). GDB-style debuggers work with either. **Consolidated is the recommended canonical form.** When both views are required, the provenance layer (§12) records the derivation between them.
+Tywaves-style waveform viewers prefer the consolidated form (preserves structure). GDB-style debuggers work with either. **Consolidated is the recommended canonical form.**
 
 ### 6.8 Cross-module references (XMR)
 
-FIRRTL supports hierarchical references via `RefType` / `firrtl.xmr.deref`. In `uhdi`, XMRs are modeled by `bindKind: "probe"` / `"rwprobe"` variables whose `ownerScopeRef` points to the module *declaring* the probe (typically the module exposing the internal signal), not the module *consuming* it. Consumers dereference by walking provenance or by reading the probe's `value.exprRef` which describes the source path.
+FIRRTL supports hierarchical references via `RefType` / `firrtl.xmr.deref`. In `uhdi`, XMRs are modeled by `bindKind: "probe"` / `"rwprobe"` variables whose `ownerScopeRef` points to the module *declaring* the probe (typically the module exposing the internal signal), not the module *consuming* it. Consumers dereference by reading the probe's `value.exprRef` which describes the source path.
 
 An XMR read does not generate any dataflow `Data` edge *to the consuming variable* -- only a `Declaration` edge. This models the formal-verification semantics of probes (read-through without electrical load).
 
@@ -1708,8 +1701,6 @@ Same semantics as statement-level `category`.
 ### 9.7 Interaction with other layers
 
 - **Dataflow layer (§10):** conditional edges carry expressions that may coincide with `enableRef` values. Consumers combining both layers can compute more precise activation (`dataflow_condition && enableRef`) but this is consumer logic, not format obligation.
-- **Temporal layer (§11):** the clock domain assigned to a statement's owning scope determines *when* breakpoint enables are sampled. A statement in a different clock domain from the user's frame of reference requires temporal translation.
-- **Provenance layer (§12):** for synthetic statements (`steppable: false`), provenance can explain what pass created them -- useful when a user wonders why a breakpoint they expected is marked non-steppable.
 
 ---
 
@@ -1765,12 +1756,7 @@ Six kinds. The first four are adopted from PDG; the last two are `uhdi` addition
 | `Clock` | A is clocked by B | `reg ← clock_signal` |
 | `Reset` | A is reset by B | `reg ← reset_signal` |
 
-**Emitter choice: `Clock` / `Reset` edges may be omitted when the temporal layer (§11) is present.** When `temporal.domains` is emitted authoritatively, a consumer that needs slicing through clock/reset can synthesize these edges on the fly from the domain assignments. This eliminates the storage redundancy flagged in §14. An emitter that produces both layers SHOULD pick one authoritative source:
-
-- **Minimal dataflow + full temporal** (recommended for interactive / waveform tools that don't slice).
-- **Full dataflow including Clock/Reset + minimal temporal** (recommended for standalone slicers that don't want to cross layer boundaries).
-
-When both are emitted, the linter cross-checks consistency (§11.9).
+**Emitter choice: `Clock` / `Reset` edges may be omitted when their information is implicit from scope structure.** An emitter SHOULD pick one authoritative representation and not duplicate clock/reset topology across multiple forms.
 
 ### 10.5 Conditional edges and `condition` field
 
@@ -1802,7 +1788,7 @@ Without this flag, slicing through registers produces infinite cycles (a registe
 
 ### 10.7 `assignDelay`
 
-Integer delay in cycles. Usually 0 (combinational) or 1 (single register). Values > 1 indicate multi-cycle pipelines or `delay` FIFO history (from temporal layer).
+Integer delay in cycles. Usually 0 (combinational) or 1 (single register). Values > 1 indicate multi-cycle pipelines.
 
 > **Open question (§14):** PDG has `assignDelay` both on vertices and edges. `uhdi` places it only on edges -- delay is a property of the connection, not the node. Revisit if this breaks conversion from PDG.
 
@@ -1817,7 +1803,7 @@ Dataflow is the heaviest layer by document size. Estimates for RocketChip-scale 
 
 **Chunking (required for designs over ~10K variables).** The dataflow layer MUST be emittable as a separate file referenced from the main document. The recommended layout:
 
-- Main document: `<design>.uhdi.json` -- contains §3-§8 core pools plus `temporal`/`provenance` if produced.
+- Main document: `<design>.uhdi.json` -- contains §3-§8 core pools.
 - Per-top-scope dataflow: `<design>.<top-scope-id>.uhdi-dataflow.json` -- one file per entry in the top-level `top` array, containing only edges whose endpoints fall inside that scope's reachable variable set.
 - Main document links chunks via an optional `dataflowChunks` array of relative paths alongside the inline `dataflow` field. A consumer that needs slicing loads the relevant chunk on demand.
 
@@ -1939,8 +1925,7 @@ The format itself does not perform these -- all algorithms belong in consumer to
 - **§5 Expressions:** endpoints can reference named expressions, avoiding duplication with scope body connects.
 - **§7 Scope body:** each `connect` produces at least one `Data` edge (consumer -> value source) and optionally a `Conditional` edge (if inside a `block` with `guardRef`). An emitter generates these automatically.
 - **§9 Breakpoint metadata:** edges carry `condition`, breakpoints carry `enableRef`. Debuggers combining both layers may compute `breakpoint.enableRef ∧ edge.condition` as the full activation predicate -- this is consumer logic, not format obligation.
-- **§11 Temporal:** `Clock` and `Reset` edges correspond to clock/reset domain assignments in the temporal layer. If variable V has clock domain C, there should be a `Clock` edge from V to the signal of C. (See §10.4 open question on whether this cross-layer redundancy is worth keeping.)
-- **§12 Provenance:** synthetic edges (e.g., those created by inlining passes) are traceable through the provenance layer.
+- **Clock/Reset edges:** if variable V has a clock domain, there should be a `Clock` edge from V to the clock signal (see §10.4 on whether to emit or omit these).
 
 ### 10.13 Deliberate exclusions
 
@@ -1960,690 +1945,11 @@ Some PDG features were not carried over.
 4. `clocked: true` is incompatible with kinds `Declaration`, `Clock`, `Reset`.
 5. Self-loops within one cycle (`from == to` with `clocked: false`) are errors.
 6. Duplicate edges (same `from`, `to`, `kind`, `condition`) -- linter warning.
-7. Every variable with `bindKind: "reg"` must have a resolvable clock: **either** a `Clock` edge in the dataflow layer **or** a clock assignment via `temporal.domains` (or its scope chain). Absence of both -- error.
-8. `Declaration` edges are uni-directional: the reverse (`decl_of_X ← use_of_X`) should not exist.
+7. `Declaration` edges are uni-directional: the reverse (`decl_of_X ← use_of_X`) should not exist.
 
 ---
 
-## 11. Temporal Information (Optional)
-
-### 11.1 Rationale
-
-The temporal layer captures metadata about clocking, reset, and history access. It is distinct from the dataflow graph (§10) because clock/reset relationships are **structural properties of the design**, not dynamic dependencies derived from statements.
-
-Three primary use cases:
-
-**Multi-clock debugging.** In SoCs (e.g., RocketChip), multiple clock domains coexist (core, uncore, memory, peripheral). A breakpoint "halt when `reg == 42`" is ambiguous without domain info: which edge should sample trigger on? A debugger without this data either samples on every edge (false positives) or on a single global clock (missed events).
-
-**Reverse debugging.** hgdb supports intra-cycle reverse via per-variable history FIFOs. Depth of each FIFO lives here.
-
-**Reset-aware initial state.** When a debugger starts from cycle 0, it must know which signal is reset, what polarity, sync or async -- otherwise first-cycle state is undefined.
-
-### 11.2 Model
-
-Top-level side-table with four sub-sections:
-
-```jsonc
-"temporal": {
-  "clocks":  { /* clockId -> clock descriptor */ },
-  "resets":  { /* resetId -> reset descriptor */ },
-  "domains": { /* scopeRef or varRef -> clock/reset assignment */ },
-  "delays":  [ /* history FIFOs */ ],
-  "defaultClockRef": "...",
-  "defaultResetRef": "..."
-}
-```
-
-Clocks and resets are separate pools (not inline with each assignment) because a single clock often drives thousands of variables; inlining would cause massive duplication.
-
-### 11.3 Clocks
-
-```jsonc
-"clocks": {
-  "clk_core": {
-    "sigRef":      "clock",        // reference to variables pool (type must be clock)
-    "edge":        "rising",       // rising | falling | both
-    "frequencyHz": 1000000000      // optional: annotated frequency
-  }
-}
-```
-
-- `sigRef` references a variable whose `typeRef` resolves to a `clock` type.
-- `edge` describes the sampling edge **as it appears in the `hdl`-kind representation** (e.g., `always_ff @(posedge clk)` vs `@(negedge)` vs DDR). FIRRTL / source representations use rising-edge semantics universally; the `edge` field becomes meaningful only after `lower-seq-to-sv` (or equivalent). An emitter targeting only a source/IR representation should emit `edge: "rising"`.
-- `frequencyHz` is a hint for debugger pacing, not a correctness constraint.
-
-### 11.4 Resets
-
-```jsonc
-"resets": {
-  "rst_core": {
-    "sigRef":       "reset",
-    "kind":         "sync",              // sync | async
-    "activeHigh":   true,
-    "initialValue": { "constant": 0 }    // optional: default post-reset value
-  }
-}
-```
-
-- `sigRef` references a variable of type `reset` (for `sync`) or `asyncreset` (for `async`).
-- `activeHigh: true` means reset asserts on signal value 1. Chisel's default is `true`; FIRRTL supports both.
-- `initialValue` is an optional document-wide default for variables in this reset domain. Per-variable overrides live in the variable's `value` field (see §6.4).
-
-### 11.5 Domain assignments
-
-Links variables and scopes to clocks and resets. Keys are either `scopeRef` or `varRef`:
-
-```jsonc
-"domains": {
-  "Core":        { "clock": "clk_core", "reset": "rst_core" },
-  "L2Cache":     { "clock": "clk_uncore", "reset": "rst_core" },
-  "reg_special": { "clock": "clk_peripheral" }
-}
-```
-
-Resolution order for a given variable V:
-
-1. If V has an entry in `domains`, use it.
-2. Otherwise, look up V's owning scope; use that scope's entry if present.
-3. Otherwise, use `defaultClockRef` / `defaultResetRef`.
-4. If none of the above resolves and V is `reg` or `mem`, the linter flags an error.
-
-This mirrors Chisel's `withClock(c) { ... }` / `withClockAndReset(c, r) { ... }` scoping.
-
-**Emitter requirement:** whenever V's clock/reset binding differs from its owning scope's binding (typical case: a register inside a module wrapped in `withClock`), the emitter MUST emit an explicit `domains[V]` entry overriding the scope's default. Implicit override by omission leads to silently wrong clock attribution when consumers fall through to step 2.
-
-### 11.6 Delay FIFOs
-
-```jsonc
-"delays": [
-  { "varRef": "pipeline_stage_3", "depth": 4 },
-  { "varRef": "branch_history",   "depth": 8, "clockRef": "clk_core" }
-]
-```
-
-Stored as an array rather than a map -- delays are often batch-applied by the emitter and have no meaningful ID beyond the variable they attach to.
-
-- `depth` must be ≥ 1 (depth 0 would be just the current value).
-- `clockRef` is optional; if absent, sampling uses the clock from `domains` resolution for the variable.
-
-### 11.7 JSON Schema
-
-```jsonc
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://uhdi/temporal.schema.json",
-
-  "$defs": {
-    "VarRef":   { "type": "string" },
-    "ScopeRef": { "type": "string" },
-    "ClockRef": { "type": "string" },
-    "ResetRef": { "type": "string" },
-
-    "Clock": {
-      "type": "object",
-      "required": ["sigRef", "edge"],
-      "additionalProperties": false,
-      "properties": {
-        "sigRef":      { "$ref": "#/$defs/VarRef" },
-        "edge":        { "enum": ["rising", "falling", "both"] },
-        "frequencyHz": { "type": "integer", "minimum": 1 }
-      }
-    },
-
-    "Reset": {
-      "type": "object",
-      "required": ["sigRef", "kind", "activeHigh"],
-      "additionalProperties": false,
-      "properties": {
-        "sigRef":       { "$ref": "#/$defs/VarRef" },
-        "kind":         { "enum": ["sync", "async"] },
-        "activeHigh":   { "type": "boolean" },
-        "initialValue": {
-          "oneOf": [
-            { "type": "object", "required": ["constant"],
-              "additionalProperties": false,
-              "properties": { "constant": { "type": "integer" } } },
-            { "type": "object", "required": ["bitVector"],
-              "additionalProperties": false,
-              "properties": { "bitVector": { "type": "string",
-                                             "pattern": "^[01xzXZ?]+$" } } }
-          ]
-        }
-      }
-    },
-
-    "DomainAssignment": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "clock": { "$ref": "#/$defs/ClockRef" },
-        "reset": { "$ref": "#/$defs/ResetRef" }
-      }
-    },
-
-    "Delay": {
-      "type": "object",
-      "required": ["varRef", "depth"],
-      "additionalProperties": false,
-      "properties": {
-        "varRef":   { "$ref": "#/$defs/VarRef" },
-        "depth":    { "type": "integer", "minimum": 1 },
-        "clockRef": { "$ref": "#/$defs/ClockRef" }
-      }
-    },
-
-    "Temporal": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "clocks": {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/Clock" }
-        },
-        "resets": {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/Reset" }
-        },
-        "domains": {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/DomainAssignment" }
-        },
-        "delays": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/Delay" }
-        },
-        "defaultClockRef": { "$ref": "#/$defs/ClockRef" },
-        "defaultResetRef": { "$ref": "#/$defs/ResetRef" }
-      }
-    }
-  },
-
-  "$ref": "#/$defs/Temporal"
-}
-```
-
-### 11.8 Examples
-
-**Minimal single-clock design:**
-```jsonc
-"temporal": {
-  "clocks": { "clk": { "sigRef": "clock", "edge": "rising" } },
-  "resets": { "rst": { "sigRef": "reset", "kind": "sync", "activeHigh": true } },
-  "defaultClockRef": "clk",
-  "defaultResetRef": "rst"
-}
-```
-
-All variables and scopes inherit defaults -- no explicit `domains` entries needed.
-
-**Multi-clock SoC:**
-```jsonc
-"temporal": {
-  "clocks": {
-    "clk_core":       { "sigRef": "core_clock",   "edge": "rising",
-                        "frequencyHz": 1000000000 },
-    "clk_uncore":     { "sigRef": "uncore_clock", "edge": "rising",
-                        "frequencyHz": 500000000 },
-    "clk_peripheral": { "sigRef": "periph_clock", "edge": "rising",
-                        "frequencyHz": 100000000 }
-  },
-  "resets": {
-    "rst_core":  { "sigRef": "reset",     "kind": "sync",  "activeHigh": true },
-    "rst_async": { "sigRef": "por_reset", "kind": "async", "activeHigh": true }
-  },
-  "domains": {
-    "Core":       { "clock": "clk_core",       "reset": "rst_core" },
-    "L2Cache":    { "clock": "clk_uncore",     "reset": "rst_core" },
-    "UartDevice": { "clock": "clk_peripheral", "reset": "rst_core" },
-    "PowerMgr":   { "reset": "rst_async" }
-  },
-  "defaultClockRef": "clk_core"
-}
-```
-
-**Branch predictor with history:**
-```jsonc
-"temporal": {
-  "clocks": { "clk": { "sigRef": "clock", "edge": "rising" } },
-  "delays": [
-    { "varRef": "bp_history_reg", "depth": 16 },
-    { "varRef": "pipeline_ifid",  "depth": 1 },
-    { "varRef": "pipeline_idex",  "depth": 2 }
-  ]
-}
-```
-
-**Falling-edge sampled register (negative-edge DDR-style logic):**
-```jsonc
-"temporal": {
-  "clocks": { "clk_neg": { "sigRef": "clock_n", "edge": "falling" } },
-  "domains": { "dqs_reg": { "clock": "clk_neg" } }
-}
-```
-
-### 11.9 Interaction with other layers
-
-**§6 Variables:** `reg` and `mem` variables without a resolvable clock are errors. The linter checks `defaultClockRef` or explicit domain assignment.
-
-**§9 Breakpoints:** breakpoints fire on the clock edge of their scope/variable's domain. `stopOnEntry` triggers on the first active edge after reset deassertion.
-
-**§10 Dataflow:** when the dataflow layer emits explicit `Clock` / `Reset` edges, they must be consistent with `domains` assignments (if `domains["reg_X"].clock == "clk_core"`, then any `Clock` edge from `reg_X` must point to `clocks["clk_core"].sigRef`). When the dataflow layer omits these edge kinds (see §10.4), the consumer synthesizes them from `domains` on demand. The linter warns only on mismatch between what's present, not on absence.
-
-**§12 Provenance:** if a clock/reset signal was renamed by a CIRCT pass, provenance traces the original source name -> current HDL signal.
-
-### 11.10 Deliberate non-goals
-
-- **Relative clock relationships** (ratios, phase offsets) -- these belong in timing analysis, not debug metadata.
-- **Clock gating** -- a gated clock is just another variable of type `clock` with its own `clocks[]` entry. The gating logic lives in expressions and dataflow.
-- **Power domains** -- an orthogonal concern; not debug info.
-
-### 11.11 Contested design decisions
-
-Recorded here because they may resurface. None is a blocker.
-
-1. **`domains` as a separate map vs. `clockRef`/`resetRef` fields on each variable.** Adopted: separate map. Rationale: compactness -- thousands of variables in one clock domain would cause thousandfold duplication if inline. Trade-off: indirect lookup.
-
-2. **`initialValue` on the reset descriptor, not per variable.** Rationale: most variables sharing a reset also share an init value (typically 0); the 5% needing per-variable overrides express them through the variable's `value` field (§6.4).
-
-3. **`delays` as an array, not a map.** Rationale: delays have no meaningful ID beyond their `varRef`; ordering irrelevant; map would force artificial key generation.
-
----
-
-## 12. Provenance (Optional)
-
-> **⚠ Implementability note.** This section is fully specified, but emitting provenance in practice is substantially harder than the other layers. Every CIRCT/FIRRTL pass would need to be instrumented to record its transformations -- most passes currently don't do this. Reference implementations of the emitter can adopt provenance **incrementally**: start with the Minimum Viable Provenance set defined in §12.5 (four passes), and leave other passes with empty provenance. A consumer seeing an entity without a provenance record should treat it as "origin unknown", not as a validation failure. This layer is therefore the most research-oriented part of the format -- it is specified to enable the work, not because existing toolchains produce it today.
-
-### 12.1 Rationale
-
-Provenance is the history of every synthetic entity in the document: when the debugger or waveform viewer shows a variable named `_GEN_42` or `partialSum_0_reg`, provenance answers where it came from, which compiler pass produced it, what source-level entity it derives from, and through which transformation.
-
-This is the only layer where `uhdi` offers something **no existing format does**. hgdb, PDG, and HGLDD all provide post-compilation snapshots but don't preserve the history of how entities arrived at their final form. This makes provenance both the highest-value contribution of the format and the most research-oriented (no prior art to copy from).
-
-### 12.2 Use cases
-
-1. **Explaining "strange" names.** A user sees `_T_17` in the waveform; provenance explains it is the result of SSA on source variable `sum` at iteration 2.
-2. **Compiler self-debugging.** When a CIRCT pass produces wrong names or loses source info, provenance allows reverse-engineering what it did. Mostly an academic use case for CIRCT/Chisel contributors.
-3. **Source-value recovery through a chain.** If `reg_x` is derived from `reg`, which is derived from Chisel `myReg`, provenance yields the chain even if intermediate forms were optimized.
-4. **Consistency checks.** Two variables with identical provenance origin may indicate a pass bug (e.g., failed CSE).
-
-### 12.3 Model
-
-Top-level side-table keyed by the entity kind, then by the entity's ID from the main document:
-
-```jsonc
-"provenance": {
-  "variables":   { "_GEN_42": { /* record */ } },
-  "expressions": { "expr_117": { /* record */ } },
-  "scopes":      { "InlinedScope_0": { /* record */ } },
-  "types":       { "AnonBundle_7": { /* record */ } }
-}
-```
-
-Only the entity kinds with identity are covered -- temporal entries, dataflow edges, and breakpoint metadata are annotations without standalone identity.
-
-> **Open question (§14):** whether to add provenance for dataflow edges and temporal entries. Synthetic clocks created by a pass could reasonably have provenance. Deferred until real emitters surface the need.
-
-### 12.4 Provenance record
-
-Minimal structure:
-
-```jsonc
-{
-  "origin":      "pass:LowerTypes",
-  "derivedFrom": [ { "varRef": "io" } ],
-  "transform":   "bundle_flatten",
-  "fieldPath":   ".a.b.c"
-}
-```
-
-#### `origin` -- who produced the entity
-
-String with a category prefix:
-
-- `source` -- from authored code (Chisel, Spade, PyMTL).
-- `elab` -- created during HGF elaboration (pre-FIRRTL).
-- `pass:<Name>` -- produced by the named compiler pass.
-- `external` -- imported from another document during merge.
-- `inferred` -- derived by a consumer tool (rare).
-
-#### `derivedFrom` -- source entities
-
-Array of entity references, because one entity may derive from multiple predecessors (e.g., CSE collapsing multiple occurrences):
-
-```jsonc
-"derivedFrom": [
-  { "varRef":  "original_signal" },
-  { "exprRef": "old_computation" }
-]
-```
-
-An empty array is legal -- indicates the entity was created *de novo* by the pass, with no source antecedent (e.g., auto-generated clock gating wrapper).
-
-#### `transform` -- transformation kind
-
-| Transform | Meaning |
-|---|---|
-| `rename` | Simple renaming (unique naming, collision avoidance) |
-| `bundle_flatten` | Bundle stripped into scalar fields |
-| `vec_unroll` | Vector expanded to indexed elements |
-| `inline` | Submodule body inlined into host |
-| `ssa_temp` | SSA-introduced intermediate |
-| `cse` | Common subexpression elimination |
-| `dce_preserve` | Would have been DCE'd but kept (DontTouch) |
-| `const_fold` | Replaced by constant |
-| `mux_lower` | Conditional lowered to mux |
-| `clock_lower` | Clock/reset operation lowering |
-| `custom` | Pass-specific; requires `detail` |
-
-The list is not claimed to be complete. `custom` is the escape hatch for passes with unique semantics.
-
-#### Transform-specific fields
-
-Depending on `transform`, additional fields may appear:
-
-- `fieldPath` (for `bundle_flatten`): which Bundle field.
-- `index` (for `vec_unroll`): which Vec index.
-- `hostInstance` (for `inline`): which instance the code was inlined into.
-- `iteration` (for `ssa_temp`): which SSA iteration.
-- `detail` (for `custom`): free-form description.
-
-#### Optional metadata
-
-- `timestamp` (ISO 8601): when the pass ran.
-- `passVersion`: compiler/pass version for diagnostics.
-- `reason`: human-readable explanation.
-- `lossy` (boolean): the transformation lost information irrecoverably (e.g., `x * 0 -> 0` loses `x`).
-
-### 12.5 Minimum Viable Provenance (MVP)
-
-A reference emitter does not need to instrument every CIRCT/FIRRTL pass to be useful. The following four passes cover the majority of user-facing provenance value and can be instrumented in a scoped effort; all other transforms can be deferred without blocking a reference implementation.
-
-| Priority | Pass | Transform kind | Why it's in MVP |
-|---|---|---|---|
-| 1 | `LowerTypes` (FIRRTL) | `bundle_flatten`, `vec_unroll` | Explains every `a_b_c` / `a_0` synthetic name a user sees in waveforms. Pass already maintains internal field-to-scalar mapping -- instrumentation is largely exposing that map. |
-| 2 | `InlineModules` (`firrtl-inliner`) | `inline` | Needed for `hostInstance` to be meaningful. Single-pass scope; transformation is syntactic. |
-| 3 | `DCE` (`firrtl-imdeadcodeelim`) | `dce_preserve` + setting `status: "lost"` on surviving repr entries | Without this, variable `status` defaults to `preserved` everywhere, and §6.3 loses its teeth. Instrumentation is just recording survival / removal. |
-| 4 | `CSE` (applied within lowering) | `cse` | Explains why identical expressions produce one shared signal. Moderate complexity (must track all collapsed predecessors). |
-
-Passes outside MVP (`rename`, `ssa_temp`, `const_fold`, `mux_lower`, `clock_lower`, `custom`) are incremental additions; each provides refinement but not coverage.
-
-An MVP-only emitter produces a `provenance` section that is honest about its scope: synthetic entities from non-instrumented passes simply have no entry, and consumers treat that as "origin unknown" per §12.1.
-
-### 12.6 Chains of transformations
-
-When an entity has been transformed repeatedly (e.g., source -> LowerTypes -> Inline -> Rename), only the **most recent transformation** is recorded directly. Intermediate versions are separate entries, accessible by following `derivedFrom` recursively.
-
-```jsonc
-"variables": {
-  "parent_myBundle_field_0": {
-    "origin":      "pass:Rename",
-    "derivedFrom": [{ "varRef": "parent_myBundle_field" }],
-    "transform":   "rename"
-  },
-  "parent_myBundle_field": {
-    "origin":      "pass:Inline",
-    "derivedFrom": [{ "varRef": "myBundle_field" }],
-    "transform":   "inline",
-    "hostInstance": "parent"
-  },
-  "myBundle_field": {
-    "origin":      "pass:LowerTypes",
-    "derivedFrom": [{ "varRef": "myBundle" }],
-    "transform":   "bundle_flatten",
-    "fieldPath":   ".field"
-  }
-}
-```
-
-A consumer wishing the full chain walks `derivedFrom` lazily.
-
-> **Open question (§14):** explicit `chain` array (as a single record) vs. the current linked-list model. Plain linked form chosen for consistency with pool/reference style used throughout `uhdi`. Revisit if chain depths routinely exceed ~10.
-
-### 12.7 Reverse lookup
-
-The format stores only forward provenance (from synthetic to source). A reverse map (from source to descendants) is built by the consumer at load time. Reason: avoiding duplication and consistency risk.
-
-### 12.8 JSON Schema
-
-```jsonc
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://uhdi/provenance.schema.json",
-
-  "$defs": {
-    "VarRef":   { "type": "string" },
-    "ExprRef":  { "type": "string" },
-    "ScopeRef": { "type": "string" },
-    "TypeRef":  { "type": "string" },
-
-    "EntityRef": {
-      "oneOf": [
-        { "type": "object", "required": ["varRef"],
-          "additionalProperties": false,
-          "properties": { "varRef": { "$ref": "#/$defs/VarRef" } } },
-        { "type": "object", "required": ["exprRef"],
-          "additionalProperties": false,
-          "properties": { "exprRef": { "$ref": "#/$defs/ExprRef" } } },
-        { "type": "object", "required": ["scopeRef"],
-          "additionalProperties": false,
-          "properties": { "scopeRef": { "$ref": "#/$defs/ScopeRef" } } },
-        { "type": "object", "required": ["typeRef"],
-          "additionalProperties": false,
-          "properties": { "typeRef": { "$ref": "#/$defs/TypeRef" } } }
-      ]
-    },
-
-    "Origin": {
-      "type": "string",
-      "pattern": "^(source|elab|external|inferred|pass:[A-Za-z0-9_]+)$"
-    },
-
-    "Transform": {
-      "enum": [
-        "rename", "bundle_flatten", "vec_unroll", "inline",
-        "ssa_temp", "cse", "dce_preserve", "const_fold",
-        "mux_lower", "clock_lower", "custom"
-      ]
-    },
-
-    "Record": {
-      "type": "object",
-      "required": ["origin", "derivedFrom", "transform"],
-      "additionalProperties": false,
-      "properties": {
-        "origin":       { "$ref": "#/$defs/Origin" },
-        "derivedFrom":  { "type": "array", "items": { "$ref": "#/$defs/EntityRef" } },
-        "transform":    { "$ref": "#/$defs/Transform" },
-
-        "fieldPath":    { "type": "string" },
-        "index":        { "type": "integer", "minimum": 0 },
-        "hostInstance": { "type": "string" },
-        "iteration":    { "type": "integer", "minimum": 0 },
-        "detail":       { "type": "string" },
-
-        "timestamp":    { "type": "string", "format": "date-time" },
-        "passVersion":  { "type": "string" },
-        "reason":       { "type": "string" },
-        "lossy":        { "type": "boolean", "default": false }
-      }
-    },
-
-    "Provenance": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "variables":   {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/Record" }
-        },
-        "expressions": {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/Record" }
-        },
-        "scopes":      {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/Record" }
-        },
-        "types":       {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/Record" }
-        }
-      }
-    }
-  },
-
-  "$ref": "#/$defs/Provenance"
-}
-```
-
-### 12.9 Examples
-
-**Bundle flatten:**
-```jsonc
-"variables": {
-  "io_a_b_c": {
-    "origin":      "pass:LowerTypes",
-    "derivedFrom": [{ "varRef": "io" }],
-    "transform":   "bundle_flatten",
-    "fieldPath":   ".a.b.c"
-  }
-}
-```
-
-**SSA temp with iteration:**
-```jsonc
-"variables": {
-  "sum_1": {
-    "origin":      "pass:SSA",
-    "derivedFrom": [{ "varRef": "sum" }],
-    "transform":   "ssa_temp",
-    "iteration":   1
-  },
-  "sum_2": {
-    "origin":      "pass:SSA",
-    "derivedFrom": [{ "varRef": "sum" }],
-    "transform":   "ssa_temp",
-    "iteration":   2
-  }
-}
-```
-
-**Inline with reason:**
-```jsonc
-"variables": {
-  "parent_sub_reg": {
-    "origin":       "pass:InlineModules",
-    "derivedFrom":  [{ "varRef": "sub_reg" }],
-    "transform":    "inline",
-    "hostInstance": "parent",
-    "reason":       "single-use submodule inlined for optimization"
-  }
-}
-```
-
-**CSE collapsing multiple sources:**
-```jsonc
-"expressions": {
-  "shared_sum": {
-    "origin":      "pass:CSE",
-    "derivedFrom": [
-      { "exprRef": "a_plus_b_1" },
-      { "exprRef": "a_plus_b_2" },
-      { "exprRef": "a_plus_b_3" }
-    ],
-    "transform":   "cse",
-    "reason":      "three identical a+b occurrences collapsed"
-  }
-}
-```
-
-**Preserved dead code:**
-```jsonc
-"variables": {
-  "debug_only_reg": {
-    "origin":      "pass:DCE",
-    "derivedFrom": [{ "varRef": "debug_only_reg" }],
-    "transform":   "dce_preserve",
-    "reason":      "DontTouchAnnotation prevented elimination"
-  }
-}
-```
-
-Note: `derivedFrom` refers to itself. This is the one case where self-reference is legal -- means "this entity passed through unchanged".
-
-**Lossy transformation:**
-```jsonc
-"variables": {
-  "zero_result": {
-    "origin":      "pass:ConstFold",
-    "derivedFrom": [{ "varRef": "x" }],
-    "transform":   "const_fold",
-    "lossy":       true,
-    "reason":      "x * 0 folded to 0; x value no longer traceable"
-  }
-}
-```
-
-### 12.10 Interaction with other layers
-
-- **§6 Variables:** `status: "reconstructed"` or `status: "lost"` often correlates with a provenance record explaining which pass caused the transformation.
-- **§7 Scopes:** inline scopes (§7 `kind: "inline"`) should have provenance with `transform: "inline"` and `hostInstance`.
-- **§10 Dataflow:** synthetic edges rarely need provenance; endpoint provenance is usually sufficient.
-- **§11 Temporal:** if a clock/reset signal was renamed by a pass, provenance on the signal variable traces the original name.
-
-### 12.11 Scalability
-
-Moderate size. For RocketChip-scale designs:
-
-- Records: ~`N_variables + N_expressions + N_synthetic_scopes` ≈ 100K-300K.
-- Per-record JSON size: ~150 bytes.
-- Total: 15-45 MB raw.
-
-Smaller than dataflow but still nontrivial. Lazy loading is recommended -- most consumers never need provenance, and it is only queried when the user asks "where did this signal come from?"
-
-### 12.12 Invariants
-
-1. All `derivedFrom[]` entity references resolve.
-2. `origin: "pass:..."` has a non-empty pass name after the colon.
-3. `transform: "bundle_flatten"` requires `fieldPath`.
-4. `transform: "vec_unroll"` requires `index`.
-5. `transform: "inline"` requires `hostInstance`.
-6. `transform: "ssa_temp"` should have `iteration` (warning if absent).
-7. `transform: "custom"` requires `detail`.
-8. Cycles in `derivedFrom` are forbidden **except** self-reference with `transform: "dce_preserve"`. Cycle detection is the linter's responsibility.
-9. Chain depth (recursive `derivedFrom`) exceeding 20 -- warning.
-10. If the main document contains a variable whose name starts with a synthetic prefix (`_GEN`, `_T`, `_WIRE`, `_RAND`, …) -- a provenance record **should** exist. Warning if absent (but acceptable during incremental adoption).
-11. Entities in provenance maps must correspond to entities of the matching kind in the main document (e.g., `provenance.variables["X"]` requires `variables["X"]` to exist).
-
-### 12.13 Research-oriented open questions
-
-This section summarises open questions with thesis-level scope. Each has been deferred for a reason: real answers depend on systematic study of CIRCT/Chisel passes and on actual implementation feedback.
-
-1. **Canonical transform taxonomy.** The 11 transforms listed are a working draft based on informal pass review. A comprehensive taxonomy -- surveying all CIRCT and Chisel passes -- is itself a thesis contribution. Additional transforms will almost certainly surface.
-
-2. **Lossless vs lossy formal classification.** When can the original be reconstructed from provenance? `rename` is lossless; `const_fold` is lossy; `inline` is reversible if `hostInstance` is present. A formal theory of pass invertibility based on provenance is open.
-
-3. **Provenance-driven automated explanations.** Generating natural-language explanations of synthetic names from provenance chains -- UI/UX research territory.
-
-4. **Merge semantics.** When documents from independent tools are merged (Chisel emits the authoring layer, CIRCT adds IR/HDL layers), how is provenance joined? Does the chain continue across merge boundaries, or are they independent trees?
-
-5. **Provenance-based equivalence checking.** Two variables with identical provenance origin and transform are semantically equivalent. Can this be used for automated equivalence checks between compilation runs?
-
-### 12.14 Contested design decisions
-
-1. **Plain linked list (via `derivedFrom`) vs explicit `chain` array.** Adopted linked list for consistency with the rest of the format. Revisit if chain depths routinely exceed ~10.
-
-2. **Pass names as free strings vs enum.** Adopted free strings (`pass:<Name>`). New passes emerge constantly; an enum would be outdated instantly.
-
-3. **Self-referential `derivedFrom` legal only for `dce_preserve`.** Strict. May be relaxed for other no-op transformations if a need emerges.
-
-4. **No provenance for dataflow / temporal entities.** Synthetic edges and clocks could reasonably have provenance; currently excluded for simplicity.
-
-5. **`transform` mandatory, not optional.** Every entry must declare its transformation kind; `custom` covers the unknown. Alternative (making `transform` optional) was rejected -- forces emitters to document what they do, rather than hand-waving.
-
----
-
-## 13. Linter Requirements
+## 11. Linter Requirements
 
 JSON Schema cannot express all invariants. A separate linter must validate:
 
@@ -2662,7 +1968,6 @@ JSON Schema cannot express all invariants. A separate linter must validate:
 - Location file indices within bounds of the owning representation's files array.
 - Uniqueness of names/IDs where required.
 - Breakpoint `enableRef` and `watchpoint.matchRef` reference an expression *or* a variable (§7.4 `ExprOrVarRef`) with `uint<1>` result (for `matchRef`: with result type matching the watched variable when `kind: "value"`). The MVP `&`-joined predicate string (§9.3) is exempt -- the implicit result type is `uint<1>` by construction.
-- §11.5 `domains[V]` override: when a `reg` or `mem` variable's resolved clock (per §11.5 step 1) differs from its owning scope's default clock (step 2), the temporal pool MUST carry an explicit `domains[V]` entry for that variable. Absence is a linter error.
 - Breakpoint `watchpoint.kind` of `rising`/`falling` only on variables whose type is `uint<1>`.
 - Breakpoint `watchpoint.kind: "value"` requires `matchRef` present.
 - Breakpoint `throttle.maxHits` and `throttle.period` are mutually exclusive.
@@ -2673,25 +1978,13 @@ JSON Schema cannot express all invariants. A separate linter must validate:
 - Dataflow `condition.exprRef` resolves to a `uint<1>` expression.
 - Dataflow `clocked: true` is incompatible with kinds `Declaration`, `Clock`, `Reset`.
 - Dataflow self-loops within one cycle (`from == to` with `clocked: false`) are errors.
-- Every `bindKind: "reg"` variable has a resolvable clock: **either** an explicit `Clock` edge in dataflow, **or** an entry in `temporal.domains` (or its scope chain), **or** `temporal.defaultClockRef`. Absence of all three -- error.
-- When both dataflow `Clock` / `Reset` edges **and** `temporal.domains` are present, their clock/reset assignments for the same variable must agree.
-- Temporal `clocks[...].sigRef` resolves to a variable of type `clock`.
-- Temporal `resets[...].sigRef` resolves to a variable of type `reset` (for `kind: sync`) or `asyncreset` (for `kind: async`).
-- Temporal `domains[...]` keys resolve either to an existing `scopeRef` or `varRef`.
-- Temporal `domains[...].clock` / `.reset` resolve into respective pools.
-- Temporal `delays[].varRef` resolves; if variable has a `delay` field, matching `depth` value.
-- Temporal `defaultClockRef` / `defaultResetRef` resolve.
-- Provenance `derivedFrom[]` entity references resolve to the correct pool.
-- Provenance `origin: "pass:..."` has a non-empty pass name.
-- Provenance `transform` requires its expected fields (`bundle_flatten` -> `fieldPath`, `vec_unroll` -> `index`, `inline` -> `hostInstance`, `custom` -> `detail`).
-- Provenance `derivedFrom` cycles are forbidden, except self-reference with `transform: "dce_preserve"`.
-- Provenance entries must correspond to entities in the main document of the matching kind.
+- Every `bindKind: "reg"` variable has a resolvable clock: an explicit `Clock` edge in dataflow. Absence -- error.
 
-Recommended: warn on unreachable expressions, duplicate `priority` within one source location, duplicate dataflow edges, `Declaration` edges in reverse direction, provenance chain depth exceeding 20, synthetic-prefixed names without provenance record, provenance entries lacking `iteration` on `ssa_temp`, verification statements outside `module` / `layer_block` scopes, explicit `status` absent in any `hdl`-kind representation entry.
+Recommended: warn on unreachable expressions, duplicate `priority` within one source location, duplicate dataflow edges, `Declaration` edges in reverse direction, verification statements outside `module` / `layer_block` scopes, explicit `status` absent in any `hdl`-kind representation entry.
 
 ---
 
-## 14. Open Questions and Future Work
+## 12. Open Questions and Future Work
 
 ### Format-wide
 - Exact semantics of `bitVector` ordering (LSB-first vs MSB-first) -- needs decision.
@@ -2714,22 +2007,18 @@ Recommended: warn on unreachable expressions, duplicate `priority` within one so
 Implementation barriers are the dominant open issue -- the specification is complete but emitters require systematic pass instrumentation that does not yet exist. MVP (§12.5) lowers the barrier to four passes, but full coverage remains research work. Most research-grade questions in this layer are flagged in §12.13; a short recap:
 
 - Complete taxonomy of `transform` kinds beyond MVP (current set is a working draft based on informal pass review; full CIRCT/Chisel survey needed).
-- Formal classification of passes as lossless vs lossy based on provenance reversibility.
 - Whether explicit `chain` arrays are needed for deep transformation histories.
 - Merge semantics when documents from independent tools are joined.
-- Whether to add provenance coverage for dataflow edges and temporal entries.
-- UX/UI approaches for presenting provenance chains to human users.
 
 ### Resolved in 0.8 (no longer open)
-- ~~Whether to keep `Clock` / `Reset` as explicit edge kinds, or derive them from temporal.~~ Resolved: §10.4 allows either; emitter picks one authoritative source.
+- ~~Whether to keep `Clock` / `Reset` as explicit edge kinds, or derive them from a separate clock-domain layer.~~ Resolved: §10.4 allows either; emitter picks one authoritative source.
 - ~~Probe signals as ordinary synthetic variables.~~ Resolved: added dedicated `bindKind: "probe"` / `"rwprobe"` (§6.2) with distinct dataflow semantics (§6.8).
-- ~~Duplication of clock info between `temporal.domains` and dataflow `Clock`/`Reset` edges.~~ Resolved as above.
 
 ---
 
-## 15. Conversion to Legacy Formats
+## 13. Conversion to Legacy Formats
 
-### 15.1 Scope
+### 13.1 Scope
 
 This section specifies canonical projections from `uhdi` to three legacy hardware debug formats: HGLDD (CIRCT Debug Dialect emitter output, consumed by Tywaves / Surfer / Verdi alpha), hgdb (Hardware Generator Debugger SQLite symbol table), and PDG (Chisel trace / Program Dependency Graph).
 
@@ -2737,7 +2026,7 @@ Projections are not round-trips. `uhdi` by construction covers the union of all 
 
 Ingestion (the reverse direction: hgdb / HGLDD / PDG -> `uhdi`) is a separate concern requiring auxiliary inputs (VCD, FIRRTL dump) for type-width recovery in two of three cases. It is not specified here.
 
-### 15.2 Pre-conditions
+### 13.2 Pre-conditions
 
 | Projection | `uhdi` layers required on input | Auxiliary inputs |
 |---|---|---|
@@ -2747,7 +2036,7 @@ Ingestion (the reverse direction: hgdb / HGLDD / PDG -> `uhdi`) is a separate co
 
 A `uhdi` document emitted for a source-level consumer (e.g., a Tywaves-targeted emitter that skipped §10) cannot be converted to PDG without first running a dataflow derivation pass. This is a pipeline step, not a limitation; it is documented in §15.5.4.
 
-### 15.3 `uhdi` -> HGLDD
+### 13.3 `uhdi` -> HGLDD
 
 The simplest projection. HGLDD is a snapshot format whose information content is a subset of `uhdi` §3-§7. Conversion is a direct transliteration of fields.
 
@@ -2788,13 +2077,13 @@ A strict converter rejects such documents; a lenient one performs the lowering a
 
 #### 15.3.3 Dropped layers
 
-§7 scope body, §9 breakpoints, §10 dataflow, §11 temporal (except Tywaves-consumed subset), §12 provenance. HGLDD consumers do not read these -- observable loss at the consumer level is zero.
+§7 scope body, §9 breakpoints, §10 dataflow (except Tywaves-consumed subset). HGLDD consumers do not read these -- observable loss at the consumer level is zero.
 
 #### 15.3.4 Effort estimate
 
 3-5 days for a reference implementation. Essentially a backend variant of CIRCT's `EmitHGLDD` walk, reading `uhdi` JSON instead of the IR.
 
-### 15.4 `uhdi` -> hgdb
+### 13.4 `uhdi` -> hgdb
 
 Structural mapping to hgdb's SQLite schema is direct. The non-trivial work is serializing `uhdi` expression ASTs back to SystemVerilog expression strings.
 
@@ -2866,8 +2155,8 @@ hgdb requires split form. If the `uhdi` input uses consolidated form (§6.7), th
 #### 15.4.5 Dropped fields
 
 - `bp.watchpoint`, `bp.throttle`, `bp.category`, `bp.message` -- no hgdb field (partial exception: `watchpoint { kind: "change" }` can be approximated by the `target` attribute).
-- §10 dataflow, §12 provenance -- entirely.
-- §11 temporal -- entirely, including `delay FIFOs`. hgdb's runtime `history` table can in principle replay register pasts, but the reference projector does not walk §11 today; multi-clock domain assignments and reset polarity / kind are also not surfaced. Re-introduction is a Phase 3+ item.
+- §10 dataflow -- entirely.
+- Clock domain assignments, reset polarity / kind, delay FIFOs -- not surfaced by the reference projector. Re-introduction is a Phase 3+ item.
 - Rich types -- hgdb variables carry `rtl: bool` and name only; struct / vector / enum type information is discarded.
 - `status: "reconstructed"` / `"lost"` -- hgdb has no such notion; variables in these states are omitted from the `Variable` table unless they have a `sigName` in some repr.
 - Verification statements (`assert` / `assume` / `cover`) -- dropped, or converted to `Breakpoint` rows with `steppable: false` and `enable = "!(condRef)"` (break on assertion violation). Emitter-policy decision.
@@ -2876,7 +2165,7 @@ hgdb requires split form. If the `uhdi` input uses consolidated form (§6.7), th
 
 ~2 weeks. Roughly: 3 days for schema walk and SQLite population; 5 days for the expression-to-string serializer with comprehensive precedence tests; 2 days for bundle expansion and guard AND-reduction.
 
-### 15.5 `uhdi` -> PDG
+### 13.5 `uhdi` -> PDG
 
 The dual of PDG -> `uhdi` ingestion. Where ingestion required lifting a flat CFG into a structured tree (nontrivial dominator analysis), projection lowers the tree back into flat vertex / edge representation -- algorithmically straightforward.
 
@@ -2894,8 +2183,8 @@ The dual of PDG -> `uhdi` ingestion. Where ingestion required lifting a flat CFG
 | `dataflow.edges[]` | PDG edges (kind names match 1:1) |
 | `dataflow.edges[].clocked` | PDG `clocked` on both vertex and edge (PDG duplicates) |
 | `dataflow.edges[].assignDelay` | `assignDelay` on edge; max over incoming edges on vertex |
-| `provenance[kind][k].origin == "source"` | `isChiselStatement: true` on the corresponding vertex |
-| Any other provenance origin | `isChiselStatement: false` |
+| authoring-language origin known | `isChiselStatement: true` on the corresponding vertex |
+| authoring-language origin unknown | `isChiselStatement: false` |
 
 #### 15.5.2 Body-flattening algorithm
 
@@ -2941,7 +2230,7 @@ Dynamic memory writes (`mem[io.idx] := d`) are stored identically in both format
 
 #### 15.5.4 Pre-condition on §10
 
-PDG's dataflow edges are its source of utility for slicing. If the input `uhdi` document lacks §10, the converter must either fail explicitly or invoke a dataflow derivation pass first. The derivation walks §5 expression trees and §7 body connects to synthesize `Data` / `Conditional` / `Index` / `Declaration` edges -- the same computation an emitter performs when producing §10 initially. `Clock` / `Reset` edges are derived from §11 `temporal.domains` (preferred; see §10.4), or from register operand information when temporal is also absent.
+PDG's dataflow edges are its source of utility for slicing. If the input `uhdi` document lacks §10, the converter must either fail explicitly or invoke a dataflow derivation pass first. The derivation walks §5 expression trees and §7 body connects to synthesize `Data` / `Conditional` / `Index` / `Declaration` edges -- the same computation an emitter performs when producing §10 initially. `Clock` / `Reset` edges are derived from register operand information when not already present in the dataflow layer.
 
 Recommended CLI contract:
 
@@ -2955,15 +2244,15 @@ The second mode is slower and may produce less precise conditional edges (a deri
 #### 15.5.5 Dropped fields
 
 - §9 breakpoint metadata -- entirely.
-- §11 temporal -- multi-clock domains, delays, reset polarity / kind / `initialValue` all lost. The reference projector additionally drops dataflow edges of `kind: "Clock"` / `"Reset"` entirely (a register's clock and reset hookups are implicit in PDG-consuming slicers, which infer "clocked" from per-edge bits on `Data` edges instead). PDG retains the per-edge `clocked` Boolean on the edges that survive; no domain id, no delay depth, no reset metadata.
-- §12 provenance -- collapsed into a single `isChiselStatement` Boolean.
+- Multi-clock domains, delays, reset polarity / kind / `initialValue` -- all lost. The reference projector drops dataflow edges of `kind: "Clock"` / `"Reset"` entirely; PDG-consuming slicers infer "clocked" from per-edge bits on `Data` edges instead.
+- Pass origin information -- collapsed into a single `isChiselStatement` Boolean.
 - `status: "reconstructed"` / `"lost"` -- PDG treats all variables as present.
 
 #### 15.5.6 Effort estimate
 
 ~2 weeks assuming §10 on input. ~4 weeks if the dataflow-derivation pre-pass is included in the converter itself.
 
-### 15.6 Round-trip semantics
+### 13.6 Round-trip semantics
 
 The composition `X -> uhdi -> X` is the canonical regression test for converters. For each legacy format X, the following invariant should hold:
 
@@ -2975,9 +2264,9 @@ For hgdb: the hgdb-VSCode extension steps through breakpoints with identical `fi
 
 For PDG: a reference slicer produces the same reachable variable set for any (variable, cycle) query.
 
-The reverse composition `uhdi -> X -> uhdi` is **not** an invariant and is not expected to hold. X is smaller than `uhdi` by definition (§2.1); round-tripping through X loses every `uhdi`-specific layer (breakpoints through HGLDD, dataflow through hgdb, provenance through all three).
+The reverse composition `uhdi -> X -> uhdi` is **not** an invariant and is not expected to hold. X is smaller than `uhdi` by definition (§2.1); round-tripping through X loses every `uhdi`-specific layer (breakpoints through HGLDD, dataflow through hgdb, pass-origin through all three).
 
-### 15.7 Compatibility matrix
+### 13.7 Compatibility matrix
 
 What each projected format supports, when projecting from a maximally-annotated `uhdi` source:
 
@@ -2996,8 +2285,7 @@ What each projected format supports, when projecting from a maximally-annotated 
 | §9 breakpoints | ✗ | ✓ | ✗ |
 | §9 watchpoints | ✗ | partial (`change` only) | ✗ |
 | §10 dataflow | ✗ | ✗ | ✓ |
-| §11 temporal (clocks / resets) | Tywaves only | not consumed | `clocked` bit only |
-| §12 provenance | ✗ | ✗ | single bit (source vs not) |
+| clock / reset topology | Tywaves only | not consumed | `clocked` bit only |
 
 This matrix is the practical answer to "which `uhdi` features can I rely on if my consumer is X?" -- reference for emitter authors writing `uhdi` with a known downstream target.
 
@@ -3005,17 +2293,17 @@ This matrix is the practical answer to "which `uhdi` features can I rely on if m
 
 ## Appendix A. Change Log
 
-- **0.1** (2026-04-22) -- Initial draft. Core structure (document, types, expressions, variables, scopes) specified. Optional layers (dataflow, temporal, provenance) stubbed.
+- **0.1** (2026-04-22) -- Initial draft. Core structure (document, types, expressions, variables, scopes) specified. Optional layers (dataflow) stubbed; two additional layers removed in 1.0.
 - **0.2** (2026-04-22) -- Renamed format from `udbg` to `uhdi` (Unified Hardware Debug Info).
 - **0.3** (2026-04-22) -- Added §9 Breakpoint Metadata (full specification). Expanded `BreakpointMeta` schema with `watchpoint`, `throttle`, `category`, `message`. Added `ScopeBreakpointMeta` with `stopOnEntry`/`stopOnExit`. Renumbered §10-§14.
 - **0.4** (2026-04-22) -- Restored analytical content: expanded §1 with per-format critique, rewrote §2 with 13-axis coverage matrix, intersections, unique features, gaps. Added §6.7 Bundle flattening note. Added Appendix B documenting rejected alternatives.
 - **0.5** (2026-04-22) -- Added §10 Dataflow Graph (full specification with six edge kinds, conditional edges, scalability notes). Open questions inline in the section mark the three non-trivial design choices (Clock/Reset edges beyond PDG, `assignDelay` on edges only, probe signals as ordinary synthetic variables). Updated §13 linter invariants and §14 open questions accordingly.
-- **0.6** (2026-04-22) -- Added §11 Temporal Information (clocks, resets, domain assignments, delay FIFOs, defaults). Schema reference wired into document schema. Updated §13 linter invariants (7 new rules). §14 records three contested temporal decisions (domain duplication with dataflow, inline vs side-table domains, initialValue placement).
-- **0.7** (2026-04-22) -- Added §12 Provenance (full specification with 11 transform kinds, chains, research-oriented open questions). Section prefaced with explicit implementability caveat: emitters require systematic pass instrumentation which does not yet exist in CIRCT/Chisel. Incremental adoption guidance provided. Updated §13 linter (6 new rules, plus recommended warnings) and §14 open questions (research-grade items in the provenance subsection).
-- **0.8** (2026-04-22) -- MLIR-implementability review pass. Breaking changes: (a) §6 -- `status` moved into per-representation record; previously-global status is no longer accepted by schema. (b) §6.2 -- added `probe` / `rwprobe` BindKinds; §6.8 models XMRs. (c) §7.2 -- added `layer_block` scope kind. (d) §7.3 -- added verification statement kinds `assert`, `assume`, `cover`. (e) §5.3 -- opcodes partitioned into IR/HDL-level, HDL-only (4-state), and source-only groups; opcode/repr-level consistency added as §5.6 invariant 7. Non-breaking changes: (f) §9.3 -- added CIRCT implementation note on `enableRef` computation via `ExpandWhensPass`; watchpoint semantics on aggregates clarified. (g) §9.6 -- removed invariant 5 (redundant with schema). (h) §10.4 -- `Clock`/`Reset` edges now MAY be omitted when temporal layer is authoritative; resolves the main §14 open question on dataflow/temporal redundancy. (i) §10.8 -- chunking protocol specified (per-top-scope files with CBOR option). (j) §11.3 -- `edge` field documented as HDL-repr-specific. (k) §11.5 -- explicit emitter requirement for `withClock` overrides. (l) §12.5 -- new subsection: Minimum Viable Provenance (four-pass MVP); remaining subsections 12.5->12.14 renumbered. (m) §13 linter updated; resolved items moved out of §14 open questions.
+- **0.6** (2026-04-22) -- Added clock/reset metadata layer (removed in 1.0). Updated §13 linter (7 new rules) and §14 open questions.
+- **0.7** (2026-04-22) -- Added pass-origin layer (removed in 1.0). Updated §13 linter (6 new rules) and §14 open questions.
+- **0.8** (2026-04-22) -- MLIR-implementability review pass. Breaking changes: (a) §6 -- `status` moved into per-representation record; previously-global status is no longer accepted by schema. (b) §6.2 -- added `probe` / `rwprobe` BindKinds; §6.8 models XMRs. (c) §7.2 -- added `layer_block` scope kind. (d) §7.3 -- added verification statement kinds `assert`, `assume`, `cover`. (e) §5.3 -- opcodes partitioned into IR/HDL-level, HDL-only (4-state), and source-only groups; opcode/repr-level consistency added as §5.6 invariant 7. Non-breaking changes: (f) §9.3 -- added CIRCT implementation note on `enableRef` computation via `ExpandWhensPass`; watchpoint semantics on aggregates clarified. (g) §9.6 -- removed invariant 5 (redundant with schema). (h) §10.4 -- `Clock`/`Reset` edges now MAY be omitted; resolves the main §14 open question on dataflow/clock-domain redundancy. (i) §10.8 -- chunking protocol specified (per-top-scope files with CBOR option). (j) §13 linter updated; resolved items moved out of §14 open questions.
 - **0.9** (2026-04-22) -- Added §15 Conversion to Legacy Formats. Specifies canonical projections `uhdi` -> HGLDD / hgdb / PDG: field-level mappings, required transformations (source-level opcode lowering; AST-to-SV-string serialization with SV precedence table; guard AND-reduction for hgdb; body-flattening pre-order traversal for PDG), dropped fields per target, effort estimates (3-5 days / ~2 weeks / ~2 weeks respectively). §15.2 fixes the pre-condition that `uhdi` -> PDG requires §10 dataflow (explicitly or via derivation pre-pass). §15.6 formalises the round-trip contract: `X -> uhdi -> X` is the regression-test invariant, `uhdi -> X -> uhdi` is not. §15.7 compatibility matrix summarises per-layer coverage per target format. No schema changes; additive documentation only.
 - **0.9.1** (2026-04-24) -- Audit-driven alignment of spec text with the bundled JSON Schemas and reference emitter (`circt:fk-sc/uhdi-pool` / `EmitUHDI`): (a) §7.2 -- documented optional `containerScopeRef` on `inline`-kind scopes (already accepted by `schemas/scopes.schema.json`, emitted by `EmitUHDI::emitInlineScope`). (b) §7.3 -- documented optional `negated: boolean` on `StmtBlock` for the `else` branch of a paired when/else (emitted by `firrtl-uhdi-capture-when` and serialised by `EmitUHDI::emitStatementList`). (c) §7.4 -- JSON-Schema snippet refreshed to list both fields. (d) §7.6 -- added invariants 11 (containerScopeRef target kind) and 12 (when/else negation pairing). No schema-file change; no breaking change for emitters or consumers.
-- **0.9.2** (2026-05-15) -- Second audit-driven alignment pass against the bundled JSON Schemas and the three reference projectors (`uhdi_to_hgldd` / `uhdi_to_hgdb` / `uhdi_to_pdg`). Spec text changes: (a) §3.1 -- `version` schema snippet switched from a `pattern` to `enum: ["1.0"]`, matching the shipped `document.schema.json` and rejecting stale producers immediately. (b) §6.1, §6.4 -- `sourceLangType` listed in the Per-representation enumeration; schema snippet adds a `SourceLangType` `$def`; §6.9 (new) describes the field. (c) §6.9 -- new subsection on source-language type info as carried by Tywaves-aware producers. (d) §7.4 -- `enableRef` / `guardRef` / `matchRef` retyped from `ExprRef` to `ExprOrVarRef`; `negated`'s spec-only `default: false` removed; `Statement` snippet keeps the equivalent `oneOf` form with a note that the shipped schema dispatches via `allOf` + `if/then/else` for better error reporting. (e) §9.3 -- enlarged the MVP-shape note: the `&`-joined predicate string is the schema-legal form during the transition, with an explicit `<complex>` sentinel; long-term target retains the `expressions`-pool indirection. (f) §9.6 -- removed invariant 5 (the line resurrected in earlier merges; 0.8 changelog already documented its retirement, the schema does not list `bp` on `StmtBlock`). (g) §10.8 -- noted that no projector consumes `dataflowChunks` today, so the CBOR option is reserved rather than active. (h) §12.8 -- `Origin` pattern snippet anchored on both sides, matching the shipped `provenance.schema.json` (previously the unanchored prefix admitted `sourceXYZZY`-style typos). (i) §13 -- exempted the §9.3 MVP `&`-joined / `<complex>` form from the every-`*Ref`-resolves rule; added a linter check for the §11.5 `domains[V]` override invariant. (j) §15.2 -- removed the spurious "§11 delays" precondition from the `uhdi -> hgdb` row; the reference projector does not consume §11 today. (k) §15.3.1 -- new row maps `sourceLangType` -> Tywaves `source_lang_type_info`; the `Instantiation` row split so it no longer claims `hdl_obj_name` is emitted; `layer_block` row admits it falls through to a plain inline-scope record. (l) §15.4.1 -- `Generator Variable` row rewritten: per (variable, instance) row, not "literals only". (m) §15.4.5 -- explicit drop of §11 temporal (delays, multi-clock, reset metadata) by the reference projector. (n) §15.5.1 -- `bindKind: "literal"` row no longer claims a constant attribute the reference projector does not emit. (o) §15.5.5 -- documents that `Clock` / `Reset` edges are dropped entirely; only per-edge `clocked` Booleans on the surviving edges remain. (p) §15.7 -- `§11 temporal` cell for hgdb column now reads "not consumed" instead of "delays only". (q) Appendix B -- added B.9 (why not extend HGLDD as base), B.10 (why Python projectors), B.11 (relationship to DWARF). Schema files: `variables.schema.json` carries the new `SourceLangType` `$def` and `sourceLangType` property on `PerRepresentation`. Open work routed to `docs/uhdi-action-plan.md` rather than this changelog: the §9.3 long-term `enableRef` shape (move the AND-reduced predicate into the `expressions` pool, retire the `&`-joined transitional string) is captured there.
+- **0.9.2** (2026-05-15) -- Second audit-driven alignment pass against the bundled JSON Schemas and the three reference projectors (`uhdi_to_hgldd` / `uhdi_to_hgdb` / `uhdi_to_pdg`). Spec text changes: (a) §3.1 -- `version` schema snippet switched from a `pattern` to `enum: ["1.0"]`, matching the shipped `document.schema.json` and rejecting stale producers immediately. (b) §6.1, §6.4 -- `sourceLangType` listed in the Per-representation enumeration; schema snippet adds a `SourceLangType` `$def`; §6.9 (new) describes the field. (c) §6.9 -- new subsection on source-language type info as carried by Tywaves-aware producers. (d) §7.4 -- `enableRef` / `guardRef` / `matchRef` retyped from `ExprRef` to `ExprOrVarRef`; `negated`'s spec-only `default: false` removed; `Statement` snippet keeps the equivalent `oneOf` form with a note that the shipped schema dispatches via `allOf` + `if/then/else` for better error reporting. (e) §9.3 -- enlarged the MVP-shape note: the `&`-joined predicate string is the schema-legal form during the transition, with an explicit `<complex>` sentinel; long-term target retains the `expressions`-pool indirection. (f) §9.6 -- removed invariant 5 (the line resurrected in earlier merges; 0.8 changelog already documented its retirement, the schema does not list `bp` on `StmtBlock`). (g) §10.8 -- noted that no projector consumes `dataflowChunks` today, so the CBOR option is reserved rather than active. (h) §13 -- exempted the §9.3 MVP `&`-joined / `<complex>` form from the every-`*Ref`-resolves rule. (i) §13.2 -- removed the spurious clock-delays precondition from the `uhdi -> hgdb` row. (k) §15.3.1 -- new row maps `sourceLangType` -> Tywaves `source_lang_type_info`; the `Instantiation` row split so it no longer claims `hdl_obj_name` is emitted; `layer_block` row admits it falls through to a plain inline-scope record. (l) §15.4.1 -- `Generator Variable` row rewritten: per (variable, instance) row, not "literals only". (m) §13.4.5 -- explicit drop of clock-domain delays, multi-clock, reset metadata by the reference projector. (n) §15.5.1 -- `bindKind: "literal"` row no longer claims a constant attribute the reference projector does not emit. (o) §15.5.5 -- documents that `Clock` / `Reset` edges are dropped entirely; only per-edge `clocked` Booleans on the surviving edges remain. (p) §13.7 -- clock/reset cell for hgdb column now reads "not consumed" instead of "delays only". (q) Appendix B -- added B.9 (why not extend HGLDD as base), B.10 (why Python projectors), B.11 (relationship to DWARF). Schema files: `variables.schema.json` carries the new `SourceLangType` `$def` and `sourceLangType` property on `PerRepresentation`. Open work routed to `docs/uhdi-action-plan.md` rather than this changelog: the §9.3 long-term `enableRef` shape (move the AND-reduced predicate into the `expressions` pool, retire the `&`-joined transitional string) is captured there.
 
 ---
 
@@ -3071,10 +2359,10 @@ hgdb stores conditions as strings (`"!reset && (opcode == 3)"`), pre-AND-reduced
 
 ### B.9 Layering atop HGLDD as base
 
-Considered: take HGLDD's `objects`/`variables`/`scopes` shape and add `body[]` / `bp` / `dataflow` / `temporal` keys to it. Cheaper to implement than a from-scratch format. **Rejected** because:
+Considered: take HGLDD's `objects`/`variables`/`scopes` shape and add `body[]` / `bp` / `dataflow` keys to it. Cheaper to implement than a from-scratch format. **Rejected** because:
 
 - *Narrative collapse.* The §1.2 claim is "unified format as a superset of three legacy formats". An HGLDD-rooted document reads as "HGLDD plus debugger extensions" -- a hybrid, not an independent format. The N-way `representations` map (§3.2) and the pool-based layout (B.1) only make sense in a from-scratch design; bolting them onto HGLDD's fixed HGL/HDL pair (B.7) breaks HGLDD's own contract.
-- *Phase 3+ extensibility.* Dataflow / temporal / provenance (§10 / §11 / §12) sit naturally as optional sibling pools under the document root. Layered onto HGLDD they become extension keys hanging off a foreign object model, harder to evolve independently.
+- *Phase 3+ extensibility.* Dataflow (§10) and future optional layers sit naturally as optional sibling pools under the document root. Layered onto HGLDD they become extension keys hanging off a foreign object model, harder to evolve independently.
 - *Defence framing.* "Built a format and projected it back to HGLDD as one of three targets" (§15.3) is stronger than "extended HGLDD with our use case", which would require defending the asymmetry of one consumer being privileged.
 
 ### B.10 Python projectors vs in-tree CIRCT-native converters
