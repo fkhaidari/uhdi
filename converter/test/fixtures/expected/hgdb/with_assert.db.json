@@ -1,0 +1,89 @@
+{
+  "annotation": [],
+  "assignment": [
+    {
+      "breakpoint_key": "Checker@Checker.scala:8:5|1",
+      "condition": "",
+      "name": "result",
+      "scope_id": null,
+      "value": "result"
+    }
+  ],
+  "breakpoint": [
+    {
+      "column_num": 5,
+      "condition": "1",
+      "filename": "Checker.scala",
+      "instance_name": "Checker",
+      "line_num": 8,
+      "trigger": ""
+    }
+  ],
+  "context_variable": [
+    {
+      "breakpoint_key": "Checker@Checker.scala:8:5|1",
+      "name": "guard",
+      "type": 0,
+      "variable_value": "guard"
+    },
+    {
+      "breakpoint_key": "Checker@Checker.scala:8:5|1",
+      "name": "in",
+      "type": 0,
+      "variable_value": "in"
+    },
+    {
+      "breakpoint_key": "Checker@Checker.scala:8:5|1",
+      "name": "result",
+      "type": 0,
+      "variable_value": "result"
+    }
+  ],
+  "event": [],
+  "generator_variable": [
+    {
+      "annotation": "",
+      "instance_name": "Checker",
+      "name": "guard",
+      "variable_value": "guard"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Checker",
+      "name": "in",
+      "variable_value": "in"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Checker",
+      "name": "result",
+      "variable_value": "result"
+    }
+  ],
+  "instance": [
+    {
+      "annotation": "",
+      "name": "Checker"
+    }
+  ],
+  "scope": [
+    {
+      "breakpoints": "1",
+      "scope": 1
+    }
+  ],
+  "variable": [
+    {
+      "is_rtl": 1,
+      "value": "guard"
+    },
+    {
+      "is_rtl": 1,
+      "value": "in"
+    },
+    {
+      "is_rtl": 1,
+      "value": "result"
+    }
+  ]
+}

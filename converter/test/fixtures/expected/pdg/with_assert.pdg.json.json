@@ -1,0 +1,178 @@
+{
+  "cfg": [
+    {
+      "stmtRef": 3
+    },
+    {
+      "stmtRef": 4
+    },
+    {
+      "falseBranch": null,
+      "stmtRef": 5,
+      "trueBranch": [
+        {
+          "stmtRef": 6
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 3,
+      "kind": "Data",
+      "to": 0
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 3,
+      "kind": "Declaration",
+      "to": 1
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 4,
+      "kind": "Data",
+      "to": 0
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 5,
+      "kind": "Data",
+      "to": 2
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Data",
+      "to": 0
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Conditional",
+      "to": 5
+    }
+  ],
+  "predicates": [],
+  "vertices": [
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Checker.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 4,
+      "modulePath": [
+        "Checker"
+      ],
+      "name": "input_in",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "result",
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Checker.scala",
+      "isChiselStatement": true,
+      "kind": "DataDefinition",
+      "line": 5,
+      "modulePath": [
+        "Checker"
+      ],
+      "name": "result",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Checker.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 6,
+      "modulePath": [
+        "Checker"
+      ],
+      "name": "input_guard",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "result",
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Checker.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 8,
+      "modulePath": [
+        "Checker"
+      ],
+      "name": "connect_result",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Checker.scala",
+      "isChiselStatement": true,
+      "kind": "ControlFlow",
+      "line": 9,
+      "modulePath": [
+        "Checker"
+      ],
+      "name": "assert_cond_on_[in]",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Checker.scala",
+      "isChiselStatement": true,
+      "kind": "ControlFlow",
+      "line": 6,
+      "modulePath": [
+        "Checker"
+      ],
+      "name": "cond_on_[guard]",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 7,
+      "clocked": false,
+      "condition": null,
+      "file": "Checker.scala",
+      "isChiselStatement": true,
+      "kind": "ControlFlow",
+      "line": 11,
+      "modulePath": [
+        "Checker"
+      ],
+      "name": "assert_cond_on_[in_nonzero]",
+      "relatedSignal": null
+    }
+  ]
+}

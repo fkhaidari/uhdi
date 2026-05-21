@@ -1,0 +1,50 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "name": "Checker",
+      "scope": [
+        {
+          "filename": "Checker.scala",
+          "scope": [
+            {
+              "column": 5,
+              "line": 8,
+              "type": "assign",
+              "variable": "0"
+            },
+            {
+              "condition": "guard",
+              "scope": [],
+              "type": "block"
+            }
+          ],
+          "type": "block"
+        }
+      ],
+      "type": "module",
+      "variables": [
+        {
+          "name": "in",
+          "rtl": true,
+          "value": "in"
+        },
+        "0",
+        {
+          "name": "guard",
+          "rtl": true,
+          "value": "guard"
+        }
+      ]
+    }
+  ],
+  "top": "Checker",
+  "variables": [
+    {
+      "id": "0",
+      "name": "result",
+      "rtl": true,
+      "value": "result"
+    }
+  ]
+}
