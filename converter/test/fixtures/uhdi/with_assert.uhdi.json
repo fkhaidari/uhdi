@@ -1,0 +1,79 @@
+{
+  "format": {"name": "uhdi", "version": "1.0"},
+  "producer": {"name": "test-fixture", "version": "1.0"},
+  "representations": {
+    "chisel": {"kind": "source", "language": "Chisel", "files": ["Checker.scala"]},
+    "verilog": {"kind": "hdl", "language": "SystemVerilog", "files": ["Checker.sv"]}
+  },
+  "roles": {"authoring": "chisel", "simulation": "verilog", "canonical": "verilog"},
+  "top": ["Checker"],
+  "types": {
+    "u8": {"kind": "uint", "width": 8},
+    "bool": {"kind": "uint", "width": 1}
+  },
+  "expressions": {
+    "in_nonzero": {
+      "opcode": "!=",
+      "operands": [{"varRef": "var_in"}, {"constant": 0}]
+    }
+  },
+  "variables": {
+    "var_in": {
+      "typeRef": "u8", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Checker",
+      "representations": {
+        "chisel":  {"name": "in", "location": {"file": 0, "beginLine": 4, "beginColumn": 5}},
+        "verilog": {"name": "in", "value": {"sigName": "in"}, "location": {"file": 0, "beginLine": 4, "beginColumn": 5}}
+      }
+    },
+    "var_result": {
+      "typeRef": "u8", "bindKind": "wire",
+      "ownerScopeRef": "Checker",
+      "representations": {
+        "chisel":  {"name": "result", "location": {"file": 0, "beginLine": 5, "beginColumn": 5}},
+        "verilog": {"name": "result", "value": {"sigName": "result"}, "location": {"file": 0, "beginLine": 5, "beginColumn": 5}}
+      }
+    },
+    "var_guard": {
+      "typeRef": "bool", "bindKind": "port", "direction": "input",
+      "ownerScopeRef": "Checker",
+      "representations": {
+        "chisel":  {"name": "guard", "location": {"file": 0, "beginLine": 6, "beginColumn": 5}},
+        "verilog": {"name": "guard", "value": {"sigName": "guard"}, "location": {"file": 0, "beginLine": 6, "beginColumn": 5}}
+      }
+    }
+  },
+  "scopes": {
+    "Checker": {
+      "name": "Checker", "kind": "module",
+      "representations": {
+        "chisel":  {"name": "Checker", "location": {"file": 0, "beginLine": 3, "beginColumn": 1}},
+        "verilog": {"name": "Checker", "location": {"file": 0, "beginLine": 1, "beginColumn": 1}}
+      },
+      "variableRefs": ["var_in", "var_result", "var_guard"],
+      "body": [
+        {
+          "kind": "connect", "varRef": "var_result",
+          "valueRef": {"varRef": "var_in"},
+          "locations": {"chisel": {"file": 0, "beginLine": 8, "beginColumn": 5}}
+        },
+        {
+          "kind": "assert",
+          "condRef": "var_in",
+          "locations": {"chisel": {"file": 0, "beginLine": 9, "beginColumn": 5}}
+        },
+        {
+          "kind": "block",
+          "guardRef": "var_guard",
+          "body": [
+            {
+              "kind": "assert",
+              "condRef": "in_nonzero",
+              "locations": {"chisel": {"file": 0, "beginLine": 11, "beginColumn": 7}}
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

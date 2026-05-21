@@ -540,6 +540,29 @@ def _derive_edges(ctx: _Ctx,
                         "clocked": False,
                         "condition": None,
                     })
+        elif kind in ("assert", "assume", "cover"):
+            # Data: condRef may be a varRef or exprRef; fan out over all
+            # referenced vars (mirrors block's guardRef handling).
+            cond_ref = stmt.get("condRef") or ""
+            for vref in _expand_guard(cond_ref, ctx):
+                cond_idx = _vertex_for_varref(vref, ctx)
+                if cond_idx is not None and cond_idx != v_idx:
+                    edges.append({
+                        "from": v_idx,
+                        "to": cond_idx,
+                        "kind": "Data",
+                        "clocked": False,
+                        "condition": None,
+                    })
+            # Conditional: one edge per enclosing ControlFlow vertex.
+            for cf_idx in chain:
+                edges.append({
+                    "from": v_idx,
+                    "to": cf_idx,
+                    "kind": "Conditional",
+                    "clocked": False,
+                    "condition": None,
+                })
     return edges
 
 

@@ -405,6 +405,112 @@ def test_resolve_predicate_index_handles_exprref_shaped_guardref():
     assert block_cfg.get("predStmtRef") == 0
 
 
+# ---------------------------------------------------------------------------
+# _derive_edges: assert/assume/cover (FU4.2)
+# ---------------------------------------------------------------------------
+
+
+def test_derive_edges_emits_data_for_assert_cond():
+    """assert with condRef pointing at a varRef -> Data edge from CF vertex
+    to the referenced variable's vertex (§15.5.4 derivation, FU4.2)."""
+    variables = {
+        "v_in":     _port("in"),
+        "v_result": {"typeRef": "u8", "bindKind": "wire", "ownerScopeRef": "X",
+                     "representations": {"chisel": {"name": "result"}}},
+    }
+    body = [
+        {"kind": "connect", "varRef": "v_result", "valueRef": {"varRef": "v_in"}},
+        {"kind": "assert", "condRef": "v_in"},
+    ]
+    doc = _doc(
+        variables=variables,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": body}},
+    )
+    out = pdg_convert(doc)
+    # Locate the assert CF vertex: _controlflow_vertex prefixes annotation
+    # into the `name` field, so look for "assert_cond_on_[...]".
+    assert_cf_idx = next(
+        i for i, v in enumerate(out["vertices"])
+        if v.get("kind") == "ControlFlow" and v.get("name", "").startswith("assert_")
+    )
+    v_in_idx = next(
+        i for i, v in enumerate(out["vertices"])
+        if v.get("kind") == "IO"
+    )
+    data_edges = [
+        e for e in out["edges"]
+        if e["from"] == assert_cf_idx and e["to"] == v_in_idx and e["kind"] == "Data"
+    ]
+    assert len(data_edges) == 1
+
+
+def test_derive_edges_emits_conditional_for_assert_under_block():
+    """assert nested inside a block -> Conditional edge from assert CF vertex
+    to the enclosing block's CF vertex (FU4.2)."""
+    variables = {
+        "v_guard": _port("guard"),
+        "v_in":    _port("in"),
+    }
+    body = [{"kind": "block", "guardRef": "v_guard", "body": [
+        {"kind": "assert", "condRef": "v_in"},
+    ]}]
+    doc = _doc(
+        variables=variables,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": body}},
+    )
+    out = pdg_convert(doc)
+    # block CF vertex has no annotation prefix in name.
+    block_cf_idx = next(
+        i for i, v in enumerate(out["vertices"])
+        if v.get("kind") == "ControlFlow"
+        and not v.get("name", "").startswith("assert_")
+    )
+    assert_cf_idx = next(
+        i for i, v in enumerate(out["vertices"])
+        if v.get("kind") == "ControlFlow" and v.get("name", "").startswith("assert_")
+    )
+    cond_edges = [
+        e for e in out["edges"]
+        if e["from"] == assert_cf_idx and e["to"] == block_cf_idx
+        and e["kind"] == "Conditional"
+    ]
+    assert len(cond_edges) == 1
+
+
+def test_derive_edges_assert_with_exprref_condition():
+    """assert whose condRef is an exprRef whose operand is a varRef ->
+    Data edge still emitted via _expand_guard fallthrough (FU4.2)."""
+    variables = {
+        "v_in": _port("in"),
+    }
+    expressions = {
+        "in_nonzero": {"opcode": "!=", "operands": [{"varRef": "v_in"}, {"constant": 0}]},
+    }
+    body = [{"kind": "assert", "condRef": "in_nonzero"}]
+    doc = _doc(
+        variables=variables,
+        expressions=expressions,
+        scopes={"X": {"name": "X", "variableRefs": list(variables.keys()),
+                       "body": body}},
+    )
+    out = pdg_convert(doc)
+    assert_cf_idx = next(
+        i for i, v in enumerate(out["vertices"])
+        if v.get("kind") == "ControlFlow" and v.get("name", "").startswith("assert_")
+    )
+    v_in_idx = next(
+        i for i, v in enumerate(out["vertices"])
+        if v.get("kind") == "IO"
+    )
+    data_edges = [
+        e for e in out["edges"]
+        if e["from"] == assert_cf_idx and e["to"] == v_in_idx and e["kind"] == "Data"
+    ]
+    assert len(data_edges) == 1
+
+
 def test_resolve_predicate_index_rejects_multi_probe_expr():
     """When the exprRef guardRef touches TWO probe variables, predStmtRef must
     stay unset — no single predStmtRef slot can represent a multi-probe guard."""
