@@ -191,10 +191,14 @@ The difference is the *variable set*, driven by DCE stage:
 |---|---|---|
 | variables | `io.rdy`, `io.q`, `busy` | `x`, `y`, `busy` |
 
-Native exposes the **output ports** as named watch variables; UHDI exposes the
-**backing registers** the ports were folded into. Same count, different debug
-surface — native lets you watch `io.q`, UHDI lets you watch `x`. Plus the
-cosmetic `generator: "uhdi"` vs `"circt"` (not consumed by the hgdb runtime).
+The top-level pool lists internal nodes (`x`, `y`) vs native's output ports —
+but this is *placement*, not loss: ours carries the ports too, inlined in
+`table[].variables`. The ports are now registered under their **dotted source
+name** (`io.q`, not the flattened `io_q`) so the hgdb runtime resolves them by
+the HDL identifier, matching native — fixed by `build_dotted_name_map`
+(`uhdi_common.refs`), which rebuilds `io.q` from the synthetic subfield chain.
+Net: ours is a superset (ports *and* backing registers `x`/`y`, which native
+omits). Remaining delta is the cosmetic `generator: "uhdi"` vs `"circt"`.
 
 **SQLite path (hgdb-firrtl, Counter, 9 ORM tables).** Here UHDI is **richer**:
 
@@ -224,10 +228,10 @@ post-DCE UHDI with a richer statement tree.
   `circt_debug_*` intrinsics, §8); per-breakpoint `context_variable` scoping in
   hgdb SQLite (legacy producer emits zero, §9); a single normalised carrier
   feeding all three formats from one pass.
-- **UHDI loses** (vs native): pre-DCE intermediate signals incl. output-port
-  watch names (post-DCE asymmetry, inherent, §9); Bundle→`objects[]` projection
-  on some designs (fixable gap); dynamic-mem-index precision in PDG (fixable
-  gap, §7).
+- **UHDI loses** (vs native): Bundle→`objects[]` projection on some HGLDD
+  designs (fixable gap); dynamic-mem-index precision in PDG (fixable gap, §7).
+  (The earlier hgdb output-port-name gap is now closed — ports register under
+  their dotted source name, §9.)
 - **Parity** everywhere else: locations, scalar/struct/vector types,
   single-module enums, hierarchy, static control flow, hgdb top-level shape.
 
