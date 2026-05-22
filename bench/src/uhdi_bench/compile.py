@@ -21,6 +21,11 @@ class Pipeline:
     chisel_dep: str
     plugin_dep: str
     repositories: tuple = ()
+    # Extra `--`-args passed to the fixture's Main. The fixture forwards
+    # only the flags it recognises; --with-experimental-debug-intrinsics is
+    # a new-chisel-fork option, so it must NOT reach stock 6.4.0 (hgdb) or
+    # the tywaves fork -- both reject unknown emitCHIRRTL options.
+    fixture_flags: tuple = ()
 
 
 # Local-first defaults (publishLocal'd checkout). Override via env vars.
@@ -41,6 +46,7 @@ _UHDI = Pipeline(
     chisel_dep="org.chipsalliance::chisel:7.1.1+210-c6faff5e-SNAPSHOT",
     plugin_dep="org.chipsalliance:::chisel-plugin:7.1.1+210-c6faff5e-SNAPSHOT",
     repositories=("ivy2Local",),
+    fixture_flags=("--with-experimental-debug-intrinsics",),
 )
 
 _HGDB = Pipeline(
@@ -50,11 +56,21 @@ _HGDB = Pipeline(
     plugin_dep="org.chipsalliance:::chisel-plugin:6.4.0",
 )
 
+# ChiselTrace fork: separate SNAPSHOT that emits pdg.json directly from
+# ChiselStage (addChiselTrace=True). Published to ivy2Local alongside tywaves.
+_CHISELTRACE = Pipeline(
+    name="chiseltrace",
+    scala_version="2.13.14",
+    chisel_dep="org.chipsalliance::chisel:6.4.3-tywaves-chiseltrace-SNAPSHOT",
+    plugin_dep="org.chipsalliance:::chisel-plugin:6.4.3-tywaves-chiseltrace-SNAPSHOT",
+    repositories=("ivy2Local",),
+)
+
 
 def pipelines() -> List[Pipeline]:
     """All registered pipelines. Override via UHDI_BENCH_<NAME>_{CHISEL,PLUGIN}."""
     out: List[Pipeline] = []
-    for default in (_TYWAVES, _UHDI, _HGDB):
+    for default in (_TYWAVES, _UHDI, _HGDB, _CHISELTRACE):
         chisel_dep = os.environ.get(f"UHDI_BENCH_{default.name.upper()}_CHISEL", default.chisel_dep)
         plugin_dep = os.environ.get(f"UHDI_BENCH_{default.name.upper()}_PLUGIN", default.plugin_dep)
         out.append(dataclasses.replace(default, chisel_dep=chisel_dep, plugin_dep=plugin_dep))
@@ -129,6 +145,9 @@ def compile_for(scala: pathlib.Path, pipeline: Pipeline) -> pathlib.Path:
     ]
     cmd += [f"--repository={r}" for r in pipeline.repositories]
     cmd.append(str(scala))
+    if pipeline.fixture_flags:
+        cmd.append("--")
+        cmd += list(pipeline.fixture_flags)
 
     env = {**os.environ, **_bypass_coursier_mirror_env()}
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=env)

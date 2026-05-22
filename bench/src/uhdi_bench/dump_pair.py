@@ -11,10 +11,16 @@ from . import compile as compile_mod
 from .runner import discover_toolchain, run_target
 
 # Mirrors test_pipeline._TARGET_TO_PIPELINE (kept here so this CLI is pytest-free).
+# The pipeline is which Chisel fork compiles the .scala -> .fir that feeds the
+# UHDI side. For pdg this is `uhdi` (NOT chiseltrace): the UHDI projection comes
+# from firtool --emit-uhdi on the uhdi-fork fir, exactly like hgldd/hgdb. The
+# chiseltrace fork is only used inside _emit_native_pdg for the NATIVE side, via
+# its own scala-cli compile.
 _TARGET_TO_PIPELINE = {
     "tywaves":     "tywaves",
     "hgdb_circt":  "hgdb",
     "hgdb_firrtl": "hgdb",
+    "pdg":         "uhdi",
 }
 
 _DEFAULT_OUT = pathlib.Path(tempfile.gettempdir()) / "bench-diff"
@@ -33,6 +39,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="dump just this target (default: all 3)")
     p.add_argument("-o", "--out", type=pathlib.Path, default=_DEFAULT_OUT,
                    help=f"output dir (default: {_DEFAULT_OUT})")
+    p.add_argument("--pipeline", choices=[pl.name for pl in compile_mod.pipelines()],
+                   help="override which fork compiles the UHDI-side fir "
+                        "(e.g. a fixture using new-chisel enum intrinsics must "
+                        "use --pipeline uhdi for the tywaves target, since the "
+                        "tywaves fork emits the old EnumComponentAnnotation that "
+                        "firtool --emit-hgldd rejects)")
     args = p.parse_args(argv)
 
     if not args.scala.is_file():
@@ -47,10 +59,10 @@ def main(argv: list[str] | None = None) -> int:
 
     rc = 0
     for target in targets:
-        pipeline = compile_mod.get(_TARGET_TO_PIPELINE[target])
+        pipeline = compile_mod.get(args.pipeline or _TARGET_TO_PIPELINE[target])
         try:
             fir = compile_mod.compile_for(args.scala, pipeline)
-            ours, native = run_target(fir, target, tc)
+            ours, native = run_target(fir, target, tc, scala_path=args.scala)
         except (RuntimeError, compile_mod.CompileError) as e:
             print(f"{target:14} skip: {e}", file=sys.stderr)
             rc = 1

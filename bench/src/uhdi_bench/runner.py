@@ -178,7 +178,7 @@ def _emit_native_hgdb_circt(fir: pathlib.Path, workdir: pathlib.Path,
     proc = subprocess.run(
         [str(firtool), f"--hgdb={db}",
          "-o", str(sv), str(legacy)],
-        capture_output=True, text=True, timeout=120)
+        capture_output=True, text=True, timeout=300)
     if proc.returncode != 0:
         raise RuntimeError(
             f"hgdb-circt firtool --hgdb exit {proc.returncode} on "
@@ -190,6 +190,49 @@ def _emit_native_hgdb_circt(fir: pathlib.Path, workdir: pathlib.Path,
         raise RuntimeError(
             f"hgdb-circt firtool succeeded but produced no {db.name}")
     return json.loads(db.read_text(encoding="utf-8"))
+
+
+def _emit_native_pdg(scala_path: pathlib.Path, workdir: pathlib.Path,
+                    scala_cli_bin: str) -> Dict[str, Any]:
+    """Native PDG via chiseltrace-fork ChiselStage (addChiselTrace=True).
+
+    Unlike hgldd/hgdb emitters that take a pre-compiled .fir, PDG requires
+    its own Scala compilation: the chiseltrace plugin injects PDG annotations
+    during ChiselStage and emits pdg.json directly -- firtool is not involved.
+    The fixture must define `object PdgMain extends App` that calls
+    ChiselStage(withDebug=False, addChiselTrace=True).execute(...)."""
+    from .compile import _bypass_coursier_mirror_env
+
+    cmd = [
+        scala_cli_bin,
+        "run",
+        "--scala", "2.13.14",
+        "--dep", "org.chipsalliance::chisel:6.4.3-tywaves-chiseltrace-SNAPSHOT",
+        "--compiler-plugin",
+        "org.chipsalliance:::chisel-plugin:6.4.3-tywaves-chiseltrace-SNAPSHOT",
+        "--scala-option", "-Ymacro-annotations",
+        "--repository=ivy2Local",
+        # --main-class is a scala-cli option, so it must precede the source
+        # file; after `--` it would be passed to the program (the fixture
+        # has both Main and PdgMain, so scala-cli errors on ambiguity).
+        "--main-class", "PdgMain",
+        str(scala_path),
+        "--",
+        str(workdir),
+    ]
+    env = {**os.environ, **_bypass_coursier_mirror_env()}
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"scala-cli PDG exit {proc.returncode} for {scala_path.name}:\n"
+            f"--- stdout ---\n{proc.stdout}\n"
+            f"--- stderr ---\n{proc.stderr}")
+    pdg_file = workdir / "pdg.json"
+    if not pdg_file.is_file():
+        raise RuntimeError(
+            f"scala-cli succeeded but pdg.json not found in {workdir}; "
+            f"did PdgMain write to args(0)?")
+    return json.loads(pdg_file.read_text(encoding="utf-8"))
 
 
 def _emit_native_hgdb_firrtl(fir: pathlib.Path, workdir: pathlib.Path,
@@ -286,7 +329,8 @@ def _canonical_hgldd(doc: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def run_target(fir: pathlib.Path, target: str,
-               toolchain: Toolchain) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+               toolchain: Toolchain,
+               scala_path: pathlib.Path | None = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Run one (fixture, target) cell. Returns (uhdi_derived, native);
     caller does the structural diff."""
     from uhdi_common.backend import discover, get
@@ -328,17 +372,35 @@ def run_target(fir: pathlib.Path, target: str,
                 fir, workdir, toolchain.hgdb_firrtl_jar,
                 toolchain.hgdb_python)
             return ours, native
-        # PDG (uhdi_to_pdg / chiseltrace) is intentionally absent: the
-        # bench's contract is "uhdi-side projection vs native reference",
-        # and PDG has no native reference -- ChiselTrace is the sole
-        # producer of PDG documents on this side of the toolchain. PDG
-        # is validated by `converter/test/test_pdg_internals.py` plus
-        # the golden fixtures under `converter/test/fixtures/expected/pdg/`,
-        # not by the bench's diff-against-native loop. See bench/README.md
-        # "Targets" section for the rationale.
+        if target == "pdg":
+            # Native reference is chiseltrace (a chisel fork) compiled
+            # directly from the .scala source -- firtool is not involved.
+            # The PdgMain entry point lives in a sidecar `<Name>Native.scala`
+            # (the chiseltrace fork's ChiselStage API differs from the uhdi
+            # fork's, so PdgMain can't share the main fixture file). The UHDI
+            # side still uses `fir`/`uhdi_doc` from the uhdi pipeline above.
+            if scala_path is None:
+                raise RuntimeError(
+                    "pdg target requires scala_path (pass the .scala fixture "
+                    "path to run_target)")
+            sidecar = scala_path.with_name(f"{scala_path.stem}Native.scala")
+            if not sidecar.is_file():
+                raise RuntimeError(
+                    f"pdg target needs a native sidecar {sidecar.name} next to "
+                    f"{scala_path.name} (defines `object PdgMain` on the "
+                    f"chiseltrace fork); not found")
+            cli = shutil.which("scala-cli")
+            if cli is None:
+                raise RuntimeError(
+                    "scala-cli not on PATH; install from "
+                    "https://scala-cli.virtuslab.org/")
+            backend = get("pdg")
+            ours = backend.convert(uhdi_doc, None)
+            native = _emit_native_pdg(sidecar, workdir, cli)
+            return ours, native
         raise ValueError(
             f"unknown target {target!r}; have tywaves, hgdb_circt, "
-            f"hgdb_firrtl")
+            f"hgdb_firrtl, pdg")
     finally:
         if not os.environ.get("UHDI_BENCH_KEEP_WORKDIR"):
             shutil.rmtree(workdir, ignore_errors=True)
