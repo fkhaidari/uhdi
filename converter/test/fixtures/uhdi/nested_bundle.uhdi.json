@@ -1,0 +1,523 @@
+{
+  "expressions": {
+    "expr_0": {
+      "opcode": "'{",
+      "operands": [
+        {
+          "exprRef": "expr_1"
+        },
+        {
+          "sigName": "io_cmd_bits"
+        }
+      ]
+    },
+    "expr_1": {
+      "opcode": "'{",
+      "operands": [
+        {
+          "sigName": "io_cmd_ready"
+        },
+        {
+          "sigName": "io_cmd_valid"
+        },
+        {
+          "sigName": "io_cmd_bits"
+        }
+      ]
+    }
+  },
+  "format": {
+    "name": "uhdi",
+    "version": "1.0"
+  },
+  "producer": {
+    "name": "circt"
+  },
+  "representations": {
+    "chisel": {
+      "files": [
+        "/tmp/uhdi-verify/nested/NestedBundle.scala"
+      ],
+      "kind": "source",
+      "language": "Chisel"
+    },
+    "verilog": {
+      "files": [
+        ""
+      ],
+      "kind": "hdl",
+      "language": "SystemVerilog"
+    }
+  },
+  "roles": {
+    "authoring": "chisel",
+    "canonical": "verilog",
+    "simulation": "verilog"
+  },
+  "scopes": {
+    "NestedBundle": {
+      "body": [
+        {
+          "kind": "decl",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "varRef": "io_cmd_ready"
+        },
+        {
+          "kind": "decl",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "varRef": "io_cmd_valid"
+        },
+        {
+          "kind": "decl",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "varRef": "io_cmd_bits"
+        },
+        {
+          "kind": "decl",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "varRef": "io_out"
+        },
+        {
+          "kind": "connect",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "valueRef": {
+            "varRef": "io_cmd_ready"
+          },
+          "varRef": "io_cmd_ready"
+        },
+        {
+          "kind": "connect",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "valueRef": {
+            "varRef": "io_cmd_valid"
+          },
+          "varRef": "io_cmd_valid"
+        },
+        {
+          "kind": "connect",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "valueRef": {
+            "varRef": "io_cmd_bits"
+          },
+          "varRef": "io_cmd_bits"
+        },
+        {
+          "kind": "connect",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 14,
+              "file": 0
+            }
+          },
+          "valueRef": {
+            "varRef": "io_out"
+          },
+          "varRef": "io_out"
+        },
+        {
+          "kind": "connect",
+          "locations": {
+            "chisel": {
+              "beginColumn": 16,
+              "beginLine": 19,
+              "file": 0
+            }
+          },
+          "valueRef": {
+            "varRef": "<const>"
+          },
+          "varRef": "io_cmd_ready"
+        },
+        {
+          "kind": "connect",
+          "locations": {
+            "chisel": {
+              "beginColumn": 10,
+              "beginLine": 20,
+              "file": 0
+            }
+          },
+          "valueRef": {
+            "varRef": "io_cmd_bits"
+          },
+          "varRef": "io_out"
+        }
+      ],
+      "kind": "module",
+      "name": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 7,
+            "beginLine": 14,
+            "file": 0
+          },
+          "name": "NestedBundle",
+          "sourceLangType": {
+            "typeName": "NestedBundle"
+          }
+        },
+        "verilog": {
+          "location": {
+            "beginLine": 2,
+            "file": 0
+          },
+          "name": "NestedBundle"
+        }
+      },
+      "variableRefs": [
+        "var_64c3abdf_0000",
+        "var_d905ebfb_0000",
+        "var_ad9cdce0_0000",
+        "var_ad9cdce0_0000__cmd",
+        "var_ad9cdce0_0000__cmd__ready",
+        "var_ad9cdce0_0000__cmd__valid",
+        "var_ad9cdce0_0000__cmd__bits",
+        "var_ad9cdce0_0000__out",
+        "var_NestedBundle_io_cmd_ready",
+        "var_NestedBundle_io_cmd_valid",
+        "var_NestedBundle_io_cmd_bits",
+        "var_NestedBundle_io_out"
+      ]
+    }
+  },
+  "top": [
+    "NestedBundle"
+  ],
+  "types": {
+    "NestedBundle_io": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "cmd",
+          "typeRef": "NestedBundle_io_cmd"
+        },
+        {
+          "flipped": true,
+          "name": "out",
+          "typeRef": "uint8"
+        }
+      ]
+    },
+    "NestedBundle_io_cmd": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "ready",
+          "typeRef": "bool"
+        },
+        {
+          "flipped": true,
+          "name": "valid",
+          "typeRef": "bool"
+        },
+        {
+          "flipped": true,
+          "name": "bits",
+          "typeRef": "uint8"
+        }
+      ]
+    },
+    "bool": {
+      "kind": "uint",
+      "width": 1
+    },
+    "uint8": {
+      "kind": "uint",
+      "width": 8
+    }
+  },
+  "variables": {
+    "var_64c3abdf_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 7,
+            "beginLine": 14,
+            "file": 0
+          },
+          "name": "clock",
+          "sourceLangType": {
+            "typeName": "IO[Clock]"
+          },
+          "status": "preserved"
+        },
+        "verilog": {
+          "name": "clock",
+          "status": "preserved",
+          "value": {
+            "sigName": "clock"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_NestedBundle_io_cmd_bits": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "name": "io_cmd_bits"
+        },
+        "verilog": {
+          "name": "io_cmd_bits",
+          "value": {
+            "sigName": "io_cmd_bits"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_NestedBundle_io_cmd_ready": {
+      "bindKind": "port",
+      "direction": "output",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "name": "io_cmd_ready"
+        },
+        "verilog": {
+          "name": "io_cmd_ready",
+          "value": {
+            "sigName": "io_cmd_ready"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_NestedBundle_io_cmd_valid": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "name": "io_cmd_valid"
+        },
+        "verilog": {
+          "name": "io_cmd_valid",
+          "value": {
+            "sigName": "io_cmd_valid"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_NestedBundle_io_out": {
+      "bindKind": "port",
+      "direction": "output",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "name": "io_out"
+        },
+        "verilog": {
+          "name": "io_out",
+          "value": {
+            "sigName": "io_out"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_ad9cdce0_0000": {
+      "bindKind": "node",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 15,
+            "file": 0
+          },
+          "name": "io",
+          "sourceLangType": {
+            "typeName": "IO[AnonymousBundle]"
+          },
+          "status": "preserved"
+        },
+        "verilog": {
+          "status": "preserved",
+          "value": {
+            "exprRef": "expr_0"
+          }
+        }
+      },
+      "typeRef": "NestedBundle_io"
+    },
+    "var_ad9cdce0_0000__cmd": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 15,
+            "file": 0
+          },
+          "name": "cmd",
+          "sourceLangType": {
+            "params": [
+              {
+                "name": "gen",
+                "typeName": "T"
+              }
+            ],
+            "typeName": "IO[DecoupledIO]"
+          },
+          "status": "preserved"
+        }
+      },
+      "typeRef": "NestedBundle_io_cmd"
+    },
+    "var_ad9cdce0_0000__cmd__bits": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 15,
+            "file": 0
+          },
+          "name": "bits",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          },
+          "status": "preserved"
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_ad9cdce0_0000__cmd__ready": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 15,
+            "file": 0
+          },
+          "name": "ready",
+          "sourceLangType": {
+            "typeName": "IO[Bool]"
+          },
+          "status": "preserved"
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_ad9cdce0_0000__cmd__valid": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 15,
+            "file": 0
+          },
+          "name": "valid",
+          "sourceLangType": {
+            "typeName": "IO[Bool]"
+          },
+          "status": "preserved"
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_ad9cdce0_0000__out": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 15,
+            "file": 0
+          },
+          "name": "out",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          },
+          "status": "preserved"
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_d905ebfb_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "NestedBundle",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 7,
+            "beginLine": 14,
+            "file": 0
+          },
+          "name": "reset",
+          "sourceLangType": {
+            "typeName": "IO[Bool]"
+          },
+          "status": "preserved"
+        },
+        "verilog": {
+          "name": "reset",
+          "status": "preserved",
+          "value": {
+            "sigName": "reset"
+          }
+        }
+      },
+      "typeRef": "bool"
+    }
+  }
+}

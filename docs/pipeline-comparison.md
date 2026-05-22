@@ -56,7 +56,7 @@ tracked as informational manifest entries, not regressions.
 | **enum, single-module** | `=` | `=` | n/a |
 | **enum, cross-module (shared)** | `▲` UHDI (§EnrichDemo) | `▲` | n/a |
 | **generator / ctor params** | `▲` UHDI (§EnrichDemo) | n/a | n/a |
-| Bundle `io` → `objects[]` | `▼` known gap (§4) | n/a | n/a |
+| Bundle `io` → `objects[]` | `=` (on uhdi-chisel; §4) | n/a | n/a |
 | instance hierarchy / module path | `=` | `=` | `=` |
 | control flow (when/switch) | n/a | `=`* | `=` |
 | dataflow edges | n/a | `=`* | `▼` (§Trace) |
@@ -81,14 +81,21 @@ Differences fall into four buckets — only the third is a true "UHDI is worse":
    documented "completeness" delta and is justified per cell in
    `bench/manifest.toml`.
 
-3. **Known converter gaps (UHDI poorer, fixable).**
-   - `uhdi_to_hgldd` does not yet project Bundle-typed `io` into HGLDD
-     `objects[]` (GCD/Fifo `missing /objects/*`).
+3. **Known gaps (fixable).**
    - Complex when/elsewhen chains emit empty hgdb breakpoint/assignment rows.
    - `uhdi_to_pdg` degrades a **dynamic memory index** to a `<complex>`
      predicate sentinel instead of native's probe + `Index` edges (§Trace).
    These fixtures are in bench `_PENDING_FIXTURES`; the gaps predate the
    toolchain bump.
+
+   *Not* a converter gap (resolved): Bundle `io` → HGLDD `objects[]`. The
+   `bench` "GCD/Fifo `missing /objects/*`" is a *harness artifact* — that
+   comparison feeds the **tywaves-chisel** `.fir` (`TywavesAnnotation`, which
+   `--emit-uhdi` does not read) so the UHDI has no subfield structure. On a
+   **uhdi-chisel** `.fir` (with `circt_debug_subfield`), `uhdi_to_hgldd`
+   projects the full struct hierarchy, including nested Decoupled bundles
+   (`io` → `{enq → {ready,valid,bits}, deq → {…}, count}`). Locked by the
+   `nested_bundle` golden fixture.
 
 4. **New richness from this toolchain bump (UHDI richer).** Cross-module shared
    enums and generator/constructor parameters now flow producer→consumer
@@ -228,10 +235,10 @@ post-DCE UHDI with a richer statement tree.
   `circt_debug_*` intrinsics, §8); per-breakpoint `context_variable` scoping in
   hgdb SQLite (legacy producer emits zero, §9); a single normalised carrier
   feeding all three formats from one pass.
-- **UHDI loses** (vs native): Bundle→`objects[]` projection on some HGLDD
-  designs (fixable gap); dynamic-mem-index precision in PDG (fixable gap, §7).
-  (The earlier hgdb output-port-name gap is now closed — ports register under
-  their dotted source name, §9.)
+- **UHDI loses** (vs native): dynamic-mem-index precision in PDG (fixable
+  gap, §7); complex-predicate `<complex>` sentinel feeding empty hgdb rows.
+  (Closed by this work: hgdb dotted port names §9, and Bundle→`objects[]`
+  struct projection incl. nested bundles §4.)
 - **Parity** everywhere else: locations, scalar/struct/vector types,
   single-module enums, hierarchy, static control flow, hgdb top-level shape.
 
