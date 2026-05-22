@@ -48,5 +48,5 @@ class TrafficLight(period: Int = 8) extends Module {
 }
 
 object Main extends App {
-  print(ChiselStage.emitCHIRRTL(new TrafficLight))
+  print(ChiselStage.emitCHIRRTL(new TrafficLight, Array("--with-experimental-debug-intrinsics")))
 }
