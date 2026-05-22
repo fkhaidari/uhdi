@@ -47,16 +47,48 @@ def _expectations_for(fixture_stem: str, target: str) -> CellExpectations:
 # see Stage 3 risk register + bench/README.md "Pending fixtures".
 _PENDING_FIXTURES = {"GCD", "Fifo", "TrafficLight"}
 
+# Per-tool torture fixtures (Hgdb/Tywaves/ChiselTrace Torture) each target ONE
+# tool and deliberately exercise gaps; they are analysed manually via
+# `python -m uhdi_bench.dump_pair`, not diffed against native in this regression
+# loop. Skip the (fixture, target) cells that don't apply or hit known
+# environment limits (see docs/pipeline-tasks.md):
+#   - HgdbTorture is a hgdb design; tywaves diff is meaningless, and the
+#     hgdb-circt LLVM-16 fork hangs >300s on it. hgdb_firrtl is the real cell
+#     but its native side needs python-3.11 ABI bindings (env limit E1).
+#   - TywavesTorture uses enum intrinsics -> tywaves-fork firtool crashes;
+#     only meaningful via `dump_pair --pipeline uhdi`.
+#   - *Native.scala sidecars carry no `Main`; not bench cells at all.
+_PENDING_CELLS = {
+    ("HgdbTorture", "tywaves"),
+    ("HgdbTorture", "hgdb_circt"),
+    ("HgdbTorture", "hgdb_firrtl"),
+    ("TywavesTorture", "tywaves"),
+    ("TywavesTorture", "hgdb_circt"),
+    ("TywavesTorture", "hgdb_firrtl"),
+    ("ChiselTraceTorture", "tywaves"),
+    ("ChiselTraceTorture", "hgdb_circt"),
+    ("ChiselTraceTorture", "hgdb_firrtl"),
+}
+# Sidecars are compiled only by the pdg path; they have no Main and must never
+# be picked up as standalone bench fixtures.
+_SKIP_FIXTURE_STEMS = {"ChiselTraceTortureNative"}
+
 
 @pytest.mark.scala_cli
 @pytest.mark.parametrize("target", sorted(_TARGET_TO_PIPELINE))
 @pytest.mark.parametrize("scala", _scala_fixtures(),
                          ids=lambda p: p.stem)
 def test_pipeline(scala: pathlib.Path, target: str, toolchain) -> None:
+    if scala.stem in _SKIP_FIXTURE_STEMS:
+        pytest.skip(f"{scala.stem}: native-PDG sidecar, not a standalone cell")
     if scala.stem in _PENDING_FIXTURES:
         pytest.skip(
             f"{scala.stem}: lifted from demo/ pending uhdi_to_* projector "
             f"gaps on Bundle / complex-when designs (see risk register)")
+    if (scala.stem, target) in _PENDING_CELLS:
+        pytest.skip(
+            f"{scala.stem}/{target}: per-tool torture cell analysed via "
+            f"dump_pair, not the regression diff (see docs/pipeline-tasks.md)")
     pipeline_name = _TARGET_TO_PIPELINE[target]
     pipeline = get_pipeline(pipeline_name)
     try:
