@@ -80,10 +80,26 @@ def _source_lang_type(repr_obj: Optional[Dict[str, Any]]) -> Optional[Dict[str, 
     slt = repr_obj.get("sourceLangType")
     if not slt or not slt.get("typeName"):
         return None
-    # First-pass: project typeName only. `params` is preserved on the
-    # UHDI side (see uhdi-spec §6.4 SourceLangType) but Tywaves does not
-    # render it yet; surface in a follow-up when there is a consumer.
-    return {"type_name": slt["typeName"]}
+    out: Dict[str, Any] = {"type_name": slt["typeName"]}
+    # `params` (UHDI §6.9, an opaque list of ctor/generator params) maps
+    # onto Tywaves' `source_lang_type_info.params` (List[ConstructorParams],
+    # see HglddParser.scala). UHDI `typeName` -> HGLDD `type`; `name`/`value`
+    # pass through. Skip silently if absent or malformed.
+    params = slt.get("params")
+    if isinstance(params, list):
+        rendered = []
+        for p in params:
+            if not isinstance(p, dict) or "name" not in p:
+                continue
+            entry: Dict[str, Any] = {"name": p["name"]}
+            if (tpe := p.get("typeName")) is not None:
+                entry["type"] = tpe
+            if (val := p.get("value")) is not None:
+                entry["value"] = val
+            rendered.append(entry)
+        if rendered:
+            out["params"] = rendered
+    return out
 
 
 def _populate_enum_index(ctx: "_Context") -> None:

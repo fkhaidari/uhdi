@@ -955,7 +955,7 @@ Tywaves and similar authoring-language-aware waveform viewers render not only th
 ```
 
 - `typeName` (required): the rendered surface-language type string, opaque to the format. Producers choose the convention; consumers display it verbatim.
-- `params` (optional, untyped): an opaque escape hatch reserved for parameterized-type metadata (e.g. width / depth values that an extended consumer could substitute back into the rendered name). No projector reads `params` today; emitters may omit it freely.
+- `params` (optional): a list of constructor/generator parameters of the declaring module or aggregate type, each an object `{ "name", "typeName", "value" }` (e.g. `{ "name": "width", "typeName": "Int", "value": "8" }`). Numeric values are serialised as strings to avoid precision loss. `uhdi_to_hgldd` projects these onto Tywaves `source_lang_type_info.params` (List[ConstructorParams]: UHDI `typeName` -> HGLDD `type`; `name`/`value` pass through). Entries without a `name` are skipped; an empty/absent list is omitted. Emitters may omit `params` freely; consumers that do not model parameters ignore it.
 
 The authoring representation (`roles.authoring`, §3.3) is the canonical site for this field. Absence of `sourceLangType` is not an error -- the consumer falls back to rendering the type-pool type (§4) instead.
 
@@ -2047,6 +2047,7 @@ The simplest projection. HGLDD is a snapshot format whose information content is
 | `variables[k].representations["<hdl-role>"].value.sigName` | `value.sig_name` |
 | `variables[k].representations["<hdl-role>"].value.exprRef` (inlined) | HGLDD expression tree |
 | `variables[k].representations["<authoring-role>"].sourceLangType.typeName` (§6.9) | Tywaves `source_lang_type_info.type_name` (Tywaves variant only) |
+| `…sourceLangType.params[]` `{name,typeName,value}` (§6.9) | Tywaves `source_lang_type_info.params[]` `{name,type,value}` (`typeName`->`type`; module-level params come from the scope's authoring repr) |
 | `variables[k].bindKind` + `direction` | HGLDD port semantic (input / output / inout) |
 | `scopes[k].kind: "extmodule"` | `isExtModule: true` |
 | `scopes[k].kind: "inline"` | inline scope record |
