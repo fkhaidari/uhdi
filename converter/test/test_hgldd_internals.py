@@ -11,6 +11,7 @@ from uhdi_to_hgldd.convert import (
     _FileInfo,
     _first_vector_element_sig,
     _resolve_hdl_file_path,
+    _source_lang_type,
     _topo_sorted_struct_ids,
     _type_description,
 )
@@ -1715,3 +1716,53 @@ def test_resolve_hdl_file_path_keeps_sv_default_when_language_empty():
     }
     out = hgldd_convert(doc)
     assert "Top.sv" in out["HGLDD"]["file_info"]
+
+
+# ---- _source_lang_type (sourceLangType -> source_lang_type_info) --------
+
+
+def test_source_lang_type_none_when_no_repr_or_typename():
+    assert _source_lang_type(None) is None
+    assert _source_lang_type({}) is None
+    assert _source_lang_type({"sourceLangType": {"params": []}}) is None
+
+
+def test_source_lang_type_typename_only():
+    assert _source_lang_type({"sourceLangType": {"typeName": "IO[Bundle]"}}) == {
+        "type_name": "IO[Bundle]"}
+
+
+def test_source_lang_type_projects_ctor_params_with_type_key():
+    # UHDI `params[].typeName` maps onto Tywaves ConstructorParams `type`;
+    # name/value pass through (HglddParser.scala SourceLangType.params).
+    out = _source_lang_type({"sourceLangType": {
+        "typeName": "Top",
+        "params": [
+            {"name": "width", "typeName": "Int", "value": "8"},
+            {"name": "depth", "typeName": "Int", "value": "4"},
+        ],
+    }})
+    assert out == {
+        "type_name": "Top",
+        "params": [
+            {"name": "width", "type": "Int", "value": "8"},
+            {"name": "depth", "type": "Int", "value": "4"},
+        ],
+    }
+
+
+def test_source_lang_type_params_tolerate_partial_and_skip_malformed():
+    out = _source_lang_type({"sourceLangType": {
+        "typeName": "Q",
+        "params": [
+            {"name": "n"},                       # no typeName/value
+            {"typeName": "Int", "value": "1"},   # no name -> skipped
+            "garbage",                            # non-dict -> skipped
+        ],
+    }})
+    assert out == {"type_name": "Q", "params": [{"name": "n"}]}
+
+
+def test_source_lang_type_omits_empty_params_list():
+    assert _source_lang_type({"sourceLangType": {
+        "typeName": "T", "params": []}}) == {"type_name": "T"}
