@@ -47,5 +47,5 @@ class Fifo(width: Int = 8, depth: Int = 4) extends Module {
 }
 
 object Main extends App {
-  print(ChiselStage.emitCHIRRTL(new Fifo, Array("--with-experimental-debug-intrinsics")))
+  print(ChiselStage.emitCHIRRTL(new Fifo, args))
 }

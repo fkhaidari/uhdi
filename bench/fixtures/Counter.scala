@@ -24,5 +24,5 @@ object Main extends App {
   // emitCHIRRTL (vs emitFIRRTLDialect/emitSystemVerilog) so the
   // output is the un-lowered FIR text -- that's what `firtool
   // --emit-uhdi` and `--emit-hgldd` consume directly.
-  print(ChiselStage.emitCHIRRTL(new Counter, Array("--with-experimental-debug-intrinsics")))
+  print(ChiselStage.emitCHIRRTL(new Counter, args))
 }

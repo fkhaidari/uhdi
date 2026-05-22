@@ -38,5 +38,5 @@ class GCD(width: Int = 16) extends Module {
 }
 
 object Main extends App {
-  print(ChiselStage.emitCHIRRTL(new GCD, Array("--with-experimental-debug-intrinsics")))
+  print(ChiselStage.emitCHIRRTL(new GCD, args))
 }
