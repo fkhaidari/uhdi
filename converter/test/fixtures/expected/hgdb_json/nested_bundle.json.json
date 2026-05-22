@@ -1,0 +1,44 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "name": "NestedBundle",
+      "scope": [],
+      "type": "module",
+      "variables": [
+        {
+          "name": "clock",
+          "rtl": true,
+          "value": "clock"
+        },
+        {
+          "name": "reset",
+          "rtl": true,
+          "value": "reset"
+        },
+        {
+          "name": "io.cmd.ready",
+          "rtl": true,
+          "value": "io_cmd_ready"
+        },
+        {
+          "name": "io.cmd.valid",
+          "rtl": true,
+          "value": "io_cmd_valid"
+        },
+        {
+          "name": "io.cmd.bits",
+          "rtl": true,
+          "value": "io_cmd_bits"
+        },
+        {
+          "name": "io.out",
+          "rtl": true,
+          "value": "io_out"
+        }
+      ]
+    }
+  ],
+  "top": "NestedBundle",
+  "variables": []
+}

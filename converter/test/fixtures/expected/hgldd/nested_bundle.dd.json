@@ -1,0 +1,226 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "/tmp/uhdi-verify/nested/NestedBundle.scala",
+      "NestedBundle.sv"
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 15,
+        "end_column": 14,
+        "end_line": 15,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "NestedBundle_io_cmd",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 15,
+            "end_column": 14,
+            "end_line": 15,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          },
+          "type_name": "logic",
+          "var_name": "ready"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 15,
+            "end_column": 14,
+            "end_line": 15,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          },
+          "type_name": "logic",
+          "var_name": "valid"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 15,
+            "end_column": 14,
+            "end_line": 15,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "bits"
+        }
+      ]
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 15,
+        "end_column": 14,
+        "end_line": 15,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "NestedBundle_io",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 15,
+            "end_column": 14,
+            "end_line": 15,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "params": [
+              {
+                "name": "gen",
+                "type": "T"
+              }
+            ],
+            "type_name": "IO[DecoupledIO]"
+          },
+          "type_name": "NestedBundle_io_cmd",
+          "var_name": "cmd"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 15,
+            "end_column": 14,
+            "end_line": 15,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "out"
+        }
+      ]
+    },
+    {
+      "children": [],
+      "hdl_loc": {
+        "begin_line": 2,
+        "end_line": 2,
+        "file": 2
+      },
+      "hgl_loc": {
+        "begin_column": 7,
+        "begin_line": 14,
+        "end_column": 7,
+        "end_line": 14,
+        "file": 1
+      },
+      "kind": "module",
+      "module_name": "NestedBundle",
+      "obj_name": "NestedBundle",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 14,
+            "end_column": 7,
+            "end_line": 14,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 14,
+            "end_column": 7,
+            "end_line": 14,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 15,
+            "end_column": 14,
+            "end_line": 15,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[AnonymousBundle]"
+          },
+          "type_name": "NestedBundle_io",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "io_cmd_ready"
+                  },
+                  {
+                    "sig_name": "io_cmd_valid"
+                  },
+                  {
+                    "sig_name": "io_cmd_bits"
+                  }
+                ]
+              },
+              {
+                "sig_name": "io_cmd_bits"
+              }
+            ]
+          },
+          "var_name": "io"
+        },
+        {
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "io_out"
+          },
+          "var_name": "io_out"
+        }
+      ],
+      "source_lang_type_info": {
+        "type_name": "NestedBundle"
+      }
+    }
+  ]
+}
