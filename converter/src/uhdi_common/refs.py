@@ -44,6 +44,42 @@ def resolve_authoring_name(ref: str, ctx: BaseContext) -> Optional[str]:
     return str(name) if name is not None else None
 
 
+def build_dotted_name_map(ctx: BaseContext) -> Dict[str, str]:
+    """Map a flattened RTL-style name (`io_q`) to its dotted source name
+    (`io.q`), reconstructed from the synthetic subfield variables the
+    producer emits as `<parent_id>__<field>`.
+
+    firtool flattens aggregate ports (`io.q` -> sig `io_q`); the authoring
+    name of the flat port variable is the underscored leaf, so hgdb would
+    register it under `io_q` and a source-level `io.q` lookup misses. The
+    synthetic subfields carry the field structure (`io` bundle + field `q`),
+    so joining their authoring names with `.` recovers the source path and
+    with `_` recovers the flat key. Only entries where the two differ are
+    returned, so scalar signals and literal underscore names are untouched."""
+    def parts(vid: str) -> Optional[list]:
+        leaf = resolve_authoring_name(vid, ctx)
+        if leaf is None:
+            return None
+        if "__" not in vid:
+            return [leaf]
+        parent, _, _ = vid.rpartition("__")
+        head = parts(parent)
+        return None if head is None else head + [leaf]
+
+    out: Dict[str, str] = {}
+    for vid, var in ctx.variables.items():
+        if var.get("bindKind") != "synthetic" or "__" not in vid:
+            continue
+        p = parts(vid)
+        if not p:
+            continue
+        flat = "_".join(p)
+        dotted = ".".join(p)
+        if flat != dotted:
+            out[flat] = dotted
+    return out
+
+
 def resolve_var_by_ref(ref: str, ctx: BaseContext) -> Dict[str, Any]:
     """Look up variable by either stable_id or authoring name.
 

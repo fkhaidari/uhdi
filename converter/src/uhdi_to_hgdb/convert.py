@@ -12,6 +12,7 @@ from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
 from uhdi_common.expressions import walk as walk_expression
 from uhdi_common.refs import (
+    build_dotted_name_map,
     loc_column,
     loc_file_path,
     loc_line,
@@ -216,7 +217,9 @@ _resolve_body_var_ref = resolve_var_by_ref
 
 
 def _source_name(stable_id, ctx):
-    return resolve_authoring_name(stable_id, ctx) or stable_id
+    name = resolve_authoring_name(stable_id, ctx) or stable_id
+    # `io_q` -> `io.q`: register the HDL-source dotted name (matches native).
+    return getattr(ctx, "_dotted_names", {}).get(name, name)
 
 
 def _serialize_enable(enable_ref, ctx):
@@ -322,6 +325,7 @@ def convert(uhdi, output_path):
         ctx = _Ctx.from_uhdi(uhdi)
     except ConversionError as e:
         raise HGDBConversionError(str(e)) from None
+    ctx._dotted_names = build_dotted_name_map(ctx)
 
     output_path = pathlib.Path(output_path)
     tmp_path = output_path.with_name(output_path.name + ".tmp")

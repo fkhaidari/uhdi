@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
 from uhdi_common.refs import (
+    build_dotted_name_map,
     loc_column,
     loc_file_path,
     loc_line,
@@ -35,6 +36,9 @@ def _inline_var_def(stable_id: str, var: Dict[str, Any], ctx: _Ctx
     DCE'd outputs fall back to authoring name (matches hgdb-circt)."""
     sig = resolve_sig_name(stable_id, ctx)
     name = resolve_authoring_name(stable_id, ctx) or stable_id
+    # Recover the source-level dotted name (`io_q` -> `io.q`) so hgdb resolves
+    # the port by its HDL identifier, not the flattened RTL leaf.
+    name = getattr(ctx, "_dotted_names", {}).get(name, name)
     if not sig:
         sig = name
     if not sig:
@@ -195,6 +199,7 @@ def convert(uhdi: Dict[str, Any]) -> Dict[str, Any]:
         ctx = _Ctx.from_uhdi(uhdi)
     except ConversionError as e:
         raise HGDBJsonConversionError(str(e)) from None
+    ctx._dotted_names = build_dotted_name_map(ctx)
 
     try:
         top_names = list(uhdi.get("top") or [])

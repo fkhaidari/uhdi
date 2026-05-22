@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from uhdi_common.context import BaseContext
 from uhdi_common.refs import (
+    build_dotted_name_map,
     loc_column,
     loc_file_path,
     loc_line,
@@ -225,3 +226,41 @@ def test_loc_line_and_column_default_to_zero():
 def test_loc_line_handles_string_input():
     """Some emitters write line numbers as strings; int() coercion covers both."""
     assert loc_line({"beginLine": "12"}) == 12
+
+
+# ---- build_dotted_name_map ------------------------------------------------
+
+
+def _name(n):
+    return {"representations": {"chisel": {"name": n}}}
+
+
+def test_dotted_name_map_reconstructs_bundle_paths():
+    """Synthetic subfields (`<io>__q`) recover `io_q` -> `io.q`."""
+    ctx = _ctx(variables={
+        "b": {**_name("io"), "bindKind": "node"},
+        "b__q": {**_name("q"), "bindKind": "synthetic"},
+        "b__rdy": {**_name("rdy"), "bindKind": "synthetic"},
+        "io_q": {**_name("io_q"), "bindKind": "port"},
+    })
+    m = build_dotted_name_map(ctx)
+    assert m == {"io_q": "io.q", "io_rdy": "io.rdy"}
+
+
+def test_dotted_name_map_handles_nested_bundles():
+    """Nested subfields chain: `io_sub_x` -> `io.sub.x`."""
+    ctx = _ctx(variables={
+        "b": {**_name("io"), "bindKind": "node"},
+        "b__sub": {**_name("sub"), "bindKind": "synthetic"},
+        "b__sub__x": {**_name("x"), "bindKind": "synthetic"},
+    })
+    m = build_dotted_name_map(ctx)
+    assert m["io_sub_x"] == "io.sub.x"
+
+
+def test_dotted_name_map_skips_scalars_and_literal_underscores():
+    """No synthetic -> no entry; a scalar named `foo_bar` is left untouched."""
+    ctx = _ctx(variables={
+        "v": {**_name("foo_bar"), "bindKind": "node"},
+    })
+    assert build_dotted_name_map(ctx) == {}
