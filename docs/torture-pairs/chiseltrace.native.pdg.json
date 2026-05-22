@@ -1,0 +1,2028 @@
+{
+  "vertices": [{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 33,
+  "char": 7,
+  "name": "input_reset",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "reset",
+  "fieldPath": ""
+},
+  "assignsTo": "reset",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "input_io.din",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "din"
+},
+  "assignsTo": "io.din",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "input_io.rdAddr",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "rdAddr"
+},
+  "assignsTo": "io.rdAddr",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "input_io.wrAddr",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "wrAddr"
+},
+  "assignsTo": "io.wrAddr",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "input_io.sel",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "sel"
+},
+  "assignsTo": "io.sel",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "input_io.we",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "we"
+},
+  "assignsTo": "io.we",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "input_io.cond",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "cond"
+},
+  "assignsTo": "io.cond",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "input_io.en",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "en"
+},
+  "assignsTo": "io.en",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "output_io.dout",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "output_io.rsel",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 34,
+  "char": 14,
+  "name": "output_io.muxed",
+  "kind": "IO",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 24,
+  "char": 29,
+  "name": "defnode__a_T",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": null,
+  "assignsTo": "stage._a_T",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 24,
+  "char": 29,
+  "name": "defnode__a_T_1",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": null,
+  "assignsTo": "stage._a_T_1",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 24,
+  "char": 22,
+  "name": "defwire_a",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 24,
+  "char": 22,
+  "name": "connect_a",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.a",
+  "fieldPath": ""
+},
+  "assignsTo": "stage.a",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 25,
+  "char": 25,
+  "name": "defnode__b_T",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": null,
+  "assignsTo": "stage._b_T",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 25,
+  "char": 22,
+  "name": "defwire_b",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 25,
+  "char": 22,
+  "name": "connect_b",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.b",
+  "fieldPath": ""
+},
+  "assignsTo": "stage.b",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 26,
+  "char": 18,
+  "name": "defreg_r",
+  "kind": "DataDefinition",
+  "clocked": true,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.r",
+  "fieldPath": ""
+},
+  "assignsTo": "stage.r",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 27,
+  "char": 15,
+  "name": "cond_on_[io.en]",
+  "kind": "ControlFlow",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.pred_io_en",
+  "fieldPath": ""
+},
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 28,
+  "char": 7,
+  "name": "connect_r",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.r",
+  "fieldPath": ""
+},
+  "assignsTo": "stage.r",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 30,
+  "char": 10,
+  "name": "connect_io.out",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.io",
+  "fieldPath": "out"
+},
+  "assignsTo": "stage.io.out",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 18,
+  "char": 7,
+  "name": "input_reset",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.reset",
+  "fieldPath": ""
+},
+  "assignsTo": "stage.reset",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 19,
+  "char": 14,
+  "name": "input_io.in",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.io",
+  "fieldPath": "in"
+},
+  "assignsTo": "stage.io.in",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 19,
+  "char": 14,
+  "name": "input_io.en",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": {
+  "signalPath": "stage.io",
+  "fieldPath": "en"
+},
+  "assignsTo": "stage.io.en",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 19,
+  "char": 14,
+  "name": "output_io.out",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": ["stage"],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 47,
+  "char": 21,
+  "name": "definstance_stage",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "",
+  "line": 0,
+  "char": 0,
+  "name": "connect_stage.reset",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "stage",
+  "fieldPath": "reset"
+},
+  "assignsTo": "stage.reset",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 48,
+  "char": 15,
+  "name": "connect_stage.io.in",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "stage.io",
+  "fieldPath": "in"
+},
+  "assignsTo": "stage.io.in",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 49,
+  "char": 15,
+  "name": "connect_stage.io.en",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "stage.io",
+  "fieldPath": "en"
+},
+  "assignsTo": "stage.io.en",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 51,
+  "char": 24,
+  "name": "defmem_mem.0",
+  "kind": "Definition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 51,
+  "char": 24,
+  "name": "defmem_mem.1",
+  "kind": "Definition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 51,
+  "char": 24,
+  "name": "defmem_mem.2",
+  "kind": "Definition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 51,
+  "char": 24,
+  "name": "defmem_mem.3",
+  "kind": "Definition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 52,
+  "char": 22,
+  "name": "defwire__io_dout_WIRE",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 52,
+  "char": 22,
+  "name": "connect__io_dout_WIRE",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_io_dout_WIRE",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 52,
+  "char": 22,
+  "name": "defnode_probe_TmfAOvkxoIrMNKHuIXfL",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "probe_TmfAOvkxoIrMNKHuIXfL",
+  "fieldPath": ""
+},
+  "assignsTo": "probe_TmfAOvkxoIrMNKHuIXfL",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 52,
+  "char": 22,
+  "name": "connect_io_dout_MPORT",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io_dout_MPORT",
+  "fieldPath": ""
+},
+  "assignsTo": "io_dout_MPORT",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 1
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 52,
+  "char": 11,
+  "name": "connect_io.dout",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "dout"
+},
+  "assignsTo": "io.dout",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 54,
+  "char": 15,
+  "name": "cond_on_[io.en]",
+  "kind": "ControlFlow",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "pred_io_en",
+  "fieldPath": ""
+},
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 55,
+  "char": 17,
+  "name": "cond_on_[io.we]",
+  "kind": "ControlFlow",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "pred_io_we",
+  "fieldPath": ""
+},
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 56,
+  "char": 21,
+  "name": "cond_on_[io.cond]",
+  "kind": "ControlFlow",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "pred_io_cond",
+  "fieldPath": ""
+},
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 57,
+  "char": 18,
+  "name": "defnode_probe_DFOykmfwMbPuleTczFog",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "probe_DFOykmfwMbPuleTczFog",
+  "fieldPath": ""
+},
+  "assignsTo": "probe_DFOykmfwMbPuleTczFog",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 57,
+  "char": 18,
+  "name": "connect_mem.0",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "mem",
+  "fieldPath": "0"
+},
+  "assignsTo": "mem.0",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_DFOykmfwMbPuleTczFog"],
+  "probeValue": [0]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 57,
+  "char": 18,
+  "name": "connect_mem.1",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "mem",
+  "fieldPath": "1"
+},
+  "assignsTo": "mem.1",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_DFOykmfwMbPuleTczFog"],
+  "probeValue": [1]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 57,
+  "char": 18,
+  "name": "connect_mem.2",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "mem",
+  "fieldPath": "2"
+},
+  "assignsTo": "mem.2",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_DFOykmfwMbPuleTczFog"],
+  "probeValue": [2]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 57,
+  "char": 18,
+  "name": "connect_mem.3",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "mem",
+  "fieldPath": "3"
+},
+  "assignsTo": "mem.3",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_DFOykmfwMbPuleTczFog"],
+  "probeValue": [3]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 57,
+  "char": 18,
+  "name": "connect_MPORT",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "MPORT",
+  "fieldPath": ""
+},
+  "assignsTo": "MPORT",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "defwire__regs_WIRE.0",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "defwire__regs_WIRE.1",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "defwire__regs_WIRE.2",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "defwire__regs_WIRE.3",
+  "kind": "Definition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": null,
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "connect__regs_WIRE.0",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_regs_WIRE.0",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "connect__regs_WIRE.1",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_regs_WIRE.1",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "connect__regs_WIRE.2",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_regs_WIRE.2",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 29,
+  "name": "connect__regs_WIRE.3",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_regs_WIRE.3",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 21,
+  "name": "defreg_regs.0",
+  "kind": "DataDefinition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "0"
+},
+  "assignsTo": "regs.0",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 21,
+  "name": "defreg_regs.1",
+  "kind": "DataDefinition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "1"
+},
+  "assignsTo": "regs.1",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 21,
+  "name": "defreg_regs.2",
+  "kind": "DataDefinition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "2"
+},
+  "assignsTo": "regs.2",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 62,
+  "char": 21,
+  "name": "defreg_regs.3",
+  "kind": "DataDefinition",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "3"
+},
+  "assignsTo": "regs.3",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 63,
+  "char": 15,
+  "name": "cond_on_[io.we]",
+  "kind": "ControlFlow",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "pred_io_we",
+  "fieldPath": ""
+},
+  "assignsTo": null,
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 64,
+  "char": 18,
+  "name": "defnode_probe_nIwaijmCWefPASFvjAbZ",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "probe_nIwaijmCWefPASFvjAbZ",
+  "fieldPath": ""
+},
+  "assignsTo": "probe_nIwaijmCWefPASFvjAbZ",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 64,
+  "char": 18,
+  "name": "connect_regs.0",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "0"
+},
+  "assignsTo": "regs.0",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_nIwaijmCWefPASFvjAbZ"],
+  "probeValue": [0]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 64,
+  "char": 18,
+  "name": "connect_regs.1",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "1"
+},
+  "assignsTo": "regs.1",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_nIwaijmCWefPASFvjAbZ"],
+  "probeValue": [1]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 64,
+  "char": 18,
+  "name": "connect_regs.2",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "2"
+},
+  "assignsTo": "regs.2",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_nIwaijmCWefPASFvjAbZ"],
+  "probeValue": [2]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 64,
+  "char": 18,
+  "name": "connect_regs.3",
+  "kind": "Connection",
+  "clocked": true,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "regs",
+  "fieldPath": "3"
+},
+  "assignsTo": "regs.3",
+  "isChiselStatement": true,
+  "condition": {
+  "probeName": ["probe_nIwaijmCWefPASFvjAbZ"],
+  "probeValue": [3]
+},
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 66,
+  "char": 11,
+  "name": "defnode_probe_tZWiPZFioJnHuxzEtWyn",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "probe_tZWiPZFioJnHuxzEtWyn",
+  "fieldPath": ""
+},
+  "assignsTo": "probe_tZWiPZFioJnHuxzEtWyn",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 66,
+  "char": 11,
+  "name": "connect_io.rsel",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "rsel"
+},
+  "assignsTo": "io.rsel",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 68,
+  "char": 18,
+  "name": "defnode_probe_pNxvsZPGuRhQBeeTyuDN",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "probe_pNxvsZPGuRhQBeeTyuDN",
+  "fieldPath": ""
+},
+  "assignsTo": "probe_pNxvsZPGuRhQBeeTyuDN",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 68,
+  "char": 18,
+  "name": "defnode__io_muxed_T",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_io_muxed_T",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 68,
+  "char": 12,
+  "name": "connect_io.muxed",
+  "kind": "Connection",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": {
+  "signalPath": "io",
+  "fieldPath": "muxed"
+},
+  "assignsTo": "io.muxed",
+  "isChiselStatement": true,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 70,
+  "char": 18,
+  "name": "defnode__T",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_T",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 70,
+  "char": 10,
+  "name": "defnode__T_1",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_T_1",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 70,
+  "char": 41,
+  "name": "defnode__T_2",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_T_2",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 70,
+  "char": 28,
+  "name": "defnode__T_3",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_T_3",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 70,
+  "char": 9,
+  "name": "defnode__T_4",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "modulePath": [""],
+  "relatedSignal": null,
+  "assignsTo": "_T_4",
+  "isChiselStatement": false,
+  "condition": null,
+  "assignDelay": 0
+}],
+  "edges": [{
+  "from": 8,
+  "to": 38,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 9,
+  "to": 67,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 10,
+  "to": 70,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 11,
+  "to": 23,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 11,
+  "to": 28,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 11,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 12,
+  "to": 11,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 12,
+  "to": 11,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 12,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 13,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 14,
+  "to": 12,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 14,
+  "to": 12,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 14,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 15,
+  "to": 13,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 15,
+  "to": 14,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 15,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 16,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 17,
+  "to": 15,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 17,
+  "to": 15,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 17,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 18,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 19,
+  "to": 24,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 19,
+  "to": 29,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 19,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 20,
+  "to": 16,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 20,
+  "to": 17,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 20,
+  "to": 19,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 21,
+  "to": 18,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 21,
+  "to": 18,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 21,
+  "to": 20,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 21,
+  "to": 26,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 25,
+  "to": 21,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 27,
+  "to": 0,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 28,
+  "to": 1,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 29,
+  "to": 7,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 35,
+  "to": 2,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 36,
+  "to": 34,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 36,
+  "to": 35,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 37,
+  "to": 30,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [0]
+}
+},{
+  "from": 37,
+  "to": 43,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [0]
+}
+},{
+  "from": 37,
+  "to": 31,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [1]
+}
+},{
+  "from": 37,
+  "to": 44,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [1]
+}
+},{
+  "from": 37,
+  "to": 32,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [2]
+}
+},{
+  "from": 37,
+  "to": 45,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [2]
+}
+},{
+  "from": 37,
+  "to": 33,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [3]
+}
+},{
+  "from": 37,
+  "to": 46,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_TmfAOvkxoIrMNKHuIXfL"],
+  "probeValue": [3]
+}
+},{
+  "from": 37,
+  "to": 36,
+  "kind": "Index",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 38,
+  "to": 37,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 39,
+  "to": 7,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 40,
+  "to": 5,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 40,
+  "to": 39,
+  "kind": "Conditional",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 41,
+  "to": 6,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 41,
+  "to": 40,
+  "kind": "Conditional",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 41,
+  "to": 60,
+  "kind": "Conditional",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 42,
+  "to": 3,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 42,
+  "to": 41,
+  "kind": "Conditional",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 43,
+  "to": 47,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 43,
+  "to": 42,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 43,
+  "to": 41,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 44,
+  "to": 47,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 44,
+  "to": 42,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 44,
+  "to": 41,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 45,
+  "to": 47,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 45,
+  "to": 42,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 45,
+  "to": 41,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 46,
+  "to": 47,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 46,
+  "to": 42,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 46,
+  "to": 41,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 47,
+  "to": 21,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 47,
+  "to": 41,
+  "kind": "Conditional",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 56,
+  "to": 48,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 56,
+  "to": 52,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 57,
+  "to": 49,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 57,
+  "to": 53,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 58,
+  "to": 50,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 58,
+  "to": 54,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 59,
+  "to": 51,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 59,
+  "to": 55,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 60,
+  "to": 5,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 61,
+  "to": 4,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 61,
+  "to": 40,
+  "kind": "Conditional",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 61,
+  "to": 60,
+  "kind": "Conditional",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 62,
+  "to": 1,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 62,
+  "to": 61,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 62,
+  "to": 40,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 62,
+  "to": 60,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 63,
+  "to": 1,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 63,
+  "to": 61,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 63,
+  "to": 40,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 63,
+  "to": 60,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 64,
+  "to": 1,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 64,
+  "to": 61,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 64,
+  "to": 40,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 64,
+  "to": 60,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 65,
+  "to": 1,
+  "kind": "Data",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 65,
+  "to": 61,
+  "kind": "Index",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 65,
+  "to": 40,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 65,
+  "to": 60,
+  "kind": "Conditional",
+  "clocked": true,
+  "condition": null
+},{
+  "from": 66,
+  "to": 4,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 67,
+  "to": 56,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [0]
+}
+},{
+  "from": 67,
+  "to": 56,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [0]
+}
+},{
+  "from": 67,
+  "to": 62,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [0]
+}
+},{
+  "from": 67,
+  "to": 57,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [1]
+}
+},{
+  "from": 67,
+  "to": 57,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [1]
+}
+},{
+  "from": 67,
+  "to": 63,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [1]
+}
+},{
+  "from": 67,
+  "to": 58,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [2]
+}
+},{
+  "from": 67,
+  "to": 58,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [2]
+}
+},{
+  "from": 67,
+  "to": 64,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [2]
+}
+},{
+  "from": 67,
+  "to": 59,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [3]
+}
+},{
+  "from": 67,
+  "to": 59,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [3]
+}
+},{
+  "from": 67,
+  "to": 65,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_tZWiPZFioJnHuxzEtWyn"],
+  "probeValue": [3]
+}
+},{
+  "from": 67,
+  "to": 66,
+  "kind": "Index",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 68,
+  "to": 6,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 69,
+  "to": 21,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_pNxvsZPGuRhQBeeTyuDN"],
+  "probeValue": [1]
+}
+},{
+  "from": 69,
+  "to": 38,
+  "kind": "Data",
+  "clocked": false,
+  "condition": {
+  "probeName": ["probe_pNxvsZPGuRhQBeeTyuDN"],
+  "probeValue": [0]
+}
+},{
+  "from": 69,
+  "to": 68,
+  "kind": "Index",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 70,
+  "to": 69,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 70,
+  "to": 69,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 71,
+  "to": 5,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 71,
+  "to": 7,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 72,
+  "to": 71,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 72,
+  "to": 71,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 73,
+  "to": 3,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 73,
+  "to": 2,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 74,
+  "to": 72,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 74,
+  "to": 72,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 74,
+  "to": 73,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 74,
+  "to": 73,
+  "kind": "Declaration",
+  "clocked": false,
+  "condition": null
+},{
+  "from": 75,
+  "to": 0,
+  "kind": "Data",
+  "clocked": false,
+  "condition": null
+}],
+  "predicates": [{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 27,
+  "char": 15,
+  "name": "stage.pred_io_en",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "isChiselStatement": false
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 54,
+  "char": 15,
+  "name": "pred_io_en",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "isChiselStatement": false
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 55,
+  "char": 17,
+  "name": "pred_io_we",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "isChiselStatement": false
+},{
+  "file": "home/farid/thesis/practice/uhdi/bench/fixtures/ChiselTraceTortureNative.scala",
+  "line": 56,
+  "char": 21,
+  "name": "pred_io_cond",
+  "kind": "DataDefinition",
+  "clocked": false,
+  "isChiselStatement": false
+}],
+  "cfg": [{"stmtRef": 0}, {"stmtRef": 1}, {"stmtRef": 2}, {"stmtRef": 3}, {"stmtRef": 4}, {"stmtRef": 5}, {"stmtRef": 6}, {"stmtRef": 7}, {"stmtRef": 8}, {"stmtRef": 9}, {"stmtRef": 10}, {"stmtRef": 11}, {"stmtRef": 12}, {"stmtRef": 13}, {"stmtRef": 14}, {"stmtRef": 15}, {"stmtRef": 16}, {"stmtRef": 17}, {"stmtRef": 18}, {"stmtRef": 19, "predStmtRef": 0, "trueBranch": [{"stmtRef": 20}]}, {"stmtRef": 21}, {"stmtRef": 22}, {"stmtRef": 23}, {"stmtRef": 24}, {"stmtRef": 25}, {"stmtRef": 26}, {"stmtRef": 27}, {"stmtRef": 28}, {"stmtRef": 29}, {"stmtRef": 30}, {"stmtRef": 31}, {"stmtRef": 32}, {"stmtRef": 33}, {"stmtRef": 34}, {"stmtRef": 35}, {"stmtRef": 36}, {"stmtRef": 37}, {"stmtRef": 38}, {"stmtRef": 39, "predStmtRef": 1, "trueBranch": [{"stmtRef": 40, "predStmtRef": 2, "trueBranch": [{"stmtRef": 41, "predStmtRef": 3, "trueBranch": [{"stmtRef": 42}, {"stmtRef": 43}, {"stmtRef": 44}, {"stmtRef": 45}, {"stmtRef": 46}, {"stmtRef": 47}]}]}]}, {"stmtRef": 48}, {"stmtRef": 49}, {"stmtRef": 50}, {"stmtRef": 51}, {"stmtRef": 52}, {"stmtRef": 53}, {"stmtRef": 54}, {"stmtRef": 55}, {"stmtRef": 56}, {"stmtRef": 57}, {"stmtRef": 58}, {"stmtRef": 59}, {"stmtRef": 60, "predStmtRef": 2, "trueBranch": [{"stmtRef": 61}, {"stmtRef": 62}, {"stmtRef": 63}, {"stmtRef": 64}, {"stmtRef": 65}]}, {"stmtRef": 66}, {"stmtRef": 67}, {"stmtRef": 68}, {"stmtRef": 69}, {"stmtRef": 70}, {"stmtRef": 71}, {"stmtRef": 72}, {"stmtRef": 73}, {"stmtRef": 74}, {"stmtRef": 75}]
+}
