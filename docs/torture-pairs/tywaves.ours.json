@@ -1,0 +1,840 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "/home/farid/thesis/practice/uhdi/bench/fixtures/TywavesTorture.scala",
+      "TywavesTorture.sv"
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "children": [],
+      "enum_defs": {
+        "0": {
+          "0": "Add",
+          "1": "Sub",
+          "2": "And",
+          "3": "Or",
+          "4": "Pass"
+        }
+      },
+      "hdl_loc": {
+        "begin_line": 2,
+        "end_line": 2
+      },
+      "hgl_loc": {
+        "begin_column": 7,
+        "begin_line": 61,
+        "end_column": 7,
+        "end_line": 61
+      },
+      "kind": "module",
+      "module_name": "Alu",
+      "obj_name": "Alu",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 61,
+            "end_column": 7,
+            "end_line": 61
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 61,
+            "end_column": 7,
+            "end_line": 61
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Reset]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 62,
+            "end_column": 14,
+            "end_line": 62
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[AnonymousBundle]"
+          },
+          "type_name": "Alu_io",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "io_a"
+              },
+              {
+                "sig_name": "io_b"
+              },
+              {
+                "sig_name": "io_op"
+              },
+              {
+                "sig_name": "io_out"
+              }
+            ]
+          },
+          "var_name": "io"
+        }
+      ],
+      "source_lang_type_info": {
+        "params": [
+          {
+            "name": "width",
+            "type": "Int"
+          }
+        ],
+        "type_name": "Alu"
+      }
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 62,
+        "end_column": 14,
+        "end_line": 62
+      },
+      "kind": "struct",
+      "obj_name": "Alu_io",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 62,
+            "end_column": 14,
+            "end_line": 62
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "a"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 62,
+            "end_column": 14,
+            "end_line": 62
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "b"
+        },
+        {
+          "enum_def_ref": 0,
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 62,
+            "end_column": 14,
+            "end_line": 62
+          },
+          "packed_range": [
+            2,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[Op]"
+          },
+          "type_name": "logic",
+          "var_name": "op"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 62,
+            "end_column": 14,
+            "end_line": 62
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "out"
+        }
+      ]
+    },
+    {
+      "children": [
+        {
+          "hdl_loc": {
+            "begin_column": 2,
+            "begin_line": 131,
+            "end_column": 2,
+            "end_line": 131
+          },
+          "hgl_loc": {
+            "begin_column": 19,
+            "begin_line": 90,
+            "end_column": 19,
+            "end_line": 90
+          },
+          "module_name": "Alu",
+          "name": "alu",
+          "obj_name": "Alu"
+        }
+      ],
+      "enum_defs": {
+        "0": {
+          "0": "Add",
+          "1": "Sub",
+          "2": "And",
+          "3": "Or",
+          "4": "Pass"
+        }
+      },
+      "hdl_loc": {
+        "begin_line": 67,
+        "end_line": 67
+      },
+      "hgl_loc": {
+        "begin_column": 7,
+        "begin_line": 79,
+        "end_column": 7,
+        "end_line": 79
+      },
+      "kind": "module",
+      "module_name": "TywavesTorture",
+      "obj_name": "TywavesTorture",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 35,
+            "begin_line": 105,
+            "end_column": 35,
+            "end_line": 105
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "OpResult[UInt<8>]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "_tmp_T_4"
+          },
+          "var_name": "tmp"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 29,
+            "begin_line": 108,
+            "end_column": 29,
+            "end_line": 108
+          },
+          "packed_range": [
+            3,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "OpResult[UInt<4>]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "_tmp_T_5"
+          },
+          "var_name": "tmp_1"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 79,
+            "end_column": 7,
+            "end_line": 79
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 79,
+            "end_column": 7,
+            "end_line": 79
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[AnonymousBundle]"
+          },
+          "type_name": "TywavesTorture_io",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_packet_inner_lo"
+                      },
+                      {
+                        "sig_name": "io_packet_inner_hi"
+                      },
+                      {
+                        "sig_name": "io_packet_inner_tag"
+                      }
+                    ]
+                  },
+                  {
+                    "sig_name": "io_packet_valid"
+                  }
+                ]
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_grid_0_0"
+                      },
+                      {
+                        "sig_name": "io_grid_0_1"
+                      },
+                      {
+                        "sig_name": "io_grid_0_2"
+                      },
+                      {
+                        "sig_name": "io_grid_0_3"
+                      }
+                    ]
+                  },
+                  {
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_grid_1_0"
+                      },
+                      {
+                        "sig_name": "io_grid_1_1"
+                      },
+                      {
+                        "sig_name": "io_grid_1_2"
+                      },
+                      {
+                        "sig_name": "io_grid_1_3"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_bvec_0_lo"
+                      },
+                      {
+                        "sig_name": "io_bvec_0_hi"
+                      },
+                      {
+                        "sig_name": "io_bvec_0_tag"
+                      }
+                    ]
+                  },
+                  {
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_bvec_1_lo"
+                      },
+                      {
+                        "sig_name": "io_bvec_1_hi"
+                      },
+                      {
+                        "sig_name": "io_bvec_1_tag"
+                      }
+                    ]
+                  },
+                  {
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_bvec_2_lo"
+                      },
+                      {
+                        "sig_name": "io_bvec_2_hi"
+                      },
+                      {
+                        "sig_name": "io_bvec_2_tag"
+                      }
+                    ]
+                  },
+                  {
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_bvec_3_lo"
+                      },
+                      {
+                        "sig_name": "io_bvec_3_hi"
+                      },
+                      {
+                        "sig_name": "io_bvec_3_tag"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sig_name": "io_op"
+              },
+              {
+                "sig_name": "io_result"
+              },
+              {
+                "sig_name": "acc"
+              },
+              {
+                "sig_name": "io_combo"
+              }
+            ]
+          },
+          "var_name": "io"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 34,
+            "begin_line": 96,
+            "end_column": 34,
+            "end_line": 96
+          },
+          "source_lang_type_info": {
+            "type_name": "OpResult[Bool]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "eq"
+          },
+          "var_name": "eq"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 36,
+            "begin_line": 97,
+            "end_column": 36,
+            "end_line": 97
+          },
+          "packed_range": [
+            5,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "OpResult[UInt<6>]"
+          },
+          "type_name": "logic",
+          "value": {
+            "opcode": "{}",
+            "operands": [
+              {
+                "sig_name": "io_packet_inner_hi"
+              },
+              {
+                "integer_num": 0
+              }
+            ]
+          },
+          "var_name": "shifted"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 20,
+            "begin_line": 98,
+            "end_column": 20,
+            "end_line": 98
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "OpResult[UInt<8>]"
+          },
+          "type_name": "logic",
+          "value": {
+            "opcode": "{}",
+            "operands": [
+              {
+                "sig_name": "io_packet_inner_hi"
+              },
+              {
+                "sig_name": "io_packet_inner_lo"
+              }
+            ]
+          },
+          "var_name": "packed"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 21,
+            "begin_line": 99,
+            "end_column": 21,
+            "end_line": 99
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "OpResult[UInt<8>]"
+          },
+          "type_name": "logic",
+          "value": {
+            "opcode": "R{}",
+            "operands": [
+              {
+                "sig_name": "io_packet_inner_lo"
+              },
+              {
+                "integer_num": 2
+              }
+            ]
+          },
+          "var_name": "filled"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 20,
+            "begin_line": 103,
+            "end_column": 20,
+            "end_line": 103
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "Reg[UInt<8>]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "acc"
+          },
+          "var_name": "acc"
+        },
+        {
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "io_sum"
+          },
+          "var_name": "io_sum"
+        }
+      ],
+      "source_lang_type_info": {
+        "params": [
+          {
+            "name": "width",
+            "type": "Int"
+          },
+          {
+            "name": "depth",
+            "type": "Int"
+          }
+        ],
+        "type_name": "TywavesTorture"
+      }
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 80,
+        "end_column": 14,
+        "end_line": 80
+      },
+      "kind": "struct",
+      "obj_name": "TywavesTorture_io",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Outer]"
+          },
+          "type_name": "TywavesTorture_io_packet",
+          "var_name": "packet"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>[4][2]]"
+          },
+          "type_name": "logic",
+          "unpacked_range": [
+            1,
+            0,
+            3,
+            0
+          ],
+          "var_name": "grid"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Inner[4]]"
+          },
+          "type_name": "TywavesTorture_io_packet_inner",
+          "unpacked_range": [
+            3,
+            0
+          ],
+          "var_name": "bvec"
+        },
+        {
+          "enum_def_ref": 0,
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            2,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[Op]"
+          },
+          "type_name": "logic",
+          "var_name": "op"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "result"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "sum"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            15,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<16>]"
+          },
+          "type_name": "logic",
+          "var_name": "combo"
+        }
+      ]
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 80,
+        "end_column": 14,
+        "end_line": 80
+      },
+      "kind": "struct",
+      "obj_name": "TywavesTorture_io_packet",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Inner]"
+          },
+          "type_name": "TywavesTorture_io_packet_inner",
+          "var_name": "inner"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          },
+          "type_name": "logic",
+          "var_name": "valid"
+        }
+      ]
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 80,
+        "end_column": 14,
+        "end_line": 80
+      },
+      "kind": "struct",
+      "obj_name": "TywavesTorture_io_packet_inner",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            3,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>]"
+          },
+          "type_name": "logic",
+          "var_name": "lo"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            3,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>]"
+          },
+          "type_name": "logic",
+          "var_name": "hi"
+        },
+        {
+          "enum_def_ref": 0,
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "packed_range": [
+            2,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[Op]"
+          },
+          "type_name": "logic",
+          "var_name": "tag"
+        }
+      ]
+    }
+  ]
+}

@@ -1,165 +1,165 @@
-# uhdi в CIRCT: руководство к действию
+# uhdi in CIRCT: action plan
 
-**Phase 1 (Tywaves) + Phase 2 (hgdb). План как последовательность шагов.**
+**Phase 1 (Tywaves) + Phase 2 (hgdb). Plan as a sequence of steps.**
 
 ---
 
-## 0. Контекст и главный тезис
+## 0. Context and main thesis
 
-Таргет демонстрации — средний SoC (не RocketChip). Защита ограничена результатами Phase 1 + Phase 2.
+The demonstration target is a medium-sized SoC (not RocketChip). The defense is scoped to Phase 1 + Phase 2 results.
 
-Sanity-checks A1–A4 **пройдены**:
+Sanity-checks A1–A4 **passed**:
 
-| # | Результат | Последствие |
+| # | Result | Consequence |
 |---|---|---|
-| A1 | ✅ InlineAnnotation → `dbg.scope "l", "Leaf"` создаётся корректно | inline-tracking работает без пре-пасса |
-| A2 | ✅ LowerTypes сохраняет nested `dbg.struct` при плоских SV-портах | Tywaves bundle-view получит корректные данные |
-| A3 | ✅ Unused `observed` reg выжил после DCE | `dontTouch` не нужен |
-| A4 | ✅ `dbg.variable` имеет attr-dict через assemblyFormat — discardable attrs вешаются без расширения dialect | основной путь, не fallback |
+| A1 | ✅ InlineAnnotation → `dbg.scope "l", "Leaf"` is created correctly | inline-tracking works without a pre-pass |
+| A2 | ✅ LowerTypes preserves nested `dbg.struct` with flat SV ports | Tywaves bundle-view will receive correct data |
+| A3 | ✅ Unused `observed` reg survived DCE | `dontTouch` is not needed |
+| A4 | ✅ `dbg.variable` has attr-dict via assemblyFormat — discardable attrs attach without dialect extension | primary path, not fallback |
 
-Все риски [C]-уровня из первой редакции плана сняты. Остаются A13–A16 (см. §5), проверяются в §1.
+All [C]-level risks from the first revision of the plan are resolved. Remaining: A13–A16 (see §5), verified in §1.
 
-### Тезис для защиты
+### Thesis statement for the defense
 
-uhdi — унифицированный формат отладочной информации для hardware-генераторов, построенный как *суперсет* существующих форматов (hgdb, HGLDD, PDG). Работа демонстрирует:
+uhdi is a unified debug information format for hardware generators, built as a *superset* of existing formats (hgdb, HGLDD, PDG). The work demonstrates:
 
-1. **Формат** — N-way representations, pool-based structure, layered optionality (spec).
-2. **Инфраструктура** — два CIRCT pass'а и один emitter, производящие uhdi из Chisel-дизайнов.
-3. **Независимые проекции** — `uhdi-to-hgldd` и `uhdi-to-hgdb` как Python-конвертеры. Python умышленный: reference implementation, явно отделённая от компилятора, подчёркивает, что формат — независимая сущность, а не внутреннее представление CIRCT.
+1. **Format** — N-way representations, pool-based structure, layered optionality (spec).
+2. **Infrastructure** — two CIRCT passes and one emitter producing uhdi from Chisel designs.
+3. **Independent projections** — `uhdi-to-hgldd` and `uhdi-to-hgdb` as Python converters. Python is intentional: a reference implementation, explicitly decoupled from the compiler, emphasizing that the format is an independent entity, not an internal CIRCT representation.
 
-### Почему pool-based формат с нуля, а не расширение HGLDD
+### Why a pool-based format from scratch, rather than extending HGLDD
 
-Альтернатива — взять HGLDD как базу и наращивать к нему ключи `body[]`/`bp` для hgdb-use-case. Короче, но:
+The alternative — taking HGLDD as the base and adding `body[]`/`bp` keys for the hgdb use-case — is shorter, but:
 
-- narrative "unified format как суперсет" размывается — формат остаётся гибридом.
-- Phase 3+ заделы (temporal, provenance) становятся пристроем к HGLDD-shape, а не естественным расширением pool-based структуры.
-- thesis-defence слабее: "выполнили одну проекцию поверх чужого формата" против "формат — независимая сущность, две проекции это демонстрируют".
+- the "unified format as superset" narrative blurs — the format remains a hybrid.
+- Phase 3+ foundations (temporal, provenance) become an addition bolted onto the HGLDD shape rather than a natural extension of the pool-based structure.
+- the thesis defense is weaker: "implemented one projection on top of someone else's format" vs. "the format is an independent entity, two projections demonstrate that".
 
-Pool-based path тяжелее, но даёт прочную основу. Сознательный выбор.
+The pool-based path is heavier, but provides a solid foundation. A deliberate choice.
 
-### Что это значит для кода
+### What this means for the code
 
-- Базовая ветка — `fk-sc/debug-info` (Chisel intrinsics + расширение `dbg` dialect). От неё отпочковываемся, uhdi-работа начинается с чистого листа.
-- Минимум новых passes: **два** в Phase 1, **один-два** в Phase 2.
-- Минимум нового в dialect: attributes (Phase 1) + statement-ops с регионами (Phase 2).
-- **Никакого Phase 3+ задела**: representations фиксирована как пара `(chisel, verilog)`, status не эмитится, temporal/provenance не трогаем.
-- Emitter — один файл `EmitUHDI.cpp` с флагом `--emit-uhdi`.
-- Converters (`uhdi-to-hgldd`, `uhdi-to-hgdb`) — Python-скрипты, decoupled от CIRCT build.
+- Base branch — `fk-sc/debug-info` (Chisel intrinsics + `dbg` dialect extension). We branch off from it; uhdi work starts with a clean slate.
+- Minimum new passes: **two** in Phase 1, **one or two** in Phase 2.
+- Minimum new dialect additions: attributes (Phase 1) + statement-ops with regions (Phase 2).
+- **No Phase 3+ scaffolding**: representations are fixed as the pair `(chisel, verilog)`, status is not emitted, temporal/provenance is untouched.
+- Emitter — one file `EmitUHDI.cpp` with the `--emit-uhdi` flag.
+- Converters (`uhdi-to-hgldd`, `uhdi-to-hgdb`) — Python scripts, decoupled from the CIRCT build.
 
 ---
 
-## 1. Pre-implementation: sanity-checks и baseline
+## 1. Pre-implementation: sanity-checks and baseline
 
-A1–A4 уже пройдены. До начала реализации закрываем четыре дополнительные проверки.
+A1–A4 are already done. Before starting implementation, we close four additional checks.
 
-### 1.1 Check A13 — discardable attrs переживают pipeline
+### 1.1 Check A13 — discardable attrs survive the pipeline
 
-Критично для обоих pass'ов Phase 1. MLIR обычно сохраняет discardable attrs, но отдельные CIRCT passes иногда стирают их вручную.
+Critical for both Phase 1 passes. MLIR normally preserves discardable attrs, but some CIRCT passes occasionally erase them manually.
 
-Тест:
+Test:
 
-- Проставить `uhdi.test_attr = "hello"` на `dbg.variable` на FIRRTL-уровне (вручную в MLIR-fixture).
-- Прогнать full pipeline до HW-dialect: `firtool --ir-hw test.fir`.
-- Grep по output: attr должен сохраниться на соответствующем `dbg.variable`.
+- Set `uhdi.test_attr = "hello"` on `dbg.variable` at the FIRRTL level (manually in an MLIR fixture).
+- Run the full pipeline to HW-dialect: `firtool --ir-hw test.fir`.
+- Grep the output: the attr must be preserved on the corresponding `dbg.variable`.
 
-**Plan B, если теряются:** зарегистрировать `uhdi.stable_id` и `uhdi.repr_entry` как **named attributes** в `DebugOps.td` — 5–10 строк tablegen, добавляющих поля в `dbg.variable` / `dbg.scope` / `dbg.struct` / `dbg.array`. MLIR гарантирует survival зарегистрированных attrs через все стандартные passes, потому что op description их явно декларирует. FusedLoc как fallback **не использовать**: location-merging passes переписывают агрессивнее, чем op-level attrs.
+**Plan B if they are lost:** register `uhdi.stable_id` and `uhdi.repr_entry` as **named attributes** in `DebugOps.td` — 5–10 lines of tablegen adding fields to `dbg.variable` / `dbg.scope` / `dbg.struct` / `dbg.array`. MLIR guarantees survival of registered attrs through all standard passes because the op description explicitly declares them. FusedLoc as a fallback **must not be used**: location-merging passes rewrite more aggressively than op-level attrs.
 
-### 1.2 Check A14 — dbg dialect расширяемость region-ops
+### 1.2 Check A14 — dbg dialect extensibility for region-ops
 
-Для Phase 2 нужны `dbg.scope_body` и `dbg.block` с регионами. В текущем `dbg` dialect (ветка `fk-sc/uhdi`) — только leaf ops.
+Phase 2 requires `dbg.scope_body` and `dbg.block` with regions. In the current `dbg` dialect (branch `fk-sc/uhdi`) — only leaf ops.
 
-Шаги:
+Steps:
 
-- Прочитать `include/circt/Dialect/Debug/DebugOps.td` в своей ветке.
-- Определить, есть ли уже region-ops или нужно добавлять.
+- Read `include/circt/Dialect/Debug/DebugOps.td` in your branch.
+- Determine whether region-ops already exist or need to be added.
 
-Варианты реализации:
+Implementation options:
 
-- **Предпочтительно:** добавить region-ops в `dbg` dialect напрямую в своём форке. Контроль над диалектом у тебя, конфликтов с upstream нет (это отдельная ветка).
-- **Fallback, если хочется меньше diff'а к dbg:** создать отдельный `uhdi_body` dialect с нужными region-ops. Больше кода, меньше взаимодействия с существующими `dbg` ops.
+- **Preferred:** add region-ops to the `dbg` dialect directly in your fork. You control the dialect, there are no upstream conflicts (this is a separate branch).
+- **Fallback if less diff to dbg is desired:** create a separate `uhdi_body` dialect with the needed region-ops. More code, less interaction with existing `dbg` ops.
 
-### 1.3 Check A15 — Tywaves на HGLDD baseline
+### 1.3 Check A15 — Tywaves on HGLDD baseline
 
-Baseline для валидации M1. Нужно убедиться, что Tywaves вообще запускается и корректно парсит HGLDD на наших демо-дизайнах — это reference-точка, с которой будет сравниваться `uhdi-to-hgldd` output.
+Baseline for M1 validation. We need to confirm that Tywaves starts at all and correctly parses HGLDD on our demo designs — this is the reference point against which `uhdi-to-hgldd` output will be compared.
 
-Шаги:
+Steps:
 
-- Взять демо-дизайн (GCD), собрать через rameloni-chisel + rameloni-circt: `firtool -g --emit-hgldd --hgldd-source-prefix=...`.
-- Открыть полученный HGLDD в Tywaves.
-- Убедиться, что сигналы, bundles и иерархия показываются.
+- Take a demo design (GCD), build it via rameloni-chisel + rameloni-circt: `firtool -g --emit-hgldd --hgldd-source-prefix=...`.
+- Open the resulting HGLDD in Tywaves.
+- Confirm that signals, bundles, and hierarchy are displayed.
 
-**Известная ловушка:** без явного `--hgldd-source-prefix` emitter выдаёт `"file_info": [".."]` с мусорным file-index — Tywaves не загрузит. Всегда передавать prefix.
+**Known pitfall:** without an explicit `--hgldd-source-prefix` the emitter produces `"file_info": [".."]` with a garbage file-index — Tywaves will not load. Always pass the prefix.
 
-**Plan B, если не открывается после prefix:** исследовать конкретную причину (Tywaves ждёт specific schema version / specific fields). Это blocker-proxy для M1 — Phase 1 стартовать нельзя, потому что валидация M1 через Tywaves GUI не пройдёт.
+**Plan B if it does not open after prefix:** investigate the specific cause (Tywaves expects a specific schema version / specific fields). This is a blocker-proxy for M1 — Phase 1 cannot start because M1 validation through the Tywaves GUI will not pass.
 
-### 1.4 Check A16 — Chisel withDebug конец цепочки
+### 1.4 Check A16 — Chisel withDebug end of chain
 
-Chisel fork `fk-sc/debug-info` эмитит `circt_debug_*` intrinsics только при включённом `withDebug`. Без этого флага emitter получит голый `MaterializeDebugInfo` output без source-language info → Tywaves покажет flat сигналы, Phase 1 визуально деградирует.
+The Chisel fork `fk-sc/debug-info` emits `circt_debug_*` intrinsics only when `withDebug` is enabled. Without this flag the emitter receives bare `MaterializeDebugInfo` output with no source-language info → Tywaves will show flat signals, Phase 1 visually degrades.
 
-Тест:
+Test:
 
-- Взять демо-дизайн (GCD).
-- Собрать его через ChiselStage с явно включённым withDebug.
-- Убедиться, что промежуточный FIRRTL содержит `circt_debug_var` intrinsics.
-- Прогнать через firtool и убедиться, что UHDI JSON содержит `source_lang_type_info`.
+- Take a demo design (GCD).
+- Build it via ChiselStage with `withDebug` explicitly enabled.
+- Confirm that the intermediate FIRRTL contains `circt_debug_var` intrinsics.
+- Run through firtool and confirm that the UHDI JSON contains `source_lang_type_info`.
 
-Если `withDebug` забыт — defect проявится на валидации M1 и заставит пересобирать весь demo-набор.
+If `withDebug` is forgotten — the defect will surface at M1 validation and force rebuilding the entire demo set.
 
 ---
 
 ## 2. Phase 1: pool-based uhdi + Tywaves
 
-### 2.1 Архитектурный принцип
+### 2.1 Architectural principle
 
-Emitter — **passive reader**. Отладочная информация не трекается, только читается из существующих свойств CIRCT:
+The emitter is a **passive reader**. Debug information is not tracked, only read from existing CIRCT properties:
 
-- `dbg.*` ops живут через весь pipeline (A13 — подтверждается в §1.1).
-- Inlining создаёт explicit `dbg.scope` (A1 ✅).
-- LowerTypes сохраняет `dbg.struct`/`dbg.array` (A2 ✅).
-- DCE не удаляет значения с dbg-uses (A3 ✅).
+- `dbg.*` ops live through the entire pipeline (A13 — confirmed in §1.1).
+- Inlining creates explicit `dbg.scope` (A1 ✅).
+- LowerTypes preserves `dbg.struct`/`dbg.array` (A2 ✅).
+- DCE does not remove values with dbg-uses (A3 ✅).
 
-Последовательность:
+Sequence:
 
-1. Проставить stable IDs на dbg-ops (init pass, §2.2).
-2. Snapshot'нуть финальные Verilog-имена (snapshot pass, §2.3, параллельный ExportVerilog).
-3. Сериализовать в pool-based JSON (emitter, §2.4).
-4. Конвертировать в HGLDD (Python-скрипт, §2.5).
-5. Валидировать end-to-end через Tywaves (§2.6).
+1. Assign stable IDs to dbg-ops (init pass, §2.2).
+2. Snapshot final Verilog names (snapshot pass, §2.3, parallel to ExportVerilog).
+3. Serialize to pool-based JSON (emitter, §2.4).
+4. Convert to HGLDD (Python script, §2.5).
+5. Validate end-to-end through Tywaves (§2.6).
 
 ### 2.2 Pass `firrtl-uhdi-init`
 
-**Положение:** после `MaterializeDebugInfo` / `LowerIntrinsics`. dbg ops материализуются этими пассами — раньше нечего аннотировать.
+**Position:** after `MaterializeDebugInfo` / `LowerIntrinsics`. dbg ops are materialized by these passes — there is nothing to annotate earlier.
 
-**Действие:** walk всех `dbg.variable` / `dbg.scope` / `dbg.struct` / `dbg.array`. Для каждого:
+**Action:** walk all `dbg.variable` / `dbg.scope` / `dbg.struct` / `dbg.array`. For each:
 
-- Вычислить `stable_id = <kind>_<hash_prefix>_<counter>`:
+- Compute `stable_id = <kind>_<hash_prefix>_<counter>`:
   - `hash_prefix` = blake2b(name + type + scope-path), 8 hex chars.
-  - `counter` разрешает коллизии внутри одного hash-prefix.
-  - Стабильно между прогонами (нужно для diff-валидации в §2.6).
-- Проставить attribute `uhdi.stable_id`.
-- Заполнить attribute `uhdi.repr_entry` для ключа `"chisel"`: name + source loc из SourceInfo.
+  - `counter` resolves collisions within the same hash-prefix.
+  - Stable across runs (required for diff-validation in §2.6).
+- Set attribute `uhdi.stable_id`.
+- Populate attribute `uhdi.repr_entry` for the `"chisel"` key: name + source loc from SourceInfo.
 
-**Тесты:** `.mlir` FileCheck с 2–3 input-IR fixtures (leaf module; module с inlined scope; module с lowered bundle).
+**Tests:** `.mlir` FileCheck with 2–3 input-IR fixtures (leaf module; module with inlined scope; module with lowered bundle).
 
-**Объём:** ~50–100 LOC C++.
+**Size:** ~50–100 LOC C++.
 
 ### 2.3 Pass `hw-uhdi-verilog-snapshot`
 
-**Положение:** параллельно ExportVerilog, не после. Работает на том же HW-dialect IR, с которого ExportVerilog эмитит Verilog.
+**Position:** parallel to ExportVerilog, not after. Operates on the same HW-dialect IR from which ExportVerilog emits Verilog.
 
-**Источник имён:** `NameLoc "emitted"` и FusedLoc `"verilogLocations"`, которые `PrettifyVerilogNames` проставляет на HW ops перед ExportVerilog. Образец интеграции — `EmitHGLDDPass` в CIRCT, см. `tools/firtool/firtool.cpp` (wiring для HGLDD).
+**Name source:** `NameLoc "emitted"` and FusedLoc `"verilogLocations"` that `PrettifyVerilogNames` sets on HW ops before ExportVerilog. Integration reference — `EmitHGLDDPass` in CIRCT, see `tools/firtool/firtool.cpp` (wiring for HGLDD).
 
-**Действие:** для каждой dbg-op с `uhdi.stable_id` найти соответствующий HW-op по tracking chain, извлечь Verilog-name и source location из NameLoc/FusedLoc. Заполнить `uhdi.repr_entry` для ключа `"verilog"`.
+**Action:** for each dbg-op with `uhdi.stable_id`, find the corresponding HW-op via the tracking chain, extract Verilog-name and source location from NameLoc/FusedLoc. Populate `uhdi.repr_entry` for the `"verilog"` key.
 
-**Если dbg-op не привязан напрямую к HW-op** (например, чистый `dbg.struct` над lowered scalars): рекурсивно пройти по operands в поисках валидного HW-ref.
+**If a dbg-op is not directly bound to an HW-op** (e.g., a pure `dbg.struct` over lowered scalars): recursively traverse operands to find a valid HW-ref.
 
-**Тесты:** `.mlir` FileCheck по образцу EmitHGLDD тестов.
+**Tests:** `.mlir` FileCheck following the EmitHGLDD tests as a model.
 
-**Объём:** ~300–500 LOC C++.
+**Size:** ~300–500 LOC C++.
 
 ### 2.4 Emitter `export-uhdi` (pool-based)
 
-Новый файл `lib/Target/DebugInfo/EmitUHDI.cpp`, флаг `--emit-uhdi`. Wiring в `tools/firtool/firtool.cpp` по образцу существующего `EmitHGLDDPass`.
+New file `lib/Target/DebugInfo/EmitUHDI.cpp`, flag `--emit-uhdi`. Wiring in `tools/firtool/firtool.cpp` following the existing `EmitHGLDDPass` as a model.
 
 ```cpp
 struct UhdiEmitter {
@@ -172,101 +172,101 @@ struct UhdiEmitter {
 };
 ```
 
-**Этапы:**
+**Stages:**
 
-1. Фиксированный `representations` manifest: две записи `chisel` + `verilog`.
+1. Fixed `representations` manifest: two entries `chisel` + `verilog`.
 2. Walk `dbg.scope` → `scopePool`:
-   - без `scope` operand + `hw.module` → `"module"`
-   - без `scope` operand + `hw.module.extern` → `"extmodule"`
-   - со `scope` operand → `"inline"`
+   - no `scope` operand + `hw.module` → `"module"`
+   - no `scope` operand + `hw.module.extern` → `"extmodule"`
+   - with `scope` operand → `"inline"`
 3. Walk `dbg.variable` / `dbg.struct` / `dbg.array` → `varPool` + `typePool`.
 4. Dedup:
-   - Типы по structural equality.
-   - Expressions по `(opcode, operands)` tuple.
-5. Сериализация через `llvm::json::OStream`.
+   - Types by structural equality.
+   - Expressions by `(opcode, operands)` tuple.
+5. Serialization via `llvm::json::OStream`.
 
-**Правила упрощений:**
+**Simplification rules:**
 
-- `status` не эмитится вообще (implicit preserved per spec §6.3).
-- Expressions inline если uses_count == 1, named если ≥2.
-- Chunking **не** реализуем — средний SoC не требует.
-- CBOR **не** реализуем — JSON достаточно.
-- Bundle в consolidated form (одна variable с struct-type, per §6.7) — оптимально для Tywaves.
+- `status` is not emitted at all (implicit preserved per spec §6.3).
+- Expressions are inlined if uses_count == 1, named if ≥2.
+- Chunking is **not** implemented — a medium SoC does not require it.
+- CBOR is **not** implemented — JSON is sufficient.
+- Bundle in consolidated form (one variable with struct-type, per §6.7) — optimal for Tywaves.
 
-**Тесты:** integration — прогнать на 4 эталонных дизайна (см. §2.6), валидировать output по spec schema через `jsonschema`.
+**Tests:** integration — run on 4 reference designs (see §2.6), validate output against the spec schema via `jsonschema`.
 
-**Объём:** ~1000–1500 LOC C++. Основная работа Phase 1.
+**Size:** ~1000–1500 LOC C++. The main work of Phase 1.
 
 ### 2.5 CLI tool `uhdi-to-hgldd` (Python)
 
-Straightforward field mapping согласно spec §15.3.
+Straightforward field mapping per spec §15.3.
 
-Задачи:
+Tasks:
 
-- Загрузить uhdi JSON, валидировать по schema (`jsonschema` library).
-- Пройтись по variables, сгенерировать HGLDD объекты.
-- Dedup struct-типов (HGLDD ожидает deduplicated structs).
-- Packed/unpacked range conversion для vectors.
+- Load uhdi JSON, validate against schema (`jsonschema` library).
+- Walk variables, generate HGLDD objects.
+- Dedup struct types (HGLDD expects deduplicated structs).
+- Packed/unpacked range conversion for vectors.
 
-**Объём:** ~600–900 LOC Python.
+**Size:** ~600–900 LOC Python.
 
-### 2.6 Валидация Phase 1 (M1)
+### 2.6 Phase 1 validation (M1)
 
-Набор тестовых дизайнов:
+Test design set:
 
-| Дизайн | Контролирует |
+| Design | Controls |
 |---|---|
-| GCD | Базовая функциональность, регистры, простые when'ы |
-| FIFO (~20 signals) | Memory, Vec, небольшой control flow |
-| SingleCycleCPU (учебный RISC-V) | Hierarchy, bundles, параметризация |
-| SoC с 2–3 модулями + InlineInstance | `kind: "inline"` в uhdi scope tree |
+| GCD | Basic functionality, registers, simple whens |
+| FIFO (~20 signals) | Memory, Vec, small control flow |
+| SingleCycleCPU (educational RISC-V) | Hierarchy, bundles, parameterization |
+| SoC with 2–3 modules + InlineInstance | `kind: "inline"` in uhdi scope tree |
 
-**Метрика:** Tywaves на **нашем** `uhdi-to-hgldd` output показывает то же hierarchy/typed/values tree, что на **native** HGLDD.
+**Metric:** Tywaves on **our** `uhdi-to-hgldd` output shows the same hierarchy/typed/values tree as on **native** HGLDD.
 
-**Реализация:**
+**Implementation:**
 
-1. Визуальный diff в Tywaves GUI — 4 дизайна, быстрый sanity.
-2. Python-скрипт canonical JSON diff: нормализация обоих HGLDD (sort keys, stable ID-аннотация, whitespace) и structural diff.
-3. Дополнительная метрика для evaluation: pool-based compression — подсчёт `(inline expressions / total)`, struct dedup rate, размер файла vs naive-inline baseline. На SingleCycleCPU ожидаемо 20–40% сокращение. Даёт численный результат для главы 5.
+1. Visual diff in the Tywaves GUI — 4 designs, quick sanity.
+2. Python script canonical JSON diff: normalize both HGLDDs (sort keys, stable ID annotation, whitespace) and structural diff.
+3. Additional metric for evaluation: pool-based compression — count `(inline expressions / total)`, struct dedup rate, file size vs. naive-inline baseline. On SingleCycleCPU, 20–40% reduction is expected. Provides a numerical result for chapter 5.
 
-**M1 closed:** все 4 дизайна показываются в Tywaves идентично native HGLDD (diff по canonicalized JSON пустой или расхождения объяснены).
+**M1 closed:** all 4 designs display in Tywaves identically to native HGLDD (diff on canonicalized JSON is empty or discrepancies are explained).
 
 ---
 
 ## 3. Phase 2: uhdi + hgdb
 
-### 3.1 Что добавляется
+### 3.1 What is added
 
-- Capture-when pass для control flow и AND-reduced enable conditions.
-- scope body — statement tree внутри scope, переживает ExpandWhens.
-- Breakpoint metadata (только `enableRef`).
+- Capture-when pass for control flow and AND-reduced enable conditions.
+- scope body — statement tree inside the scope, surviving ExpandWhens.
+- Breakpoint metadata (`enableRef` only).
 - Python CLI tool `uhdi-to-hgdb`.
 
-### 3.2 Новые элементы dialect
+### 3.2 New dialect elements
 
-**Ops** (внутри dbg scope body region):
+**Ops** (inside dbg scope body region):
 
-- `dbg.scope_body` — region-containing op, одна на `dbg.scope`.
-- `dbg.block` — region-op с `guardRef` attribute для when-nesting.
+- `dbg.scope_body` — region-containing op, one per `dbg.scope`.
+- `dbg.block` — region-op with `guardRef` attribute for when-nesting.
 - `dbg.connect_stmt`, `dbg.decl_stmt` — statement-ops.
-- `dbg.assert_stmt`, `dbg.assume_stmt`, `dbg.cover_stmt` — если в дизайне есть verification.
-- `dbg.expression` — AST-узел с opcode и operands.
+- `dbg.assert_stmt`, `dbg.assume_stmt`, `dbg.cover_stmt` — if the design contains verification.
+- `dbg.expression` — AST node with opcode and operands.
 
 **Attribute:**
 
-- `#dbg.bp` — только поле `enableRef`. Остальные (watchpoint, throttle, category, message) не эмитим.
+- `#dbg.bp` — only the `enableRef` field. The rest (watchpoint, throttle, category, message) are not emitted.
 
-Расширение делается в своей ветке. Форма — по результату §1.2: либо в `dbg` напрямую, либо в отдельном `uhdi_body` dialect.
+The extension is made in your own branch. The form — per the result of §1.2: either directly in `dbg`, or in a separate `uhdi_body` dialect.
 
 ### 3.3 Pass `firrtl-uhdi-capture-when`
 
-**Положение:** между Inliner и ExpandWhens. Inliner проходит до нас (корректно обрабатывает `dbg.scope`), ExpandWhens после (разрушает `firrtl.when`, но наш `dbg.scope_body` автономен).
+**Position:** between Inliner and ExpandWhens. Inliner runs before us (correctly handles `dbg.scope`), ExpandWhens runs after (destroys `firrtl.when`, but our `dbg.scope_body` is autonomous).
 
-**Алгоритм (псевдокод):**
+**Algorithm (pseudocode):**
 
 ```
 walkRegion(region, condStack, intoRegion):
-  для каждой op в region:
+  for each op in region:
     match op:
       firrtl.when:
         guard = buildDbgExpr(op.condition)
@@ -286,80 +286,80 @@ walkRegion(region, condStack, intoRegion):
       ... (assert/assume/cover, declarations)
 ```
 
-**Три критические тонкости:**
+**Three critical subtleties:**
 
-1. **`dbg.expression` ссылается на `dbg.variable`, не на raw FIRRTL SSA.** ExpandWhens потом будет всё менять в FIRRTL. Если condition — `firrtl.and %a, %b`, сначала ищем `dbg.variable` на `%a` и `%b`; если нет — создаём синтетический через stable_id.
+1. **`dbg.expression` references `dbg.variable`, not raw FIRRTL SSA.** ExpandWhens will later change everything in FIRRTL. If the condition is `firrtl.and %a, %b`, first look for `dbg.variable` on `%a` and `%b`; if none — create a synthetic one via stable_id.
 
-2. **Memoization AND-reduction.** Content-addressable cache по отсортированному вектору operand-stable_ids. В минимуме можно начать **без** memoization. На среднем SoC приемлемо (~10K expr ops). Добавлять при реальной необходимости.
+2. **Memoization of AND-reduction.** Content-addressable cache by sorted vector of operand stable_ids. At a minimum, you can start **without** memoization. On a medium SoC this is acceptable (~10K expr ops). Add it when actually needed.
 
-3. **Автономность от ExpandWhens.** `dbg.scope_body` не должен иметь SSA-зависимостей от `firrtl.when`. ExpandWhens разрушает when-structure — наш region переживает.
+3. **Autonomy from ExpandWhens.** `dbg.scope_body` must not have SSA dependencies on `firrtl.when`. ExpandWhens destroys the when-structure — our region survives.
 
-**Тесты:** `.mlir` FileCheck — flat when, when/else, nested when-в-when, when с connect к агрегату.
+**Tests:** `.mlir` FileCheck — flat when, when/else, nested when-in-when, when with connect to an aggregate.
 
-**Объём:** ~500–900 LOC C++.
+**Size:** ~500–900 LOC C++.
 
-**Plan B, если pass буксует:**
+**Plan B if the pass stalls:**
 
-- Уровень A: не поддерживать elsewhen chains — только when/else. Покрывает 90% паттернов.
-- Уровень B: не делать memoization. Принять раздутый IR.
-- Уровень C: наивный AND-reduce с inline AST в `bp` attribute, без exprPool. Эмитит повторы, работает.
-- Уровень D: вход в Emergency §6.
+- Level A: do not support elsewhen chains — only when/else. Covers 90% of patterns.
+- Level B: do not implement memoization. Accept bloated IR.
+- Level C: naive AND-reduce with inline AST in `bp` attribute, no exprPool. Emits duplicates, works.
+- Level D: enter Emergency §6.
 
 ### 3.4 Emitter extension
 
-Добавляется в `EmitUHDI.cpp`:
+Added to `EmitUHDI.cpp`:
 
-- Walk `dbg.scope_body` region → uhdi `body` array. **Критично: pre-order, порядок значим** (FIRRTL last-connect semantics).
-- Сериализация `#dbg.bp` → uhdi `bp` field (только `enableRef`).
-- Обработка verification statements, если присутствуют.
+- Walk `dbg.scope_body` region → uhdi `body` array. **Critical: pre-order, order is significant** (FIRRTL last-connect semantics).
+- Serialization of `#dbg.bp` → uhdi `bp` field (`enableRef` only).
+- Handling of verification statements, if present.
 
-**Объём:** ~200–400 LOC поверх существующего emitter'а.
+**Size:** ~200–400 LOC on top of the existing emitter.
 
 #### 3.4.1 Post-defense workstream: long-term `enableRef` shape
 
-Текущий MVP (см. spec §9.3 MVP note) сериализует `enableRef` как `&`-joined predicate string (`var_a_id&!var_b_id`, sentinel `<complex>` для unresolvable leaves). Это transitional форма: schema-typed `ExprOrVarRef` принимает её как string без pattern, конвертер `uhdi-to-hgdb` парсит её inline в §15.4.3 AND-reduction.
+The current MVP (see spec §9.3 MVP note) serializes `enableRef` as an `&`-joined predicate string (`var_a_id&!var_b_id`, sentinel `<complex>` for unresolvable leaves). This is a transitional form: the schema-typed `ExprOrVarRef` accepts it as a string without a pattern, and the `uhdi-to-hgdb` converter parses it inline in §15.4.3 AND-reduction.
 
-Long-term target: эмиттер собирает AND-reduced predicate как `expressions`-pool entry (один `Conjunction` opcode с массивом operand'ов) и пишет `enableRef` как single id, разрешаемый в expressions pool. Шаги, когда придёт время:
+Long-term target: the emitter assembles the AND-reduced predicate as an `expressions`-pool entry (one `Conjunction` opcode with an array of operands) and writes `enableRef` as a single id resolved in the expressions pool. Steps when the time comes:
 
-1. В `firrtl-uhdi-capture-when` хук: вместо string-concatenation предикатов, материализовать AND-reduced дерево как набор `expressions` объектов с `opcode: "&&"` (или `Conjunction` source-level opcode); leaf'ы по-прежнему могут быть `varRef` для single-signal sample case.
-2. В `EmitUHDI.cpp` `serializeEnable`: писать `enableRef: "<expr_id>"` вместо joined-string.
-3. В `uhdi_to_hgdb/convert.py`: дропнуть branch который парсит `&`-joined string; читать через стандартный expression walk (`§15.4.2` SV pretty-printer уже умеет обрабатывать `&&` opcode → `(a) && (b)`).
-4. Удалить sentinel `<complex>` exception из §13 linter (spec уже описывает удаление как cleanup при retiring MVP).
-5. Удалить упоминание joined-формы из §9.3 MVP note + §7.4 ExprOrVarRef description + 0.9.2 changelog (или оставить historical note).
+1. In `firrtl-uhdi-capture-when` hook: instead of string-concatenating predicates, materialize the AND-reduced tree as a set of `expressions` objects with `opcode: "&&"` (or `Conjunction` source-level opcode); leaves can still be `varRef` for the single-signal sample case.
+2. In `EmitUHDI.cpp` `serializeEnable`: write `enableRef: "<expr_id>"` instead of the joined-string.
+3. In `uhdi_to_hgdb/convert.py`: drop the branch that parses the `&`-joined string; read via the standard expression walk (`§15.4.2` SV pretty-printer already handles `&&` opcode → `(a) && (b)`).
+4. Remove the sentinel `<complex>` exception from the §13 linter (the spec already describes removal as cleanup when retiring the MVP).
+5. Remove mention of the joined form from §9.3 MVP note + §7.4 ExprOrVarRef description + 0.9.2 changelog (or leave a historical note).
 
-Out of scope для защиты: requires C++ MLIR работу в `circt:fk-sc/uhdi-pool` (~½ дня C++ + ½ дня converter sync + regenerate fixtures). Решение отложено намеренно — schema принимает оба варианта одновременно, текущий emitter и projector корректны, перепиcка не блокирует ни M1 ни M2.
+Out of scope for the defense: requires C++ MLIR work in `circt:fk-sc/uhdi-pool` (~½ day C++ + ½ day converter sync + regenerate fixtures). Deliberately deferred — the schema accepts both variants simultaneously, the current emitter and projector are correct, rewriting does not block M1 or M2.
 
 ### 3.5 CLI tool `uhdi-to-hgdb` (Python)
 
-Python, как и `uhdi-to-hgldd`. Converters decoupled от CIRCT, единый шаблон tooling.
+Python, like `uhdi-to-hgldd`. Converters are decoupled from CIRCT, uniform tooling pattern.
 
-Три компонента в порядке сложности.
+Three components in order of complexity.
 
 #### (A) SQLite schema population
 
-| hgdb table | Источник из uhdi |
+| hgdb table | Source from uhdi |
 |---|---|
-| Instance | Рекурсивный walk `scopes[*].instantiates[]`, fresh id per instance |
-| Variable | variables pool, только те, у кого есть verilog-repr entry |
-| Generator Variable | по одной row на (variable, instance) — мапит authoring-language имя в bound HDL-сигнал (см. spec §15.4.1); это name-index hgdb, не literal-pool. |
-| Scope Variable | variables с `ownerScopeRef == текущий scope` |
-| Breakpoint | по одной row на `dbg.connect_stmt` на каждую instance host-scope'а |
+| Instance | Recursive walk `scopes[*].instantiates[]`, fresh id per instance |
+| Variable | variables pool, only those with a verilog-repr entry |
+| Generator Variable | one row per (variable, instance) — maps the authoring-language name to the bound HDL signal (see spec §15.4.1); this is hgdb's name-index, not a literal-pool. |
+| Scope Variable | variables with `ownerScopeRef == current scope` |
+| Breakpoint | one row per `dbg.connect_stmt` per instance of the host scope |
 
-Замораживаем конкретную версию hgdb (commit hash) — не гоняемся за moving target.
+We freeze a specific hgdb version (commit hash) — we do not chase a moving target.
 
 #### (B) Instance-path prefixing
 
-Каждый `enable` string должен использовать имена в контексте конкретного instance'а (`top.cpu.alu.io_en` вместо `io_en`). При сериализации expression переименовываем через instance path.
+Each `enable` string must use names in the context of the specific instance (`top.cpu.alu.io_en` instead of `io_en`). When serializing an expression, rename via the instance path.
 
 #### (C) SV-string serializer
 
-Главная сложность Phase 2. Требования:
+The main complexity of Phase 2. Requirements:
 
-- Precedence-aware printing по SV LRM.
-- Правильные скобки (минимум, не лишние).
-- Спец-синтаксис: унарные ops, `{N{x}}` replicate, `{a,b}` concat, ternary `?:`, reductions `&x` / `|x` / `^x`.
+- Precedence-aware printing per SV LRM.
+- Correct parentheses (minimal, not excessive).
+- Special syntax: unary ops, `{N{x}}` replicate, `{a,b}` concat, ternary `?:`, reductions `&x` / `|x` / `^x`.
 
-Скелет:
+Skeleton:
 
 ```python
 def print_expr(expr, parent_prec=0):
@@ -370,162 +370,162 @@ def print_expr(expr, parent_prec=0):
     return body
 ```
 
-Юнит-тесты: 50+ expression-конструкций, каждая roundtrip через Verilator `--lint-only`.
+Unit tests: 50+ expression constructs, each roundtrip through Verilator `--lint-only`.
 
-**Plan B:** всегда-скобочная стратегия `((a) + ((b) * (c)))`. Ugly output, всегда корректно.
+**Plan B:** always-parenthesize strategy `((a) + ((b) * (c)))`. Ugly output, always correct.
 
-### 3.6 Валидация Phase 2 (M2)
+### 3.6 Phase 2 validation (M2)
 
-Набор дизайнов: 2–3 из Phase 1 + один специальный с nested when'ами.
+Design set: 2–3 from Phase 1 + one special design with nested whens.
 
-**Метрика:** behavioral equivalence.
+**Metric:** behavioral equivalence.
 
-- Запустить simulation с hgdb-VSCode plugin.
-- Поставить breakpoint на каждой source-line.
-- Зафиксировать trace `(cycle, breakpoint_id_triggered)`.
-- Сравнить reference (stock hgdb-Chisel-plugin) с via-uhdi traces. Должны совпадать.
+- Run simulation with the hgdb-VSCode plugin.
+- Set a breakpoint on each source line.
+- Record the trace `(cycle, breakpoint_id_triggered)`.
+- Compare reference (stock hgdb-Chisel-plugin) with via-uhdi traces. They must match.
 
-**Если stock hgdb emitter недоступен:** behavioral check — debug-сессия должна subjectively работать так, как ожидается. Документируется в главе 5 как ограничение методологии.
+**If the stock hgdb emitter is unavailable:** behavioral check — the debug session must subjectively behave as expected. Documented in chapter 5 as a methodology limitation.
 
-**M2 closed:** hgdb-VSCode сессия на 2–3 дизайнах через нашу цепочку вызывает те же breakpoints, что и reference (или ведёт себя ожидаемо, если reference недоступен).
+**M2 closed:** hgdb-VSCode session on 2–3 designs through our toolchain triggers the same breakpoints as the reference (or behaves as expected if the reference is unavailable).
 
 ---
 
-## 4. Текст диплома
+## 4. Thesis text
 
-### 4.1 Структура
+### 4.1 Structure
 
-Шесть глав. Суммарно ~60–80 страниц.
+Six chapters. Approximately 60–80 pages total.
 
-| Глава | Порядок | Объём |
+| Chapter | Order | Size |
 |---|---|---|
-| 1. Introduction (мотивация, цели) | идёт первым, опирается на §1 spec | ~5–8 стр |
-| 2. Background (Chisel, FIRRTL, CIRCT, hgdb, Tywaves) | после intro | ~10–15 стр |
-| 3. Format design (uhdi) | spec уже написан — выжимка и обоснования, пишется параллельно с началом реализации emitter'а | ~15–20 стр |
-| 4. Implementation (CIRCT passes, emitter, converters) | после того как passes и emitter существуют | ~10–15 стр |
-| 5. Evaluation (Tywaves + hgdb demo + ограничения) | draft после M1, финал после M2 | ~8–12 стр |
-| 6. Conclusion, future work (Phase 3+ как outlook) | финальный | ~3–5 стр |
+| 1. Introduction (motivation, goals) | first, based on §1 of the spec | ~5–8 p. |
+| 2. Background (Chisel, FIRRTL, CIRCT, hgdb, Tywaves) | after intro | ~10–15 p. |
+| 3. Format design (uhdi) | spec already written — extract and rationale, written in parallel with the start of emitter implementation | ~15–20 p. |
+| 4. Implementation (CIRCT passes, emitter, converters) | after passes and emitter exist | ~10–15 p. |
+| 5. Evaluation (Tywaves + hgdb demo + limitations) | draft after M1, final after M2 | ~8–12 p. |
+| 6. Conclusion, future work (Phase 3+ as outlook) | final | ~3–5 p. |
 
-### 4.2 Тонкости
+### 4.2 Details
 
-- Глава 3 (формат) — 70% уже написано в uhdi spec. **Не переписывай spec**, цитируй и фокусируйся на design decisions и их обоснованиях. Spec идёт как appendix.
-- Глава 4 (implementation) — описывай **только то, что реализовано**. Phase 3+ — раздел future work.
-- Глава 5 (evaluation) — screenshots Tywaves и hgdb-VSCode, сравнение traces, обсуждение ограничений. Screenshots снимаются когда код стабилен; пересъёмка после code-freeze не предполагается.
-- Rejected alternatives (spec Appendix B) — материал для обоснования design decisions в главе 3.
+- Chapter 3 (format) — 70% already written in the uhdi spec. **Do not rewrite the spec**, cite it and focus on design decisions and their rationale. The spec goes as an appendix.
+- Chapter 4 (implementation) — describe **only what has been implemented**. Phase 3+ goes in future work.
+- Chapter 5 (evaluation) — Tywaves and hgdb-VSCode screenshots, trace comparison, discussion of limitations. Screenshots are taken when the code is stable; reshooting after code-freeze is not expected.
+- Rejected alternatives (spec Appendix B) — material for justifying design decisions in chapter 3.
 
-### 4.3 Защитная speaker note
+### 4.3 Defense speaker note
 
-Одна страница с ключевыми тезисами:
+One page with key talking points:
 
-- **Проблема:** фрагментация отладочных форматов (hgdb, HGLDD, PDG). Ни один не покрывает все use cases, lossy conversion между ними.
-- **Решение:** layered unified format, consumer выбирает нужные layers.
-- **Демонстрация:** один emitter из CIRCT, две независимые Python-проекции работают на одном документе.
-- **Вклад:** формат (spec), два CIRCT-passes, один pool-based emitter, две projection tools.
-- **Ограничения:** Phase 3+ (temporal, provenance) — future work.
+- **Problem:** fragmentation of debug formats (hgdb, HGLDD, PDG). None covers all use cases; lossy conversion between them.
+- **Solution:** layered unified format, consumer selects the needed layers.
+- **Demonstration:** one emitter from CIRCT, two independent Python projections work on the same document.
+- **Contribution:** format (spec), two CIRCT passes, one pool-based emitter, two projection tools.
+- **Limitations:** Phase 3+ (temporal, provenance) — future work.
 
 ---
 
-## 5. Сводка предположений
+## 5. Assumptions summary
 
-Уровни: **[C]** критическое — срыв = перекройка плана; **[I]** важное — срыв = лишняя работа; **[L]** слабое — локальный workaround.
+Levels: **[C]** critical — failure = plan overhaul; **[I]** important — failure = extra work; **[L]** weak — local workaround.
 
-| # | Предположение | Уровень | Статус |
+| # | Assumption | Level | Status |
 |---|---|---|---|
-| A1 | InlineInstances создаёт explicit `dbg.scope` при inlining | C | ✅ подтверждено |
-| A2 | LowerTypes сохраняет `dbg.struct`/`dbg.array` | C | ✅ подтверждено |
-| A3 | `dbg.variable` структурно блокирует DCE | C | ✅ подтверждено |
-| A4 | `dbg.variable` допускает discardable attrs | I → L | ✅ подтверждено |
-| A5 | Stable IDs стабильны между compilation runs | I | Решается через hash+counter |
-| A6 | `capture-when` не конфликтует с Inliner и другими passes до ExpandWhens | I | Проверяется перед Phase 2 |
-| A7 | uhdi-attributes на dbg ops переживают passes | I | Проверяется в §1.1 (см. A13) |
-| A8 | FIRRTL SourceInfo сохраняется через pipeline | I | Проверяется в §1 |
-| A13 | Discardable attrs (`uhdi.*`) переживают full pipeline | I | Pre-sanity (§1.1) |
-| A14 | dbg dialect допускает добавление region-ops | I | Контроль над dialect в своём форке есть; форма — §1.2 |
-| A15 | Tywaves корректно парсит существующий EmitUHDI output | L | Pre-sanity (§1.3) |
-| A16 | Chisel `withDebug` корректно триггерит `circt_debug_*` intrinsics | I | Pre-sanity (§1.4) |
+| A1 | InlineInstances creates explicit `dbg.scope` during inlining | C | ✅ confirmed |
+| A2 | LowerTypes preserves `dbg.struct`/`dbg.array` | C | ✅ confirmed |
+| A3 | `dbg.variable` structurally blocks DCE | C | ✅ confirmed |
+| A4 | `dbg.variable` allows discardable attrs | I → L | ✅ confirmed |
+| A5 | Stable IDs are stable across compilation runs | I | Resolved via hash+counter |
+| A6 | `capture-when` does not conflict with Inliner and other passes before ExpandWhens | I | Verified before Phase 2 |
+| A7 | uhdi-attributes on dbg ops survive passes | I | Verified in §1.1 (see A13) |
+| A8 | FIRRTL SourceInfo is preserved through the pipeline | I | Verified in §1 |
+| A13 | Discardable attrs (`uhdi.*`) survive the full pipeline | I | Pre-sanity (§1.1) |
+| A14 | dbg dialect allows adding region-ops | I | Dialect is under our control in our fork; form — §1.2 |
+| A15 | Tywaves correctly parses existing EmitUHDI output | L | Pre-sanity (§1.3) |
+| A16 | Chisel `withDebug` correctly triggers `circt_debug_*` intrinsics | I | Pre-sanity (§1.4) |
 
 ---
 
-## 6. Emergency: тактики сокращения scope
+## 6. Emergency: scope reduction tactics
 
-В порядке увеличения срезанности.
+In order of increasing cuts.
 
-### 6.1 Условия входа
+### 6.1 Entry conditions
 
-- `firrtl-uhdi-init` не работает на GCD после разумной отладки.
-- M1 не закрыт после реализации emitter + `uhdi-to-hgldd`.
-- capture-when pass буксует несколько итераций с частичным откатом к Plan B уровней A–C (§3.3).
-- Phase 2 emitter extension или SV-serializer упираются.
+- `firrtl-uhdi-init` does not work on GCD after reasonable debugging.
+- M1 is not closed after implementing the emitter + `uhdi-to-hgldd`.
+- capture-when pass stalls for several iterations with partial rollback to Plan B levels A–C (§3.3).
+- Phase 2 emitter extension or SV-serializer hit a wall.
 
-### 6.2 Уровень 1 — мягкие упрощения
+### 6.2 Level 1 — soft simplifications
 
-- Memoization в capture-when не добавлять.
+- Do not add memoization to capture-when.
 - SV-string serializer: always-parenthesize.
-- Верификационные statements (assert/assume/cover) не поддерживать — убрать из тестовых дизайнов.
-- `uhdi-to-hgldd`: убрать enum support, демо-дизайны не используют ChiselEnum.
+- Do not support verification statements (assert/assume/cover) — remove from test designs.
+- `uhdi-to-hgldd`: drop enum support, demo designs do not use ChiselEnum.
 
-### 6.3 Уровень 2 — сокращение демо
+### 6.3 Level 2 — demo reduction
 
-- Тестовый набор Phase 2 сократить до GCD + одного простого дизайна с одним when.
-- Убрать SoC-дизайн с InlineInstance. Демонстрация inline только в Phase 1.
-- Phase 2 evaluation: не полный behavioral trace comparison, а скриншоты работающей сессии.
+- Reduce the Phase 2 test set to GCD + one simple design with a single when.
+- Remove the SoC design with InlineInstance. Inline demonstration only in Phase 1.
+- Phase 2 evaluation: not a full behavioral trace comparison, but screenshots of a working session.
 
-### 6.4 Уровень 3 — защита только на Phase 1
+### 6.4 Level 3 — defense on Phase 1 only
 
-- Phase 2 code — present as work-in-progress в главе 4.
-- Глава 5 evaluation покрывает только Phase 1 (Tywaves).
-- Глава 6 future work: Phase 2 доделка, Phase 3+ temporal/provenance.
-- Тезис переформулируется: *«формат разработан и частично реализован; реализация Tywaves-projection демонстрирует практичность pool-based архитектуры; hgdb-projection — next immediate step»*.
+- Phase 2 code — present as work-in-progress in chapter 4.
+- Chapter 5 evaluation covers Phase 1 only (Tywaves).
+- Chapter 6 future work: Phase 2 completion, Phase 3+ temporal/provenance.
+- The thesis is reformulated: *"the format is designed and partially implemented; the Tywaves-projection implementation demonstrates the practicality of the pool-based architecture; the hgdb-projection is the next immediate step"*.
 
-Это не провал. uhdi spec сам по себе — сильный thesis contribution. Phase 1 demo его валидирует.
+This is not a failure. The uhdi spec by itself is a strong thesis contribution. The Phase 1 demo validates it.
 
 ---
 
-## 7. Чек-лист к защите
+## 7. Defense checklist
 
-### 7.1 Код
+### 7.1 Code
 
-- [ ] `firrtl-uhdi-init` собран в CIRCT, проходит unit-tests
-- [ ] `hw-uhdi-verilog-snapshot` собран, проходит unit-tests
-- [ ] `export-uhdi` (pool-based, `EmitUHDI.cpp`) генерирует валидный JSON по schema на GCD/FIFO/SingleCycleCPU
-- [ ] `uhdi-to-hgldd` (Python) генерирует HGLDD, открывающийся в Tywaves
-- [ ] `firrtl-uhdi-capture-when` работает на nested when-тесте *(если Phase 2 входит в защиту)*
-- [ ] `uhdi-to-hgdb` (Python) создаёт SQLite, открывающийся hgdb-VSCode plugin *(если Phase 2)*
-- [ ] Репозиторий запушен с README, build instructions, примером
+- [ ] `firrtl-uhdi-init` built in CIRCT, passes unit tests
+- [ ] `hw-uhdi-verilog-snapshot` built, passes unit tests
+- [ ] `export-uhdi` (pool-based, `EmitUHDI.cpp`) generates valid JSON per schema on GCD/FIFO/SingleCycleCPU
+- [ ] `uhdi-to-hgldd` (Python) generates HGLDD that opens in Tywaves
+- [ ] `firrtl-uhdi-capture-when` works on the nested when test *(if Phase 2 is included in the defense)*
+- [ ] `uhdi-to-hgdb` (Python) creates SQLite that the hgdb-VSCode plugin opens *(if Phase 2)*
+- [ ] Repository pushed with README, build instructions, and an example
 
-### 7.2 Текст
+### 7.2 Text
 
-- [ ] Все 6 глав дописаны, пройден хотя бы один self-read
-- [ ] uhdi spec приложен как appendix
-- [ ] Screenshots Tywaves / hgdb-VSCode в главе 5
+- [ ] All 6 chapters written, at least one self-read pass done
+- [ ] uhdi spec attached as appendix
+- [ ] Tywaves / hgdb-VSCode screenshots in chapter 5
 - [ ] Bibliography: hgdb paper, Tywaves paper, CIRCT docs, FIRRTL paper
-- [ ] PDF собран, проверен на опечатки
+- [ ] PDF built, checked for typos
 
-### 7.3 Защита
+### 7.3 Defense
 
-- [ ] Слайды (15–20 штук)
-- [ ] Видео-демо Tywaves (30–60 секунд)
-- [ ] Видео-демо hgdb-VSCode *(если Phase 2)*
+- [ ] Slides (15–20)
+- [ ] Tywaves video demo (30–60 seconds)
+- [ ] hgdb-VSCode video demo *(if Phase 2)*
 - [ ] Speaker notes (§4.3)
-- [ ] Репетиция вслух — минимум 2 раза
-- [ ] Ответы на очевидные вопросы:
-  - «Почему не расширили HGLDD, а сделали новый формат?»
-  - «Почему не provenance в текущей версии?»
-  - «Почему Python-конвертеры, а не CIRCT-native?»
-  - «Почему не сравнение с DWARF?»
+- [ ] Rehearsed aloud — at least 2 times
+- [ ] Answers to obvious questions:
+  - "Why not extend HGLDD instead of creating a new format?"
+  - "Why no provenance in the current version?"
+  - "Why Python converters, not CIRCT-native?"
+  - "Why no comparison with DWARF?"
 
 ---
 
-## 8. Первое действие
+## 8. First action
 
-1. Прогнать четыре sanity-check'а §1 (A13 / A14 / A15 / A16).
-2. Создать каркас репозитория (`src/`, `test/`, `docs/`, `scripts/`).
-3. Скомпилировать CIRCT с debug symbols (`-DCMAKE_BUILD_TYPE=RelWithDebInfo`). Без этого исследовательские эксперименты — мучение.
-4. Создать Overleaf/Word-шаблон диплома с заголовками глав и TOC-заготовкой. Структура должна стоять до первой страницы текста.
-5. После §1 запустить Phase 1 строго по порядку: §2.2 → §2.3 → §2.4 → §2.5 → §2.6.
-6. После закрытия M1 — §3 по порядку: §3.2 → §3.3 → §3.4 → §3.5 → §3.6.
+1. Run the four sanity-checks from §1 (A13 / A14 / A15 / A16).
+2. Create the repository skeleton (`src/`, `test/`, `docs/`, `scripts/`).
+3. Compile CIRCT with debug symbols (`-DCMAKE_BUILD_TYPE=RelWithDebInfo`). Without this, exploratory experiments are painful.
+4. Create an Overleaf/Word thesis template with chapter headings and a TOC outline. The structure must be in place before the first page of text.
+5. After §1, start Phase 1 strictly in order: §2.2 → §2.3 → §2.4 → §2.5 → §2.6.
+6. After M1 is closed — §3 in order: §3.2 → §3.3 → §3.4 → §3.5 → §3.6.
 
-**Главное:** не пытаться запрограммировать всё "правильно" с первого раза. Работающий конец цепочки важнее красивой архитектуры. Первая цель — получить хоть какой-нибудь pool-based JSON из CIRCT; остальное итеративно.
+**The main thing:** do not try to code everything "correctly" from the first attempt. A working end-to-end chain is more important than a beautiful architecture. The first goal is to get any pool-based JSON out of CIRCT; everything else is iterative.
 
 ---
 
@@ -535,7 +535,7 @@ def print_expr(expr, parent_prec=0):
 
 ---
 
-*— конец документа —*
+*— end of document —*
 
 ---
 

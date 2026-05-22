@@ -1,0 +1,283 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "/home/farid/thesis/practice/uhdi/bench/fixtures/TywavesTorture.scala",
+      ""
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "children": [],
+      "hdl_loc": {
+        "begin_line": 2,
+        "end_line": 2
+      },
+      "hgl_loc": {
+        "begin_column": 7,
+        "begin_line": 61,
+        "end_column": 7,
+        "end_line": 61
+      },
+      "kind": "module",
+      "module_name": "Alu",
+      "obj_name": "Alu",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 61,
+            "end_column": 7,
+            "end_line": 61
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 61,
+            "end_column": 7,
+            "end_line": 61
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 62,
+            "end_column": 14,
+            "end_line": 62
+          },
+          "type_name": "bit",
+          "value": {
+            "integer_num": 0
+          },
+          "var_name": "io"
+        }
+      ]
+    },
+    {
+      "children": [
+        {
+          "hdl_loc": {
+            "begin_column": 2,
+            "begin_line": 131,
+            "end_column": 2,
+            "end_line": 131
+          },
+          "hgl_loc": {
+            "begin_column": 19,
+            "begin_line": 90,
+            "end_column": 19,
+            "end_line": 90
+          },
+          "module_name": "Alu",
+          "name": "alu",
+          "obj_name": "Alu"
+        }
+      ],
+      "hdl_loc": {
+        "begin_line": 67,
+        "end_line": 67
+      },
+      "hgl_loc": {
+        "begin_column": 7,
+        "begin_line": 79,
+        "end_column": 7,
+        "end_line": 79
+      },
+      "kind": "module",
+      "module_name": "TywavesTorture",
+      "obj_name": "TywavesTorture",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 35,
+            "begin_line": 105,
+            "end_column": 35,
+            "end_line": 105
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "_tmp_T_4"
+          },
+          "var_name": "tmp"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 29,
+            "begin_line": 108,
+            "end_column": 29,
+            "end_line": 108
+          },
+          "packed_range": [
+            3,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "_tmp_T_5"
+          },
+          "var_name": "tmp_1"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 79,
+            "end_column": 7,
+            "end_line": 79
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 79,
+            "end_column": 7,
+            "end_line": 79
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 80,
+            "end_column": 14,
+            "end_line": 80
+          },
+          "type_name": "bit",
+          "value": {
+            "integer_num": 0
+          },
+          "var_name": "io"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 34,
+            "begin_line": 96,
+            "end_column": 34,
+            "end_line": 96
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "eq"
+          },
+          "var_name": "eq"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 36,
+            "begin_line": 97,
+            "end_column": 36,
+            "end_line": 97
+          },
+          "packed_range": [
+            5,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "opcode": "{}",
+            "operands": [
+              {
+                "sig_name": "io_packet_inner_hi"
+              },
+              {
+                "bit_vector": "00"
+              }
+            ]
+          },
+          "var_name": "shifted"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 20,
+            "begin_line": 98,
+            "end_column": 20,
+            "end_line": 98
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "opcode": "{}",
+            "operands": [
+              {
+                "sig_name": "io_packet_inner_hi"
+              },
+              {
+                "sig_name": "io_packet_inner_lo"
+              }
+            ]
+          },
+          "var_name": "packed_0"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 21,
+            "begin_line": 99,
+            "end_column": 21,
+            "end_line": 99
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "opcode": "R{}",
+            "operands": [
+              {
+                "integer_num": 2
+              },
+              {
+                "sig_name": "io_packet_inner_lo"
+              }
+            ]
+          },
+          "var_name": "filled"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 20,
+            "begin_line": 103,
+            "end_column": 20,
+            "end_line": 103
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "value": {
+            "sig_name": "acc"
+          },
+          "var_name": "acc"
+        }
+      ]
+    }
+  ]
+}
