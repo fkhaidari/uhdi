@@ -1,5 +1,6 @@
 """scala-cli wrapper: compile a Chisel fixture to FIR per pipeline.
 Cached by sha256(source + pipeline-config) under bench/.cache/scala-fir/."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -32,11 +33,13 @@ _TYWAVES = Pipeline(
 )
 
 # Shares tywaves SNAPSHOT; override via UHDI_BENCH_UHDI_CHISEL.
+# scala_version must match the published chisel-plugin cross
+# (plugin.cross[2.13.18] -- only 2.13.18 jars exist in ivy2Local).
 _UHDI = Pipeline(
     name="uhdi",
-    scala_version="2.13.14",
-    chisel_dep="org.chipsalliance::chisel:7.1.1+208-2aa674c8-SNAPSHOT",
-    plugin_dep="org.chipsalliance:::chisel-plugin:7.1.1+208-2aa674c8-SNAPSHOT",
+    scala_version="2.13.18",
+    chisel_dep="org.chipsalliance::chisel:7.1.1+210-f265718c-SNAPSHOT",
+    plugin_dep="org.chipsalliance:::chisel-plugin:7.1.1+210-f265718c-SNAPSHOT",
     repositories=("ivy2Local",),
 )
 
@@ -52,12 +55,9 @@ def pipelines() -> List[Pipeline]:
     """All registered pipelines. Override via UHDI_BENCH_<NAME>_{CHISEL,PLUGIN}."""
     out: List[Pipeline] = []
     for default in (_TYWAVES, _UHDI, _HGDB):
-        chisel_dep = os.environ.get(
-            f"UHDI_BENCH_{default.name.upper()}_CHISEL", default.chisel_dep)
-        plugin_dep = os.environ.get(
-            f"UHDI_BENCH_{default.name.upper()}_PLUGIN", default.plugin_dep)
-        out.append(dataclasses.replace(
-            default, chisel_dep=chisel_dep, plugin_dep=plugin_dep))
+        chisel_dep = os.environ.get(f"UHDI_BENCH_{default.name.upper()}_CHISEL", default.chisel_dep)
+        plugin_dep = os.environ.get(f"UHDI_BENCH_{default.name.upper()}_PLUGIN", default.plugin_dep)
+        out.append(dataclasses.replace(default, chisel_dep=chisel_dep, plugin_dep=plugin_dep))
     return out
 
 
@@ -90,8 +90,7 @@ def _bypass_coursier_mirror_env() -> dict:
     shared hosts."""
     global _EMPTY_COURSIER_DIR
     if _EMPTY_COURSIER_DIR is None:
-        _EMPTY_COURSIER_DIR = pathlib.Path(
-            tempfile.mkdtemp(prefix="uhdi-bench-coursier-"))
+        _EMPTY_COURSIER_DIR = pathlib.Path(tempfile.mkdtemp(prefix="uhdi-bench-coursier-"))
     return {"COURSIER_CONFIG_DIR": str(_EMPTY_COURSIER_DIR)}
 
 
@@ -108,8 +107,7 @@ def compile_for(scala: pathlib.Path, pipeline: Pipeline) -> pathlib.Path:
         raise FileNotFoundError(f"fixture not found: {scala}")
     cli = _scala_cli()
     if cli is None:
-        raise RuntimeError("scala-cli not on PATH; install from "
-                           "https://scala-cli.virtuslab.org/")
+        raise RuntimeError("scala-cli not on PATH; install from https://scala-cli.virtuslab.org/")
 
     digest = _cache_key(scala, pipeline)
     cached = _CACHE / f"{scala.stem}-{pipeline.name}-{digest}.fir"
@@ -117,28 +115,37 @@ def compile_for(scala: pathlib.Path, pipeline: Pipeline) -> pathlib.Path:
         return cached
     cached.parent.mkdir(parents=True, exist_ok=True)
 
-    cmd = [cli, "run", "--scala", pipeline.scala_version,
-           "--dep", pipeline.chisel_dep,
-           "--compiler-plugin", pipeline.plugin_dep,
-           "--scala-option", "-Ymacro-annotations"]
+    cmd = [
+        cli,
+        "run",
+        "--scala",
+        pipeline.scala_version,
+        "--dep",
+        pipeline.chisel_dep,
+        "--compiler-plugin",
+        pipeline.plugin_dep,
+        "--scala-option",
+        "-Ymacro-annotations",
+    ]
     cmd += [f"--repository={r}" for r in pipeline.repositories]
     cmd.append(str(scala))
 
     env = {**os.environ, **_bypass_coursier_mirror_env()}
-    proc = subprocess.run(cmd, capture_output=True, text=True,
-                          timeout=600, env=env)
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=env)
     if proc.returncode != 0:
         raise CompileError(
             f"scala-cli exit {proc.returncode} for {scala.name} under "
             f"pipeline {pipeline.name!r}:\n"
             f"--- stdout ---\n{proc.stdout}\n"
-            f"--- stderr ---\n{proc.stderr}")
+            f"--- stderr ---\n{proc.stderr}"
+        )
     fir = proc.stdout
     if "FIRRTL" not in fir and "circuit " not in fir:
         raise CompileError(
             f"scala-cli succeeded but stdout doesn't look like FIRRTL "
             f"(first 200 chars: {fir[:200]!r}); did the fixture's Main "
-            f"call ChiselStage.emitCHIRRTL?")
+            f"call ChiselStage.emitCHIRRTL?"
+        )
     cached.write_text(fir, encoding="utf-8")
     return cached
 
@@ -146,8 +153,10 @@ def compile_for(scala: pathlib.Path, pipeline: Pipeline) -> pathlib.Path:
 def main(argv: Optional[List[str]] = None) -> int:
     """`python -m uhdi_bench.compile <pipeline> <scala>` prints FIR to stdout."""
     import argparse
+
     p = argparse.ArgumentParser(
-        description="scala-cli wrapper: compile a Chisel fixture to FIR per pipeline.")
+        description="scala-cli wrapper: compile a Chisel fixture to FIR per pipeline."
+    )
     p.add_argument("pipeline", choices=[pl.name for pl in pipelines()])
     p.add_argument("scala", type=pathlib.Path)
     args = p.parse_args(argv)
