@@ -2,10 +2,10 @@
                   [--require-dataflow | --derive-dataflow]`.
 
 Adds two PDG-specific flags on top of the shared scaffold (uhdi-spec.md
-§15.5.4):
+Sec.15.5.4):
 
-  --require-dataflow   fail if §10 is absent in the input
-  --derive-dataflow    synthesise a best-effort graph from §5/§7
+  --require-dataflow   fail if Sec.10 is absent in the input
+  --derive-dataflow    synthesise a best-effort graph from Sec.5/Sec.7
                        (default; same as omitting both flags)
 
 Mutually exclusive."""
@@ -35,9 +35,9 @@ def main(argv: list[str] | None = None) -> int:
                    help="Suppress success message (requires --output).")
     df = p.add_mutually_exclusive_group()
     df.add_argument("--require-dataflow", action="store_true",
-                    help="Error if input lacks §10 dataflow.")
+                    help="Error if input lacks Sec.10 dataflow.")
     df.add_argument("--derive-dataflow", action="store_true",
-                    help="Synthesise edges from §5/§7 when §10 is absent "
+                    help="Synthesise edges from Sec.5/Sec.7 when Sec.10 is absent "
                          "(default).")
     args = p.parse_args(argv)
 

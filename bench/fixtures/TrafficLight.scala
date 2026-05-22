@@ -1,7 +1,7 @@
 // TrafficLight fixture (lifted from demo/fsm/app/src/TrafficLight.scala).
 // Adapted to emit CHIRRTL. Exercises `ChiselEnum` + `switch`/`is` FSM
 // structure -- the only fixture covering enum-typed registers, which
-// stress §4 enum type pool + §15.3.1 Tywaves `dbg.enumdef` mapping.
+// stress Sec.4 enum type pool + Sec.15.3.1 Tywaves `dbg.enumdef` mapping.
 
 import chisel3._
 import chisel3.util._

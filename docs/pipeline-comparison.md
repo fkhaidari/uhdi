@@ -1,11 +1,11 @@
-# UHDI pipeline vs. native pipelines — structural & completeness comparison
+# UHDI pipeline vs. native pipelines -- structural & completeness comparison
 
-This document compares the **UHDI pipeline** (`firtool --emit-uhdi` → Python
+This document compares the **UHDI pipeline** (`firtool --emit-uhdi` -> Python
 projector) against the **native** tool-specific pipelines it replaces, for the
 three downstream debug formats: Tywaves HGLDD, hgdb (JSON + SQLite), and
 ChiselTrace PDG. The focus is *structural* difference (how each format
 organises the same information) and *completeness* difference (what information
-each side carries, gains, or loses) — not line-level textual diff.
+each side carries, gains, or loses) -- not line-level textual diff.
 
 All claims below are backed by artefacts under `/tmp/bench-diff/` and
 `/tmp/uhdi-verify/` produced on 2026-05-22 with the bumped toolchain
@@ -17,18 +17,18 @@ Every downstream format has **two producers** targeting the *same* schema:
 
 | Format | Native producer | UHDI producer | Directly comparable? |
 |---|---|---|---|
-| Tywaves HGLDD | `firtool --emit-hgldd` | `uhdi_to_hgldd` | yes — `firtool --emit-hgldd` vs `--emit-uhdi`→projector |
+| Tywaves HGLDD | `firtool --emit-hgldd` | `uhdi_to_hgldd` | yes -- `firtool --emit-hgldd` vs `--emit-uhdi`->projector |
 | hgdb JSON | hgdb-circt `firtool --hgdb` | `uhdi_to_hgdb_json` | yes |
 | hgdb SQLite | hgdb-firrtl (Scala FIRRTL 1.x) | `uhdi_to_hgdb` | yes |
-| ChiselTrace PDG | chisel plugin `BuildProgramDependencyGraph` (`ChiselStage(addChiselTrace=true)`) | `uhdi_to_pdg` | yes — both target `pdg_spec.rs` |
+| ChiselTrace PDG | chisel plugin `BuildProgramDependencyGraph` (`ChiselStage(addChiselTrace=true)`) | `uhdi_to_pdg` | yes -- both target `pdg_spec.rs` |
 
 The bench harness (`bench/test/test_pipeline.py`) automates the first three as
 `ours` vs `native` with per-cell expected-delta tracking in
 `bench/manifest.toml`. PDG is added here manually because the bench has no
-native PDG cell (historically "ChiselTrace is the sole PDG producer" — but the
+native PDG cell (historically "ChiselTrace is the sole PDG producer" -- but the
 chisel plugin *is* a second producer, so the comparison holds).
 
-## 2. Structural difference (by design — not a loss)
+## 2. Structural difference (by design -- not a loss)
 
 The pipelines organise identical facts in deliberately different shapes:
 
@@ -43,35 +43,35 @@ UHDI's normalised form is the **superset carrier**: each native format is a
 between `ours` and `native` (e.g. nesting depth, pool ordering) are expected and
 tracked as informational manifest entries, not regressions.
 
-## 3. Comparison matrix (format × information dimension)
+## 3. Comparison matrix (format x information dimension)
 
 `N` = native captures it, `U` = UHDI pipeline captures it, `=` parity,
-`▲` = UHDI richer, `▼` = UHDI poorer. Cells cite the worked example.
+`^` = UHDI richer, `v` = UHDI poorer. Cells cite the worked example.
 
 | Dimension | HGLDD (tywaves) | hgdb | PDG (chiseltrace) |
 |---|---|---|---|
 | source location (file:line:col) | `=` | `=` | `=` |
-| HDL↔source name pairing | `=` (synth `<top>.sv`, §Counter) | `=` | n/a (source-only) |
+| HDL<->source name pairing | `=` (synth `<top>.sv`, Sec.Counter) | `=` | n/a (source-only) |
 | scalar/struct/vector types | `=` | `=` | `=` |
 | **enum, single-module** | `=` | `=` | n/a |
-| **enum, cross-module (shared)** | `▲` UHDI (§EnrichDemo) | `▲` | n/a |
-| **generator / ctor params** | `▲` UHDI (§EnrichDemo) | n/a | n/a |
-| Bundle `io` → `objects[]` | `=` (on uhdi-chisel; §4) | n/a | n/a |
+| **enum, cross-module (shared)** | `^` UHDI (Sec.EnrichDemo) | `^` | n/a |
+| **generator / ctor params** | `^` UHDI (Sec.EnrichDemo) | n/a | n/a |
+| Bundle `io` -> `objects[]` | `=` (on uhdi-chisel; Sec.4) | n/a | n/a |
 | instance hierarchy / module path | `=` | `=` | `=` |
 | control flow (when/switch) | n/a | `=`* | `=` |
-| dataflow edges | n/a | `=`* | `▼` (§Trace) |
-| **dynamic mem index** (probe/Index) | n/a | n/a | `▼` UHDI → `<complex>` (§Trace) |
-| Vec scalarisation in graph | n/a | n/a | `▼` partial (§Trace) |
-| pre-DCE vs post-DCE signals | `▼` post-DCE (§Counter) | `▼` post-DCE | `▼` post-DCE |
+| dataflow edges | n/a | `=`* | `v` (Sec.Trace) |
+| **dynamic mem index** (probe/Index) | n/a | n/a | `v` UHDI -> `<complex>` (Sec.Trace) |
+| Vec scalarisation in graph | n/a | n/a | `v` partial (Sec.Trace) |
+| pre-DCE vs post-DCE signals | `v` post-DCE (Sec.Counter) | `v` post-DCE | `v` post-DCE |
 
-`*` complex when-chains currently emit empty hgdb rows on pending fixtures (§4).
+`*` complex when-chains currently emit empty hgdb rows on pending fixtures (Sec.4).
 
 ## 4. Four categories of difference
 
-Differences fall into four buckets — only the third is a true "UHDI is worse":
+Differences fall into four buckets -- only the third is a true "UHDI is worse":
 
 1. **By design (structural form).** Pool+ref vs denormalised vs relational vs
-   graph (§2). Not a completeness loss.
+   graph (Sec.2). Not a completeness loss.
 
 2. **Pipeline-stage asymmetry: pre-DCE vs post-DCE.** Native hgdb/HGLDD tools
    walk FIRRTL *before* dead-code elimination and see intermediate signals;
@@ -84,24 +84,24 @@ Differences fall into four buckets — only the third is a true "UHDI is worse":
 3. **Known gaps (fixable).**
    - Complex when/elsewhen chains emit empty hgdb breakpoint/assignment rows.
    - `uhdi_to_pdg` degrades a **dynamic memory index** to a `<complex>`
-     predicate sentinel instead of native's probe + `Index` edges (§Trace).
+     predicate sentinel instead of native's probe + `Index` edges (Sec.Trace).
    These fixtures are in bench `_PENDING_FIXTURES`; the gaps predate the
    toolchain bump.
 
-   *Not* a converter gap (resolved): Bundle `io` → HGLDD `objects[]`. The
-   `bench` "GCD/Fifo `missing /objects/*`" is a *harness artifact* — that
+   *Not* a converter gap (resolved): Bundle `io` -> HGLDD `objects[]`. The
+   `bench` "GCD/Fifo `missing /objects/*`" is a *harness artifact* -- that
    comparison feeds the **tywaves-chisel** `.fir` (`TywavesAnnotation`, which
    `--emit-uhdi` does not read) so the UHDI has no subfield structure. On a
    **uhdi-chisel** `.fir` (with `circt_debug_subfield`), `uhdi_to_hgldd`
    projects the full struct hierarchy, including nested Decoupled bundles
-   (`io` → `{enq → {ready,valid,bits}, deq → {…}, count}`). Locked by the
+   (`io` -> `{enq -> {ready,valid,bits}, deq -> {...}, count}`). Locked by the
    `nested_bundle` golden fixture.
 
 4. **New richness from this toolchain bump (UHDI richer).** Cross-module shared
-   enums and generator/constructor parameters now flow producer→consumer
-   (§EnrichDemo). Native `firtool --emit-hgldd` does not carry these.
+   enums and generator/constructor parameters now flow producer->consumer
+   (Sec.EnrichDemo). Native `firtool --emit-hgldd` does not carry these.
 
-## 5. Worked example A — Counter (baseline parity)
+## 5. Worked example A -- Counter (baseline parity)
 
 `bench/fixtures/Counter.scala`, all three native targets. Artefacts:
 `/tmp/bench-diff/Counter/<target>.{ours,native}.json`.
@@ -109,13 +109,13 @@ Differences fall into four buckets — only the third is a true "UHDI is worse":
 | Target | total deltas | unexpected | nature |
 |---|---|---|---|
 | tywaves | 1 | 0 | we synthesise `Counter.sv` for the HDL `file_info` slot; native leaves it `""` (issue #20, so Tywaves can locate the `.vcd`) |
-| hgdb_circt | 3 | 0 | post-DCE `q→r`; cosmetic `generator: "uhdi"` vs `"circt"` (not consumed by runtime); nested table shape |
-| hgdb_firrtl | 2 | 0 | post-DCE `q→r` (variable + generator_variable rows) |
+| hgdb_circt | 3 | 0 | post-DCE `q->r`; cosmetic `generator: "uhdi"` vs `"circt"` (not consumed by runtime); nested table shape |
+| hgdb_firrtl | 2 | 0 | post-DCE `q->r` (variable + generator_variable rows) |
 
 **Conclusion:** outside the post-DCE asymmetry and one filename convention, the
 UHDI projection is byte-equivalent to native. Zero unexpected deltas.
 
-## 6. Worked example B — EnrichDemo (new richness, end-to-end)
+## 6. Worked example B -- EnrichDemo (new richness, end-to-end)
 
 `/tmp/uhdi-verify/EnrichDemo.scala`: two modules (`Top`, `Child`) sharing a
 top-level `ChiselEnum AluOp`; `Top` parameterised (`width`, `depth`).
@@ -125,15 +125,15 @@ top-level `ChiselEnum AluOp`; `Top` parameterised (`width`, `depth`).
   borrowing module previously degraded to scalar; circt commit
   *propagate enumTypeName/enumFqn through dbg.subfield* fixes this. Reaches
   HGLDD as `enum_defs` + `enum_def_ref`.
-- **Generator/ctor params.** `Top → params[{width,Int,8},{depth,Int,4}]`,
-  `Child → params[{width,Int,8}]` flow into UHDI `sourceLangType.params` and,
+- **Generator/ctor params.** `Top -> params[{width,Int,8},{depth,Int,4}]`,
+  `Child -> params[{width,Int,8}]` flow into UHDI `sourceLangType.params` and,
   after this change's `uhdi_to_hgldd` follow-up, into Tywaves
   `source_lang_type_info.params`.
 
-Native `firtool --emit-hgldd` carries **neither** — this information exists only
+Native `firtool --emit-hgldd` carries **neither** -- this information exists only
 on the UHDI path.
 
-## 7. Worked example C — Trace PDG (native plugin vs uhdi_to_pdg)
+## 7. Worked example C -- Trace PDG (native plugin vs uhdi_to_pdg)
 
 Identical `Trace` module (Reg`Vec(2)` + `when(io.wen)` + dynamic `mem(io.idx)`),
 compiled two ways. Artefacts: `/tmp/uhdi-verify/pdg/Trace.{native,uhdi}.pdg.json`.
@@ -143,30 +143,30 @@ compiled two ways. Artefacts: `/tmp/uhdi-verify/pdg/Trace.{native,uhdi}.pdg.json
 | vertices / edges | 13 / 16 | 18 / 16 |
 | predicates (probes) | **1** (`pred_io_wen`) | **0** |
 | edge kinds | Data 8, Conditional 3, **Index 3**, Declaration 2 | Data 7, Conditional 4, Declaration 5 |
-| Vec `mem` | scalarised → `mem.0`, `mem.1` (clocked `Definition`s) | single `mem` node + `connect_mem_0/1` |
-| dynamic `mem(io.idx)` | probe insertion + `Index` edges (resolves each possible index) | `cond_on_[<complex>]` sentinel — index **not** resolved |
+| Vec `mem` | scalarised -> `mem.0`, `mem.1` (clocked `Definition`s) | single `mem` node + `connect_mem_0/1` |
+| dynamic `mem(io.idx)` | probe insertion + `Index` edges (resolves each possible index) | `cond_on_[<complex>]` sentinel -- index **not** resolved |
 | IO / connection nodes | compact (IO 5, Conn 3) | verbose (IO 6, Conn 7); explicit clock/io/connect_* |
 
 **Conclusion:** the native plugin models dynamic memory dataflow precisely
 (probes + `Index` edges + scalarised Vec definitions), which `uhdi_to_pdg` does
-not — it collapses the dynamic index into the `<complex>` predicate form
-(spec §9.3 MVP). UHDI is, conversely, more explicit about IO/clock/connection
+not -- it collapses the dynamic index into the `<complex>` predicate form
+(spec Sec.9.3 MVP). UHDI is, conversely, more explicit about IO/clock/connection
 vertices. Closing the dynamic-index gap is the main PDG completeness follow-up.
 
-## 8. Worked example D — HGLDD (native --emit-hgldd vs uhdi_to_hgldd)
+## 8. Worked example D -- HGLDD (native --emit-hgldd vs uhdi_to_hgldd)
 
 Two regimes, because HGLDD source-language info has **two unrelated carriers**:
 native `--emit-hgldd` reads the old `TywavesAnnotation` (tywaves chisel 6.4.3);
 `uhdi_to_hgldd` reads the `circt_debug_*` intrinsics (uhdi chisel 7.1.1). Which
 side is richer depends on which chisel produced the `.fir`.
 
-**Regime 1 — tywaves-chisel `.fir` (Counter, bench tywaves target).** Native and
+**Regime 1 -- tywaves-chisel `.fir` (Counter, bench tywaves target).** Native and
 ours both carry `source_lang_type_info.type_name`; parity except the synthesised
-`<top>.sv` filename (§5). But the new `firtool --emit-uhdi` **rejects** an
-enum design's `EnumComponentAnnotation` from this fork (TrafficLight → exit 1),
+`<top>.sv` filename (Sec.5). But the new `firtool --emit-uhdi` **rejects** an
+enum design's `EnumComponentAnnotation` from this fork (TrafficLight -> exit 1),
 so enum fixtures cannot traverse the UHDI side here at all.
 
-**Regime 2 — uhdi-chisel `.fir` (EnrichDemo, same `.fir` into both emitters).**
+**Regime 2 -- uhdi-chisel `.fir` (EnrichDemo, same `.fir` into both emitters).**
 Artefacts: `/tmp/hgldd-cmp/EnrichDemo.{native,ours}.hgldd.json`.
 
 | | Native `--emit-hgldd` | Ours `uhdi_to_hgldd` |
@@ -174,17 +174,17 @@ Artefacts: `/tmp/hgldd-cmp/EnrichDemo.{native,ours}.hgldd.json`.
 | objects | 2 (`Child`, `Top`) | 3 (+ `Child_io` struct object) |
 | `source_lang_type_info` | **none** | `type_name` on every object |
 | generator/ctor params | **none** | `Top:[{width,8},{depth,4}]`, `Child:[{width,8}]` |
-| `enum_defs` / `enum_def_ref` | **none** | present; `io.op → enum_def_ref:0` (`IO[AluOp]`) |
+| `enum_defs` / `enum_def_ref` | **none** | present; `io.op -> enum_def_ref:0` (`IO[AluOp]`) |
 
 **Conclusion:** native `--emit-hgldd` does not understand the `circt_debug_*`
-intrinsics, so on a uhdi-chisel `.fir` it emits **zero** source-language info —
+intrinsics, so on a uhdi-chisel `.fir` it emits **zero** source-language info --
 no types, no enum, no params. The UHDI pipeline extracts the full set. This is
 the end-to-end "richer debug info" win of the bump: cross-module enum typing and
 generator parameters reach Tywaves only via UHDI. (Structural aside: ours also
 projects the Bundle `io` of `Child` into its own `Child_io` struct object;
 native flattens it into `port_vars`.)
 
-## 9. Worked example E — hgdb (native hgdb-circt / hgdb-firrtl vs uhdi_to_hgdb)
+## 9. Worked example E -- hgdb (native hgdb-circt / hgdb-firrtl vs uhdi_to_hgdb)
 
 Two native producers: modern hgdb-circt firtool (`--hgdb`, JSON) and legacy
 hgdb-firrtl (Scala FIRRTL 1.x, SQLite). Both run on stock-chisel `.fir`
@@ -198,11 +198,11 @@ The difference is the *variable set*, driven by DCE stage:
 |---|---|---|
 | variables | `io.rdy`, `io.q`, `busy` | `x`, `y`, `busy` |
 
-The top-level pool lists internal nodes (`x`, `y`) vs native's output ports —
+The top-level pool lists internal nodes (`x`, `y`) vs native's output ports --
 but this is *placement*, not loss: ours carries the ports too, inlined in
 `table[].variables`. The ports are now registered under their **dotted source
 name** (`io.q`, not the flattened `io_q`) so the hgdb runtime resolves them by
-the HDL identifier, matching native — fixed by `build_dotted_name_map`
+the HDL identifier, matching native -- fixed by `build_dotted_name_map`
 (`uhdi_common.refs`), which rebuilds `io.q` from the synthetic subfield chain.
 Net: ours is a superset (ports *and* backing registers `x`/`y`, which native
 omits). Remaining delta is the cosmetic `generator: "uhdi"` vs `"circt"`.
@@ -223,7 +223,7 @@ live at each breakpoint scope) and no `scope` tree; `uhdi_to_hgdb` emits a full
 this is a concrete completeness gain: UHDI knows per-breakpoint variable
 visibility that hgdb-firrtl never recorded.
 
-**Conclusion:** hgdb shows completeness moving in *both* directions — UHDI loses
+**Conclusion:** hgdb shows completeness moving in *both* directions -- UHDI loses
 pre-DCE port names (JSON path) but gains per-breakpoint context scoping (SQLite
 path). Neither is a regression from the bump; both are inherent to operating on
 post-DCE UHDI with a richer statement tree.
@@ -232,13 +232,13 @@ post-DCE UHDI with a richer statement tree.
 
 - **UHDI gains** (vs native): cross-module enum typing + generator/ctor params
   reaching HGLDD (native `--emit-hgldd` extracts none of these from
-  `circt_debug_*` intrinsics, §8); per-breakpoint `context_variable` scoping in
-  hgdb SQLite (legacy producer emits zero, §9); a single normalised carrier
+  `circt_debug_*` intrinsics, Sec.8); per-breakpoint `context_variable` scoping in
+  hgdb SQLite (legacy producer emits zero, Sec.9); a single normalised carrier
   feeding all three formats from one pass.
 - **UHDI loses** (vs native): dynamic-mem-index precision in PDG (fixable
-  gap, §7); complex-predicate `<complex>` sentinel feeding empty hgdb rows.
-  (Closed by this work: hgdb dotted port names §9, and Bundle→`objects[]`
-  struct projection incl. nested bundles §4.)
+  gap, Sec.7); complex-predicate `<complex>` sentinel feeding empty hgdb rows.
+  (Closed by this work: hgdb dotted port names Sec.9, and Bundle->`objects[]`
+  struct projection incl. nested bundles Sec.4.)
 - **Parity** everywhere else: locations, scalar/struct/vector types,
   single-module enums, hierarchy, static control flow, hgdb top-level shape.
 
@@ -250,13 +250,13 @@ FIRTOOL=../circt/build/bin/firtool .venv/bin/python -m uhdi_bench.dump_pair \
     bench/fixtures/Counter.scala -o /tmp/bench-diff
 # -> code --diff /tmp/bench-diff/Counter/tywaves.{ours,native}.json
 
-# HGLDD regime 2 — native --emit-hgldd vs uhdi_to_hgldd on the SAME uhdi-chisel
+# HGLDD regime 2 -- native --emit-hgldd vs uhdi_to_hgldd on the SAME uhdi-chisel
 # .fir (shows native emits no source-lang info from circt_debug_* intrinsics):
 #   runner._emit_native_hgldd(EnrichDemo.fir, wd, firtool)  vs
 #   get('hgldd').convert(EnrichDemo.uhdi.json, None)
 # hgdb SQLite 9-table inventory: run_target(fir, "hgdb_firrtl", tc) -> (ours, native)
 
-# PDG native (chisel plugin) — emits pdg.json:
+# PDG native (chisel plugin) -- emits pdg.json:
 COURSIER_MIRRORS=/dev/null scala-cli run /tmp/uhdi-verify/pdg/TraceNative.scala
 #   ChiselStage(withDebug=false, addChiselTrace=true), --target chirrtl
 

@@ -1,4 +1,4 @@
-"""uhdi -> PDG (chiseltrace format). See uhdi-spec.md §15.5.
+"""uhdi -> PDG (chiseltrace format). See uhdi-spec.md Sec.15.5.
 
 Pipeline:
 
@@ -6,14 +6,14 @@ Pipeline:
   2. _emit_variables  -- per scope: ports/regs/wires/literals -> vertices,
                          probes -> predicates. Build (scope_id,var_id) ->
                          vertex_index map.
-  3. _emit_body       -- pre-order walk of scope.body (§15.5.2):
+  3. _emit_body       -- pre-order walk of scope.body (Sec.15.5.2):
                          block       -> ControlFlow vertex (+ recurse)
                          connect     -> Connection vertex
                          decl        -> already emitted in step 2
                          assert/...  -> ControlFlow with annotation
                          Build cfg[] mirroring this structure.
-  4. _emit_edges      -- project §10 dataflow if present, otherwise call
-                         derive_dataflow() (synthesise from §5/§7)."""
+  4. _emit_edges      -- project Sec.10 dataflow if present, otherwise call
+                         derive_dataflow() (synthesise from Sec.5/Sec.7)."""
 from __future__ import annotations
 
 import pathlib
@@ -35,8 +35,8 @@ class PDGConversionError(ConversionError):
     pass
 
 
-# Map uhdi §6 bindKind -> chiseltrace PDGSpecNodeKind for variable vertices.
-# Probes are pulled out separately (§15.5.1) into the predicates[] list.
+# Map uhdi Sec.6 bindKind -> chiseltrace PDGSpecNodeKind for variable vertices.
+# Probes are pulled out separately (Sec.15.5.1) into the predicates[] list.
 _BIND_TO_KIND: Dict[str, str] = {
     "port":    "IO",
     "wire":    "DataDefinition",
@@ -47,8 +47,8 @@ _BIND_TO_KIND: Dict[str, str] = {
 }
 _PROBE_BINDKINDS = frozenset({"probe", "rwprobe"})
 
-# §10 edge kinds that chiseltrace's PDGSpecEdgeKind enum does not have.
-# §15.7 compatibility matrix: PDG keeps only the `clocked` bit from clocks/resets.
+# Sec.10 edge kinds that chiseltrace's PDGSpecEdgeKind enum does not have.
+# Sec.15.7 compatibility matrix: PDG keeps only the `clocked` bit from clocks/resets.
 _DROPPED_EDGE_KINDS = frozenset({"Clock", "Reset"})
 
 
@@ -230,7 +230,7 @@ def _probe_vertex(var_id: str, var: Dict[str, Any], scope_id: str, ctx: _Ctx
 
 
 # ---------------------------------------------------------------------------
-# Body flattening (§15.5.2)
+# Body flattening (Sec.15.5.2)
 # ---------------------------------------------------------------------------
 
 
@@ -265,7 +265,7 @@ def _controlflow_vertex(guard_ref: Optional[str], stmt: Dict[str, Any],
         label = f"{annotation}_{label}"
 
     # uhdi blocks rarely carry their own `locations` (only the inner connect
-    # does, see §7).  PDG slicers display vertex line/file as the "where this
+    # does, see Sec.7).  PDG slicers display vertex line/file as the "where this
     # control branch is in source"; fall back to the guard variable's loc so
     # the CF vertex isn't anchored at 0:0.
     loc = _stmt_loc(stmt, ctx)
@@ -290,7 +290,7 @@ def _controlflow_vertex(guard_ref: Optional[str], stmt: Dict[str, Any],
 
 def _walk_body(body: List[Dict[str, Any]], scope_id: str, ctx: _Ctx,
                vertices: List[Dict[str, Any]],
-               # statement-vertex bookkeeping for §10 derivation:
+               # statement-vertex bookkeeping for Sec.10 derivation:
                stmt_vertex_index: List[int],
                stmt_guard_chain: List[List[int]],
                guard_chain: List[int],
@@ -353,7 +353,7 @@ def _walk_body(body: List[Dict[str, Any]], scope_id: str, ctx: _Ctx,
             stmt_vertex_index.append(v_idx)
             stmt_guard_chain.append(list(guard_chain))
             cfg.append({"stmtRef": v_idx})
-        # "none" / unknown: skip silently (spec §15.5.2).
+        # "none" / unknown: skip silently (spec Sec.15.5.2).
     return cfg
 
 
@@ -396,14 +396,14 @@ def _resolve_predicate_index(ref: Optional[str], ctx: _Ctx) -> Optional[int]:
 
 
 # ---------------------------------------------------------------------------
-# Edge projection (§15.5.1) and derivation (§15.5.4)
+# Edge projection (Sec.15.5.1) and derivation (Sec.15.5.4)
 # ---------------------------------------------------------------------------
 
 
 def _endpoint_to_vertices(endpoint: Dict[str, Any], ctx: _Ctx) -> List[int]:
-    """An §10 EndpointRef is `{varRef}` or `{exprRef}`. A varRef resolves to
+    """An Sec.10 EndpointRef is `{varRef}` or `{exprRef}`. A varRef resolves to
     at most one vertex; an exprRef fans out over its constituent varRefs
-    (mirrors _derive_edges's _collect_expr_vars fan-out for §5 expressions)."""
+    (mirrors _derive_edges's _collect_expr_vars fan-out for Sec.5 expressions)."""
     if not isinstance(endpoint, dict):
         return []
     if (vref := endpoint.get("varRef")):
@@ -424,10 +424,10 @@ def _endpoint_to_vertices(endpoint: Dict[str, Any], ctx: _Ctx) -> List[int]:
 
 
 def _project_explicit_edges(ctx: _Ctx) -> List[Dict[str, Any]]:
-    """Direct copy of §10 edges, with kind filtering (§15.7) and condition
+    """Direct copy of Sec.10 edges, with kind filtering (Sec.15.7) and condition
     dropped when it isn't already in PDG `{probeName, probeValue}` shape.
     Compound exprRef endpoints fan out over their constituent varRefs
-    (§10 allows compound named exprRefs as EndpointRef per spec §10)."""
+    (Sec.10 allows compound named exprRefs as EndpointRef per spec Sec.10)."""
     dataflow = ctx.uhdi.get("dataflow") or {}
     edges_in = dataflow.get("edges") or []
     out: List[Dict[str, Any]] = []
@@ -461,7 +461,7 @@ def _project_explicit_edges(ctx: _Ctx) -> List[Dict[str, Any]]:
 
 def _collect_expr_vars(operand: Any, ctx: _Ctx,
                        acc: List[str], seen_exprs: Set[str]) -> None:
-    """Flatten an §5 expression / endpoint into the list of varRefs it touches.
+    """Flatten an Sec.5 expression / endpoint into the list of varRefs it touches.
     Cycle guard raises on back-edge to match uhdi_common.expressions.walk."""
     if not isinstance(operand, dict):
         return
@@ -486,9 +486,9 @@ def _derive_edges(ctx: _Ctx,
                   body_stmt_index: List[int],
                   body_guard_chain: List[List[int]],
                   body_stmts_flat: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Synthesise PDG edges from §5/§7 when §10 dataflow is absent.
+    """Synthesise PDG edges from Sec.5/Sec.7 when Sec.10 dataflow is absent.
 
-    Per spec §15.5.4 / chiseltrace example.pdg.jsonc:
+    Per spec Sec.15.5.4 / chiseltrace example.pdg.jsonc:
       * connect target <- valueRef expression  =>  Data edge (per referenced var)
       * connect target reg/mem                 =>  Declaration edge to its def
       * connect inside block                   =>  Conditional edge to CF vertex"""
@@ -532,7 +532,7 @@ def _derive_edges(ctx: _Ctx,
                 })
         elif kind == "block":
             # ControlFlow vertex's data dep is on its guard.  guardRef may
-            # name a variable directly or an expression (see §7); in the
+            # name a variable directly or an expression (see Sec.7); in the
             # expression case, fan out edges over every referenced var.
             guard_ref = stmt.get("guardRef") or ""
             for vref in _expand_guard(guard_ref, ctx):
@@ -607,8 +607,8 @@ def convert(uhdi: Dict[str, Any], *,
             require_dataflow: bool = False) -> Dict[str, Any]:
     """Translate a uhdi document to chiseltrace's PDGSpec JSON shape.
 
-    `require_dataflow=True` errors out when §10 is missing; default behaviour
-    derives a best-effort dataflow from §5/§7 (lossy -- see §15.5.4)."""
+    `require_dataflow=True` errors out when Sec.10 is missing; default behaviour
+    derives a best-effort dataflow from Sec.5/Sec.7 (lossy -- see Sec.15.5.4)."""
     try:
         ctx = _Ctx.from_uhdi(uhdi, require_dataflow=require_dataflow)
     except ConversionError as e:
@@ -660,9 +660,9 @@ def convert(uhdi: Dict[str, Any], *,
             edges = _project_explicit_edges(ctx)
         elif require_dataflow:
             raise PDGConversionError(
-                "input has no §10 dataflow but --require-dataflow was passed; "
+                "input has no Sec.10 dataflow but --require-dataflow was passed; "
                 "use --derive-dataflow to synthesise a best-effort graph "
-                "from §5/§7 (uhdi-spec.md §15.5.4)")
+                "from Sec.5/Sec.7 (uhdi-spec.md Sec.15.5.4)")
         else:
             edges = _derive_edges(ctx, body_stmt_index, body_guard_chain,
                                   body_stmts_flat)
@@ -699,11 +699,11 @@ class PDGBackend(Backend):
     description = (
         "uhdi -> PDG (chiseltrace Program Dependency Graph format).  The "
         "third arm of the spec's three legacy targets; consumed by the "
-        "chiseltrace slicer and its GUI.  When §10 dataflow is present "
+        "chiseltrace slicer and its GUI.  When Sec.10 dataflow is present "
         "in the input, edges are projected directly; otherwise a "
         "best-effort derivation pass synthesises Data/Conditional/"
-        "Declaration edges from §5 expressions and §7 body (lossier; "
-        "see uhdi-spec.md §15.5.4).")
+        "Declaration edges from Sec.5 expressions and Sec.7 body (lossier; "
+        "see uhdi-spec.md Sec.15.5.4).")
     binary_output = False
     output_extension = "pdg.json"
 

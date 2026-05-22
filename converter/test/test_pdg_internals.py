@@ -230,7 +230,7 @@ def test_convert_emits_required_top_level_keys():
 
 
 def test_convert_maps_bindkind_to_vertex_kind():
-    """Table §15.5.1: each uhdi bindKind takes a specific PDG kind."""
+    """Table Sec.15.5.1: each uhdi bindKind takes a specific PDG kind."""
     variables = {
         "v_port": _port("p"),
         "v_wire": {"typeRef": "u8", "bindKind": "wire", "ownerScopeRef": "X",
@@ -250,7 +250,7 @@ def test_convert_maps_bindkind_to_vertex_kind():
 
 
 def test_convert_routes_probes_to_predicates():
-    """Probes are NOT regular vertices: §15.5.1 puts them in `predicates[]`,
+    """Probes are NOT regular vertices: Sec.15.5.1 puts them in `predicates[]`,
     and the CFG references them by index there, not by vertex index."""
     variables = {
         "v_probe": {"typeRef": "bool", "bindKind": "probe", "ownerScopeRef": "X",
@@ -275,7 +275,7 @@ def test_convert_routes_probes_to_predicates():
 
 
 def test_convert_definition_clocked_bit_set_for_regs():
-    """§15.7: PDG retains the per-edge `clocked` bit; on Definition vertices
+    """Sec.15.7: PDG retains the per-edge `clocked` bit; on Definition vertices
     we set it when the underlying bindKind is reg/mem."""
     doc = _doc(
         variables={"r": {"typeRef": "u8", "bindKind": "reg", "ownerScopeRef": "X",
@@ -287,8 +287,8 @@ def test_convert_definition_clocked_bit_set_for_regs():
 
 
 def test_convert_drops_clock_and_reset_edges():
-    """chiseltrace's PDGSpecEdgeKind enum has 4 variants; §10 Clock/Reset
-    edges aren't representable and must be silently filtered out (§15.7)."""
+    """chiseltrace's PDGSpecEdgeKind enum has 4 variants; Sec.10 Clock/Reset
+    edges aren't representable and must be silently filtered out (Sec.15.7)."""
     doc = _doc(
         variables={
             "clk": _port("clk"),
@@ -307,15 +307,15 @@ def test_convert_drops_clock_and_reset_edges():
 
 
 def test_convert_require_dataflow_raises_when_section10_absent():
-    """Per §15.5.4: --require-dataflow turns "missing §10" into a hard error
+    """Per Sec.15.5.4: --require-dataflow turns "missing Sec.10" into a hard error
     instead of falling back to derivation (the alternative is a less precise
     edge set, which the caller may want to refuse)."""
-    with pytest.raises(PDGConversionError, match="§10"):
+    with pytest.raises(PDGConversionError, match="Sec.10"):
         pdg_convert(_doc(), require_dataflow=True)
 
 
 def test_convert_uses_explicit_dataflow_when_present():
-    """When the input carries §10 directly, project it -- don't shadow with
+    """When the input carries Sec.10 directly, project it -- don't shadow with
     the derivation pass (the explicit graph is authoritative)."""
     variables = {
         "a": _port("a"), "b": _port("b", direction="output"),
@@ -337,7 +337,7 @@ def test_convert_uses_explicit_dataflow_when_present():
 
 
 def test_convert_derives_data_decl_conditional_edges():
-    """End-to-end §15.5.4 derivation: one `block + connect` should yield
+    """End-to-end Sec.15.5.4 derivation: one `block + connect` should yield
     one of each (Data to source, Declaration to target, Conditional to CF)."""
     variables = {
         "src": _port("src"),
@@ -365,7 +365,7 @@ def test_convert_derives_data_decl_conditional_edges():
 
 
 def test_bind_to_kind_covers_all_non_probe_bindkinds():
-    """If §6 adds a bindKind, this test fails until convert.py opts in;
+    """If Sec.6 adds a bindKind, this test fails until convert.py opts in;
     silent fallthrough to "skip the variable" used to lose mem cells."""
     assert set(_BIND_TO_KIND) == {"port", "wire", "node", "literal", "reg", "mem"}
 
@@ -412,7 +412,7 @@ def test_resolve_predicate_index_handles_exprref_shaped_guardref():
 
 def test_derive_edges_emits_data_for_assert_cond():
     """assert with condRef pointing at a varRef -> Data edge from CF vertex
-    to the referenced variable's vertex (§15.5.4 derivation, FU4.2)."""
+    to the referenced variable's vertex (Sec.15.5.4 derivation, FU4.2)."""
     variables = {
         "v_in":     _port("in"),
         "v_result": {"typeRef": "u8", "bindKind": "wire", "ownerScopeRef": "X",
@@ -513,7 +513,7 @@ def test_derive_edges_assert_with_exprref_condition():
 
 def test_resolve_predicate_index_rejects_multi_probe_expr():
     """When the exprRef guardRef touches TWO probe variables, predStmtRef must
-    stay unset — no single predStmtRef slot can represent a multi-probe guard."""
+    stay unset -- no single predStmtRef slot can represent a multi-probe guard."""
     variables = {
         "v_probe1": {"typeRef": "bool", "bindKind": "probe", "ownerScopeRef": "X",
                      "representations": {"chisel": {"name": "p1"}}},
@@ -546,7 +546,7 @@ def test_resolve_predicate_index_rejects_multi_probe_expr():
 
 
 def test_project_explicit_edges_fans_out_compound_exprref_endpoint():
-    """A §10 edge whose `from` is an exprRef with two varRef operands must
+    """A Sec.10 edge whose `from` is an exprRef with two varRef operands must
     emit one Data edge per constituent varRef (FU4.8)."""
     variables = {
         "a":   _port("a"),
@@ -614,7 +614,7 @@ def test_project_explicit_edges_skips_self_edge_after_fanout():
     expressions = {
         "sum": {"opcode": "+", "operands": [{"varRef": "a"}, {"varRef": "b"}]},
     }
-    # Edge from {exprRef: sum} to {varRef: a} — the 'a' constituent maps to
+    # Edge from {exprRef: sum} to {varRef: a} -- the 'a' constituent maps to
     # the same vertex as the 'to', producing a self-edge that must be dropped.
     doc = _doc(
         variables=variables,

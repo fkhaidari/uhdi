@@ -81,7 +81,7 @@ def _source_lang_type(repr_obj: Optional[Dict[str, Any]]) -> Optional[Dict[str, 
     if not slt or not slt.get("typeName"):
         return None
     out: Dict[str, Any] = {"type_name": slt["typeName"]}
-    # `params` (UHDI §6.9, an opaque list of ctor/generator params) maps
+    # `params` (UHDI Sec.6.9, an opaque list of ctor/generator params) maps
     # onto Tywaves' `source_lang_type_info.params` (List[ConstructorParams],
     # see HglddParser.scala). UHDI `typeName` -> HGLDD `type`; `name`/`value`
     # pass through. Skip silently if absent or malformed.

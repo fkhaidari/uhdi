@@ -131,7 +131,7 @@ def _resolve_sig_name(stable_id, ctx):
     return resolved
 
 
-# SystemVerilog operator precedence (highest -> lowest), spec §15.4.2
+# SystemVerilog operator precedence (highest -> lowest), spec Sec.15.4.2
 _SV_PRECEDENCE = {
     "!": 12, "~": 12, "neg": 12,
     "*": 10, "/": 10, "%": 10,
