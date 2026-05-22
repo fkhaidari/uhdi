@@ -3,7 +3,7 @@
 // full Chisel -> firtool walk. Exercises a multi-branch `when`/`elsewhen`
 // chain on top of registers, slightly more complex than Counter's single
 // `when` -- catches divergences in the SSA condition-stack serialisation
-// (§9.3 enableRef MVP joined form vs native firtool's expression tree).
+// (Sec.9.3 enableRef MVP joined form vs native firtool's expression tree).
 
 import chisel3._
 import _root_.circt.stage.ChiselStage

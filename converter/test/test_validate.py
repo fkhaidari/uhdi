@@ -362,9 +362,9 @@ def test_validate_or_exit_schema_violation_dominates_collision(capsys):
 
 
 def test_iter_errors_flags_direction_on_non_port_variable():
-    """Schema rejects `direction` when bindKind != 'port' (F-U1.6, spec §6.6 inv 2)."""
+    """Schema rejects `direction` when bindKind != 'port' (F-U1.6, spec Sec.6.6 inv 2)."""
     doc = _minimal_valid_doc()
-    # var_Counter_r has bindKind='reg' — add direction to make it invalid
+    # var_Counter_r has bindKind='reg' -- add direction to make it invalid
     doc["variables"]["var_Counter_r"]["direction"] = "input"
     errs = list(validate.iter_errors(doc))
     assert any("direction" in e.message or "direction" in str(e.absolute_path)
@@ -372,16 +372,16 @@ def test_iter_errors_flags_direction_on_non_port_variable():
 
 
 def test_iter_errors_flags_missing_direction_on_port():
-    """Schema requires `direction` when bindKind == 'port' (F-U1.6, spec §6.6 inv 2)."""
+    """Schema requires `direction` when bindKind == 'port' (F-U1.6, spec Sec.6.6 inv 2)."""
     doc = _minimal_valid_doc()
-    # var_Counter_clock is a port — remove its direction
+    # var_Counter_clock is a port -- remove its direction
     doc["variables"]["var_Counter_clock"].pop("direction", None)
     errs = list(validate.iter_errors(doc))
     assert any("direction" in e.message for e in errs)
 
 
 def test_iter_errors_flags_fieldname_on_non_dot_opcode():
-    """Schema rejects `fieldName` when opcode != '.' (F-U1.8, spec §5.6 inv 5)."""
+    """Schema rejects `fieldName` when opcode != '.' (F-U1.8, spec Sec.5.6 inv 5)."""
     doc = _minimal_valid_doc()
     doc["expressions"]["bad_expr"] = {
         "opcode": "+",
@@ -394,7 +394,7 @@ def test_iter_errors_flags_fieldname_on_non_dot_opcode():
 
 
 def test_iter_errors_accepts_fieldname_on_dot_opcode():
-    """Schema allows `fieldName` on opcode '.' (F-U1.8, spec §5.6 inv 5)."""
+    """Schema allows `fieldName` on opcode '.' (F-U1.8, spec Sec.5.6 inv 5)."""
     doc = _minimal_valid_doc()
     doc["expressions"]["dot_expr"] = {
         "opcode": ".",
@@ -416,7 +416,7 @@ def test_enum_width_errors_empty_for_clean_doc():
 
 
 def test_enum_width_errors_flags_uint_overflow():
-    """Variant key exceeds 2^width - 1 for uint<W> (F-U1.9, spec §4.4 inv 4)."""
+    """Variant key exceeds 2^width - 1 for uint<W> (F-U1.9, spec Sec.4.4 inv 4)."""
     doc = _minimal_valid_doc()
     doc["types"]["uint2"] = {"kind": "uint", "width": 2}
     doc["types"]["MyEnum"] = {
@@ -459,7 +459,7 @@ def test_enum_width_errors_flags_sint_overflow():
 
 
 def test_enum_width_errors_flags_non_ground_underlying():
-    """Underlying must be uint or sint (F-U1.9 / spec §4.4 inv 3)."""
+    """Underlying must be uint or sint (F-U1.9 / spec Sec.4.4 inv 3)."""
     doc = _minimal_valid_doc()
     doc["types"]["MyStruct"] = {"kind": "struct", "members": []}
     doc["types"]["MyEnum"] = {

@@ -2,7 +2,7 @@
 // emit CHIRRTL for the bench pipeline. Exercises `SyncReadMem` reads /
 // writes and Decoupled-style ready/valid handshakes -- a more typical
 // bundle/port shape than Counter or GCD; useful for surfacing divergences
-// in struct/bundle handling (§6.7 consolidated vs split form).
+// in struct/bundle handling (Sec.6.7 consolidated vs split form).
 
 import chisel3._
 import chisel3.util._

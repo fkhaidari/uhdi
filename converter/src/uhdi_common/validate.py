@@ -129,7 +129,7 @@ _REF_TO_POOLS: Dict[str, Tuple[str, ...]] = {
 def representations_errors(uhdi: Dict[str, Any]) -> List[str]:
     """Diagnostics for per-entity representations keys not declared at top level.
 
-    Spec §6.6 invariant 3 and §7.6 invariant 9 require per-entity
+    Spec Sec.6.6 invariant 3 and Sec.7.6 invariant 9 require per-entity
     `representations` keys to be a subset of top-level `representations`."""
     top_keys = set((uhdi.get("representations") or {}).keys())
     errs: List[str] = []
@@ -158,7 +158,7 @@ def representations_errors(uhdi: Dict[str, Any]) -> List[str]:
 def enum_width_errors(uhdi: Dict[str, Any]) -> List[str]:
     """Diagnostics for enum variant keys that overflow underlyingTypeRef width.
 
-    Spec §4.4 invariants 3 (underlying must be ground integer) and 4
+    Spec Sec.4.4 invariants 3 (underlying must be ground integer) and 4
     (variant keys must fit width)."""
     types = uhdi.get("types") or {}
     errs: List[str] = []
@@ -209,7 +209,7 @@ def duplicate_authoring_name_errors(uhdi: Dict[str, Any]) -> List[str]:
     """Diagnostics for variables that share a representation-level `name`.
 
     `resolve_var_by_ref` falls back to a flat authoring-name index whose
-    first-wins policy silently masks the second variable. Spec §6.6.8
+    first-wins policy silently masks the second variable. Spec Sec.6.6.8
     requires names to be unique per scope, not document-wide, so cross-scope
     collisions are spec-legal but resolver-hostile."""
     name_to_ids: Dict[Tuple[str, str], List[str]] = {}

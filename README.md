@@ -9,12 +9,12 @@ This repository hosts the out-of-tree pieces of the uhdi work:
   plus four backends: `uhdi_to_hgldd`, `uhdi_to_hgdb` (SQLite),
   `uhdi_to_hgdb_json` (the JSON shape hgdb-circt's `firtool --hgdb`
   emits), and `uhdi_to_pdg` (chiseltrace's Program Dependency Graph
-  format -- third arm of the §15 projection trio, with optional
-  `--derive-dataflow` pass for inputs that omit §10).  JSON Schemas
+  format -- third arm of the Sec.15 projection trio, with optional
+  `--derive-dataflow` pass for inputs that omit Sec.10).  JSON Schemas
   extracted from the spec ship with `uhdi_common`.
 - **`bench/`** -- `uhdi-bench`: integration harness
-  `Scala/Chisel → FIR → UHDI → projection → diff vs native`. Test
-  matrix per `(fixture × target)` over targets `tywaves`,
+  `Scala/Chisel -> FIR -> UHDI -> projection -> diff vs native`. Test
+  matrix per `(fixture x target)` over targets `tywaves`,
   `hgdb_circt`, `hgdb_firrtl` for thesis chapter 5.
 - **`demo/`** -- five standalone Chisel projects (`gcd`, `fsm`,
   `fifo`, `pipeline`, `bus`) wired end-to-end through
@@ -38,27 +38,27 @@ The compiler side (CIRCT passes and `EmitUHDI.cpp`) lives in the sibling `circt/
 
 ```text
 uhdi/
-├── converter/       # uhdi-converter: format + projections
-│   ├── pyproject.toml
-│   ├── src/
-│   │   ├── uhdi_common/
-│   │   │   └── schemas/        # JSON Schemas (sec.3-12 of the spec)
-│   │   ├── uhdi_to_hgldd/      # tywaves projection
-│   │   ├── uhdi_to_hgdb/       # hgdb SQLite projection
-│   │   ├── uhdi_to_hgdb_json/  # hgdb JSON projection
-│   │   └── uhdi_to_pdg/        # chiseltrace PDG projection
-│   └── test/                   # unit + golden tests (~340 tests, no toolchain)
-├── bench/           # uhdi-bench: Scala -> FIR -> UHDI -> diff vs native
-│   ├── pyproject.toml
-│   ├── manifest.toml           # per-fixture allowed deltas
-│   ├── fixtures/               # Chisel sources
-│   ├── src/uhdi_bench/
-│   └── test/
-├── demo/            # standalone Chisel demos (gcd, fsm, fifo, pipeline, bus)
-├── docs/            # format spec + action plan
-├── tools/           # installer + uhdi-tools image recipe + release scripts
-├── pyproject.toml   # workspace root: ruff / mypy / coverage configs
-└── .github/workflows/ci.yml
++- converter/       # uhdi-converter: format + projections
+|   +- pyproject.toml
+|   +- src/
+|   |   +- uhdi_common/
+|   |   |   `- schemas/        # JSON Schemas (sec.3-12 of the spec)
+|   |   +- uhdi_to_hgldd/      # tywaves projection
+|   |   +- uhdi_to_hgdb/       # hgdb SQLite projection
+|   |   +- uhdi_to_hgdb_json/  # hgdb JSON projection
+|   |   `- uhdi_to_pdg/        # chiseltrace PDG projection
+|   `- test/                   # unit + golden tests (~340 tests, no toolchain)
++- bench/           # uhdi-bench: Scala -> FIR -> UHDI -> diff vs native
+|   +- pyproject.toml
+|   +- manifest.toml           # per-fixture allowed deltas
+|   +- fixtures/               # Chisel sources
+|   +- src/uhdi_bench/
+|   `- test/
++- demo/            # standalone Chisel demos (gcd, fsm, fifo, pipeline, bus)
++- docs/            # format spec + action plan
++- tools/           # installer + uhdi-tools image recipe + release scripts
++- pyproject.toml   # workspace root: ruff / mypy / coverage configs
+`- .github/workflows/ci.yml
 ```
 
 Each subproject has its own `pyproject.toml` (with [project], deps,

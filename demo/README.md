@@ -11,11 +11,11 @@ starter template (see [Use this in your own project](#use-this-in-your-own-proje
 
 Inside the repo, each demo's `run.sh` is a thin symlink to
 [`demo/run.sh`](run.sh), a bash shim that locates `nu` (Nushell) and
-dispatches to [`demo/run.nu`](run.nu) — the actual build / simulate /
+dispatches to [`demo/run.nu`](run.nu) -- the actual build / simulate /
 download logic. Subcommands are positional: `./run.sh` (defaults to
 `build`), `./run.sh simulate`, `./run.sh download-only`. When you copy
 a demo out of the repo as a starter, replace the symlink with a
-self-contained build script (mill + the converter CLIs) — the
+self-contained build script (mill + the converter CLIs) -- the
 in-repo shim only works under this checkout.
 
 Each demo ships a Chisel testbench (`app/src/<Top>Sim.scala`) built on

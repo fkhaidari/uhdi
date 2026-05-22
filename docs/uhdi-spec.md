@@ -46,7 +46,7 @@ No single format covers the union of use cases, and conversion between them is l
 - HGLDD -> hgdb loses expression-tree reconstruction.
 - PDG -> either loses dataflow typing.
 
-The goal of `uhdi` is a format whose **layered structure** accommodates all three use cases simultaneously, emitted once by the compiler and consumed selectively by each tool. A GDB-like debugger uses `scopes` + `variables` + `§9` breakpoints; a waveform viewer adds `types` + `expressions`; a slicer adds `§10` dataflow.
+The goal of `uhdi` is a format whose **layered structure** accommodates all three use cases simultaneously, emitted once by the compiler and consumed selectively by each tool. A GDB-like debugger uses `scopes` + `variables` + `Sec.9` breakpoints; a waveform viewer adds `types` + `expressions`; a slicer adds `Sec.10` dataflow.
 
 ### 1.3 Non-goals
 
@@ -77,18 +77,18 @@ Prior work distributes debug information across thirteen orthogonal axes. No sin
 
 | # | Category | hgdb | PDG | HGLDD |
 | --- | --- | :---: | :---: | :---: |
-| 1 | Source location (file/line/col) | ✓ scope + bp | ✓ per vertex | ✓ `hgl_loc` |
-| 2 | HDL location (generated code) | partial | ✗ | ✓ `hdl_loc` |
-| 3 | Module hierarchy | ✓ instances | ✓ `modulePath` | ✓ children |
-| 4 | Source ↔ RTL signal mapping | ✓ `variable.value` | ✓ `assignsTo` + `relatedSignal` | ✓ `value.sig_name` |
-| 5 | Value reconstruction (post-opt) | ✗ | ✗ | ✓ **primary** |
-| 6 | Type information | minimal (`rtl` bool) | none | ✓ rich |
-| 7 | Control flow | ✓ nested blocks | ✓ CF vertices + edges | ✗ |
-| 8 | Breakpoint / stepping | ✓ **primary** | implicit | implicit |
-| 9 | Dataflow / dependencies | ✗ | ✓ **primary** | implicit via operands |
-| 10 | Clock / timing info | ✓ `delay` | ✓ `clocked` + `assignDelay` | ✗ |
-| 11 | Arrays / memory indexing | ✓ `indices` | ✓ unrolled | ✓ `unpacked_range` |
-| 12 | Probe instrumentation | ✗ (has `target`) | ✓ **primary** | ✗ |
+| 1 | Source location (file/line/col) | [ok] scope + bp | [ok] per vertex | [ok] `hgl_loc` |
+| 2 | HDL location (generated code) | partial | [x] | [ok] `hdl_loc` |
+| 3 | Module hierarchy | [ok] instances | [ok] `modulePath` | [ok] children |
+| 4 | Source <-> RTL signal mapping | [ok] `variable.value` | [ok] `assignsTo` + `relatedSignal` | [ok] `value.sig_name` |
+| 5 | Value reconstruction (post-opt) | [x] | [x] | [ok] **primary** |
+| 6 | Type information | minimal (`rtl` bool) | none | [ok] rich |
+| 7 | Control flow | [ok] nested blocks | [ok] CF vertices + edges | [x] |
+| 8 | Breakpoint / stepping | [ok] **primary** | implicit | implicit |
+| 9 | Dataflow / dependencies | [x] | [ok] **primary** | implicit via operands |
+| 10 | Clock / timing info | [ok] `delay` | [ok] `clocked` + `assignDelay` | [x] |
+| 11 | Arrays / memory indexing | [ok] `indices` | [ok] unrolled | [ok] `unpacked_range` |
+| 12 | Probe instrumentation | [x] (has `target`) | [ok] **primary** | [x] |
 | 13 | Metadata | `attributes` | -- | `HGLDD.version` |
 
 ### 2.2 Intersections
@@ -96,14 +96,14 @@ Prior work distributes debug information across thirteen orthogonal axes. No sin
 All three formats share the following common denominator:
 
 - **Source location tuple** (file, line, column) -- stored differently: hgdb at scope + breakpoint level, PDG per vertex, HGLDD with dual hgl_loc/hdl_loc.
-- **Module hierarchy** with definition ≠ instance distinction.
+- **Module hierarchy** with definition != instance distinction.
 - **Minimal source-to-RTL name mapping** -- some way to translate a source-level name to an RTL signal.
 
 Pairwise overlaps:
 
-- **hgdb ∩ PDG:** both encode control flow, but with incompatible models (hgdb structural blocks with string conditions; PDG control-flow vertices plus explicit CFG).
-- **hgdb ∩ HGLDD:** both use nested scope-like containers (`scope/block` vs `children`).
-- **PDG ∩ HGLDD:** both handle bundle/vector fields via path notation.
+- **hgdb intersect PDG:** both encode control flow, but with incompatible models (hgdb structural blocks with string conditions; PDG control-flow vertices plus explicit CFG).
+- **hgdb intersect HGLDD:** both use nested scope-like containers (`scope/block` vs `children`).
+- **PDG intersect HGLDD:** both handle bundle/vector fields via path notation.
 
 ### 2.3 Unique features per format
 
@@ -138,7 +138,7 @@ Features **only HGLDD** has:
 
 2. **Data-loss semantics.** HGLDD's expression trees solve value reconstruction, but no format declares *what happened* to each variable (preserved / reconstructed / lost). Consumers can't distinguish "debugger couldn't find the signal" from "compiler optimized it away".
 
-3. **Multi-stage location mapping.** HGLDD gives HGL↔HDL; hgdb uses a two-pass High/Low FIRRTL approach internally but loses intermediate levels in the final table. Neither tracks all four to five meaningful IR levels in CIRCT pipelines.
+3. **Multi-stage location mapping.** HGLDD gives HGL<->HDL; hgdb uses a two-pass High/Low FIRRTL approach internally but loses intermediate levels in the final table. Neither tracks all four to five meaningful IR levels in CIRCT pipelines.
 
 4. **Pass origin.** No format logs which compiler pass generated a synthetic signal. This is crucial for debugging the compiler itself and for tracing optimized outputs back to source constructs.
 
@@ -150,18 +150,18 @@ The format addresses the gaps above via a layered structure. Seven categories ar
 
 #### Required
 
-1. **Source ↔ IR ↔ HDL mapping** -- per-entity location data across multiple representations (axis 1+2 unified).
+1. **Source <-> IR <-> HDL mapping** -- per-entity location data across multiple representations (axis 1+2 unified).
 2. **Module hierarchy** -- definitions vs instances, parameterized monomorphization (axis 3).
-3. **Variables** -- source-level names with type, binding, status, and value recovery (axes 4+5 unified, plus data-loss semantics from §2.4 gap 2).
+3. **Variables** -- source-level names with type, binding, status, and value recovery (axes 4+5 unified, plus data-loss semantics from Sec.2.4 gap 2).
 4. **Types** *(required for type-aware consumers, recommended otherwise)* -- ground integer, clock/reset, struct, vector, enum (axis 6).
 5. **Expressions** -- opcode trees for reconstructing values of optimized-away variables (axis 5).
-6. **Conditions** -- boolean ASTs (stored in the expressions pool with `uint<1>` result) used as guards, breakpoint enables, and formal assumptions (axis 7, filling §2.4 gap 1).
+6. **Conditions** -- boolean ASTs (stored in the expressions pool with `uint<1>` result) used as guards, breakpoint enables, and formal assumptions (axis 7, filling Sec.2.4 gap 1).
 7. **Scope body** -- statement tree within each scope, preserving source structure and FIRRTL last-connect order.
 
 #### Optional
 
 8. **Dataflow graph** -- typed edges (Data/Conditional/Index/Declaration) for slicing (axis 9).
-9. **Breakpoint metadata** -- inline on statements and scopes; covers steppability, dynamic enable conditions, priority, watchpoints, throttling, categorization, and entry/exit breakpoints (axis 8, see §9).
+9. **Breakpoint metadata** -- inline on statements and scopes; covers steppability, dynamic enable conditions, priority, watchpoints, throttling, categorization, and entry/exit breakpoints (axis 8, see Sec.9).
 
 ---
 
@@ -169,7 +169,7 @@ The format addresses the gaps above via a layered structure. Seven categories ar
 
 A `uhdi` document is a JSON object with the following top-level shape.
 The `"version": "1.0"` inside `"format"` is the on-disk **format
-version** (schema-enforced via `enum: ["1.0"]` in §3.1); the spec
+version** (schema-enforced via `enum: ["1.0"]` in Sec.3.1); the spec
 document itself is at **0.9.3** (see changelog).
 
 ```jsonc
@@ -186,8 +186,8 @@ document itself is at **0.9.3** (see changelog).
   "variables":       { /* optional pool */ },
   "scopes":          { /* required pool */ },
 
-  "dataflow":        { /* optional; see §10 */ },
-  "dataflowChunks":  [ /* optional; relative paths to per-scope chunks, see §10.8 */ ],
+  "dataflow":        { /* optional; see Sec.10 */ },
+  "dataflowChunks":  [ /* optional; relative paths to per-scope chunks, see Sec.10.8 */ ],
   "attributes":      { /* optional free-form metadata */ }
 }
 ```
@@ -654,7 +654,7 @@ An emitter that does not track a pre-elaboration representation will never produ
 4. **No cycles** through `exprRef` chains.
 5. `fieldName` is legal only with opcode `.`.
 6. Constants with explicit `width` must fit in that width.
-7. **Opcode / repr-level consistency**: an expression used inside `representations["<k>"].value` must use opcodes valid for the `kind` of representation `<k>` per §5.3. Source-level opcodes (`Mux`, `Cat`, `Fill`, `VecInit`) in `ir`/`hdl` reprs are errors. 4-state compare opcodes (`===`, `!==`, `==?`, `!=?`) in `source` reprs are errors.
+7. **Opcode / repr-level consistency**: an expression used inside `representations["<k>"].value` must use opcodes valid for the `kind` of representation `<k>` per Sec.5.3. Source-level opcodes (`Mux`, `Cat`, `Fill`, `VecInit`) in `ir`/`hdl` reprs are errors. 4-state compare opcodes (`===`, `!==`, `==?`, `!=?`) in `source` reprs are errors.
 
 ---
 
@@ -957,7 +957,7 @@ Tywaves and similar authoring-language-aware waveform viewers render not only th
 - `typeName` (required): the rendered surface-language type string, opaque to the format. Producers choose the convention; consumers display it verbatim.
 - `params` (optional): a list of constructor/generator parameters of the declaring module or aggregate type, each an object `{ "name", "typeName", "value" }` (e.g. `{ "name": "width", "typeName": "Int", "value": "8" }`). Numeric values are serialised as strings to avoid precision loss. `uhdi_to_hgldd` projects these onto Tywaves `source_lang_type_info.params` (List[ConstructorParams]: UHDI `typeName` -> HGLDD `type`; `name`/`value` pass through). Entries without a `name` are skipped; an empty/absent list is omitted. Emitters may omit `params` freely; consumers that do not model parameters ignore it.
 
-The authoring representation (`roles.authoring`, §3.3) is the canonical site for this field. Absence of `sourceLangType` is not an error -- the consumer falls back to rendering the type-pool type (§4) instead.
+The authoring representation (`roles.authoring`, Sec.3.3) is the canonical site for this field. Absence of `sourceLangType` is not an error -- the consumer falls back to rendering the type-pool type (Sec.4) instead.
 
 ---
 
@@ -1011,7 +1011,7 @@ Body array order is significant (FIRRTL last-connect semantics).
     "VarRef":   { "type": "string" },
     "ExprRef":  { "type": "string" },
     "ExprOrVarRef": {
-      "description": "Polymorphic id: resolves first against the expressions pool, then variables. Used for control-flow breakpoint metadata (`enableRef`, `guardRef`, `matchRef`) where producers commonly emit a bare variable id when the predicate is a single-signal sample, and an expression id when it's a compound boolean. The §9.3 MVP shape also accepts an `&`-joined predicate string here (transitional; see §9.3).",
+      "description": "Polymorphic id: resolves first against the expressions pool, then variables. Used for control-flow breakpoint metadata (`enableRef`, `guardRef`, `matchRef`) where producers commonly emit a bare variable id when the predicate is a single-signal sample, and an expression id when it's a compound boolean. The Sec.9.3 MVP shape also accepts an `&`-joined predicate string here (transitional; see Sec.9.3).",
       "type": "string"
     },
 
@@ -1481,7 +1481,7 @@ This is why the format attaches breakpoint metadata inline on every eligible sta
 
 ### 9.2 Placement
 
-Breakpoint metadata lives in the `bp` field of every statement kind except `StmtBlock` -- i.e. `StmtDecl`, `StmtConnect`, `StmtNone`, `StmtAssert`, `StmtAssume`, `StmtCover` -- and on scope objects. The schemas are defined in §7 (`BreakpointMeta` and `ScopeBreakpointMeta` under scopes). This section documents the semantics.
+Breakpoint metadata lives in the `bp` field of every statement kind except `StmtBlock` -- i.e. `StmtDecl`, `StmtConnect`, `StmtNone`, `StmtAssert`, `StmtAssume`, `StmtCover` -- and on scope objects. The schemas are defined in Sec.7 (`BreakpointMeta` and `ScopeBreakpointMeta` under scopes). This section documents the semantics.
 
 ### 9.3 Statement-level fields
 
@@ -1507,7 +1507,7 @@ They coincide for trivial cases but diverge after optimization.
 
 > **Implementation note (CIRCT/FIRRTL):** in the FIRRTL dialect, `enableRef` is computed by the same analysis that drives `firrtl-expand-whens`. A reference emitter should either hook into `ExpandWhensPass` to record the AND-reduced condition stack before `when`/`else` collapse, or run an equivalent analysis on pre-`ExpandWhens` IR. Post-`ExpandWhens` recovery is possible but requires reconstructing the predicate from mux trees, which loses source-level structure.
 >
-> **MVP shape (current `firrtl-uhdi-capture-when` + `EmitUHDI`):** instead of materialising the AND-reduced predicate as an entry in the `expressions` pool, the reference emitter writes `enableRef` as an `&`-joined predicate string of variable stable_ids with optional `!` per leaf (e.g. `var_a_id&!var_b_id`). The unresolvable-leaf sentinel is the literal string `<complex>`. The string passes `ExprOrVarRef` schema validation (the type is `string` with no pattern) and is consumed verbatim by `uhdi-to-hgdb`. This form is **transitional**: a future revision moves the AND-reduction into the `expressions` pool and switches `enableRef` to a single id resolving there. Consumers must accept both forms during the transition; producers writing the long-term form do not need to retain the joined shortcut. Linters (§11) treat ids containing `&` or equal to `<complex>` as the MVP shape and skip per-leaf resolution.
+> **MVP shape (current `firrtl-uhdi-capture-when` + `EmitUHDI`):** instead of materialising the AND-reduced predicate as an entry in the `expressions` pool, the reference emitter writes `enableRef` as an `&`-joined predicate string of variable stable_ids with optional `!` per leaf (e.g. `var_a_id&!var_b_id`). The unresolvable-leaf sentinel is the literal string `<complex>`. The string passes `ExprOrVarRef` schema validation (the type is `string` with no pattern) and is consumed verbatim by `uhdi-to-hgdb`. This form is **transitional**: a future revision moves the AND-reduction into the `expressions` pool and switches `enableRef` to a single id resolving there. Consumers must accept both forms during the transition; producers writing the long-term form do not need to retain the joined shortcut. Linters (Sec.11) treat ids containing `&` or equal to `<complex>` as the MVP shape and skip per-leaf resolution.
 
 Example from the hgdb paper:
 
@@ -1695,7 +1695,7 @@ Same semantics as statement-level `category`.
 
 ### 9.6 Invariants
 
-1. `enableRef` and `watchpoint.matchRef` must reference an expression *or* a variable (§7.4 `ExprOrVarRef`) with `uint<1>` result (for `matchRef`: with type matching the watched variable, for `kind: "value"`).
+1. `enableRef` and `watchpoint.matchRef` must reference an expression *or* a variable (Sec.7.4 `ExprOrVarRef`) with `uint<1>` result (for `matchRef`: with type matching the watched variable, for `kind: "value"`).
 2. `watchpoint.kind: "rising"` and `"falling"` are legal only when the target variable's `typeRef` resolves to `uint<1>`.
 3. `watchpoint.kind: "value"` requires `matchRef` to be present.
 4. `throttle.maxHits` and `throttle.period` are mutually exclusive.
@@ -1703,7 +1703,7 @@ Same semantics as statement-level `category`.
 
 ### 9.7 Interaction with other layers
 
-- **Dataflow layer (§10):** conditional edges carry expressions that may coincide with `enableRef` values. Consumers combining both layers can compute more precise activation (`dataflow_condition && enableRef`) but this is consumer logic, not format obligation.
+- **Dataflow layer (Sec.10):** conditional edges carry expressions that may coincide with `enableRef` values. Consumers combining both layers can compute more precise activation (`dataflow_condition && enableRef`) but this is consumer logic, not format obligation.
 
 ---
 
@@ -1744,7 +1744,7 @@ An endpoint is either a variable reference or an expression reference:
 "from": { "exprRef": "..." }
 ```
 
-Inline expressions are not allowed in endpoints -- only references. Rationale: edges are numerous (see §10.8 sizing), and inline expressions would cause massive duplication.
+Inline expressions are not allowed in endpoints -- only references. Rationale: edges are numerous (see Sec.10.8 sizing), and inline expressions would cause massive duplication.
 
 ### 10.4 Edge kinds
 
@@ -1755,9 +1755,9 @@ Six kinds. The first four are adopted from PDG; the last two are `uhdi` addition
 | `Data` | B's value is used in computing A | `reg_next = reg + 1` yields `Data(reg_next, reg)` |
 | `Conditional` | A executes only when a CF predicate is active | `when(en) { reg := ... }` yields `Conditional(reg, en)` |
 | `Index` | A uses B as an index (not as data) | For `mem[i] := d`: `Index(mem, i)` plus `Data(mem, d)` |
-| `Declaration` | Used during slicing to ensure the slice compiles | `use_of_x ← decl_of_x` |
-| `Clock` | A is clocked by B | `reg ← clock_signal` |
-| `Reset` | A is reset by B | `reg ← reset_signal` |
+| `Declaration` | Used during slicing to ensure the slice compiles | `use_of_x <- decl_of_x` |
+| `Clock` | A is clocked by B | `reg <- clock_signal` |
+| `Reset` | A is reset by B | `reg <- reset_signal` |
 
 **Emitter choice: `Clock` / `Reset` edges may be omitted when their information is implicit from scope structure.** An emitter SHOULD pick one authoritative representation and not duplicate clock/reset topology across multiple forms.
 
@@ -1793,26 +1793,26 @@ Without this flag, slicing through registers produces infinite cycles (a registe
 
 Integer delay in cycles. Usually 0 (combinational) or 1 (single register). Values > 1 indicate multi-cycle pipelines.
 
-> **Open question (§12):** PDG has `assignDelay` both on vertices and edges. `uhdi` places it only on edges -- delay is a property of the connection, not the node. Revisit if this breaks conversion from PDG.
+> **Open question (Sec.12):** PDG has `assignDelay` both on vertices and edges. `uhdi` places it only on edges -- delay is a property of the connection, not the node. Revisit if this breaks conversion from PDG.
 
 ### 10.8 Scalability
 
 Dataflow is the heaviest layer by document size. Estimates for RocketChip-scale designs (~500K SV LOC):
 
 - Variables: ~100K
-- Edges: ~500K to 2M (2-20× variable count)
+- Edges: ~500K to 2M (2-20x variable count)
 - Per-edge JSON size: ~120 bytes
 - Total: 60 MB - 250 MB raw JSON
 
 **Chunking (required for designs over ~10K variables).** The dataflow layer MUST be emittable as a separate file referenced from the main document. The recommended layout:
 
-- Main document: `<design>.uhdi.json` -- contains §3-§8 core pools.
+- Main document: `<design>.uhdi.json` -- contains Sec.3-Sec.8 core pools.
 - Per-top-scope dataflow: `<design>.<top-scope-id>.uhdi-dataflow.json` -- one file per entry in the top-level `top` array, containing only edges whose endpoints fall inside that scope's reachable variable set.
 - Main document links chunks via an optional `dataflowChunks` array of relative paths alongside the inline `dataflow` field. A consumer that needs slicing loads the relevant chunk on demand.
 
 Inter-chunk edges (edges whose `from` and `to` belong to different top scopes) are permitted and stored in whichever chunk the consumer picks up first; duplicates across chunks are deduplicated at load time.
 
-**Binary encoding.** CBOR is the recommended binary form for chunks (3-5× shrinkage with no semantic change). `dataflowChunks` entries ending in `.cbor` are CBOR; `.json` are text. *Status:* no reference projector consumes `dataflowChunks` today; producers may emit the field, but consumers (`uhdi-to-hgldd`, `uhdi-to-hgdb`, `uhdi-to-pdg`) currently expect the dataflow pool inline. The chunking protocol is reserved for RocketChip-scale designs and will be activated when a consumer benchmarks against an external case.
+**Binary encoding.** CBOR is the recommended binary form for chunks (3-5x shrinkage with no semantic change). `dataflowChunks` entries ending in `.cbor` are CBOR; `.json` are text. *Status:* no reference projector consumes `dataflowChunks` today; producers may emit the field, but consumers (`uhdi-to-hgldd`, `uhdi-to-hgdb`, `uhdi-to-pdg`) currently expect the dataflow pool inline. The chunking protocol is reserved for RocketChip-scale designs and will be activated when a consumer benchmarks against an external case.
 
 **Critical:** the dataflow layer is never required. Interactive debuggers and waveform viewers should never load it.
 
@@ -1925,20 +1925,20 @@ The format itself does not perform these -- all algorithms belong in consumer to
 
 ### 10.12 Interaction with other layers
 
-- **§5 Expressions:** endpoints can reference named expressions, avoiding duplication with scope body connects.
-- **§7 Scope body:** each `connect` produces at least one `Data` edge (consumer -> value source) and optionally a `Conditional` edge (if inside a `block` with `guardRef`). An emitter generates these automatically.
-- **§9 Breakpoint metadata:** edges carry `condition`, breakpoints carry `enableRef`. Debuggers combining both layers may compute `breakpoint.enableRef ∧ edge.condition` as the full activation predicate -- this is consumer logic, not format obligation.
-- **Clock/Reset edges:** if variable V has a clock domain, there should be a `Clock` edge from V to the clock signal (see §10.4 on whether to emit or omit these).
+- **Sec.5 Expressions:** endpoints can reference named expressions, avoiding duplication with scope body connects.
+- **Sec.7 Scope body:** each `connect` produces at least one `Data` edge (consumer -> value source) and optionally a `Conditional` edge (if inside a `block` with `guardRef`). An emitter generates these automatically.
+- **Sec.9 Breakpoint metadata:** edges carry `condition`, breakpoints carry `enableRef`. Debuggers combining both layers may compute `breakpoint.enableRef and edge.condition` as the full activation predicate -- this is consumer logic, not format obligation.
+- **Clock/Reset edges:** if variable V has a clock domain, there should be a `Clock` edge from V to the clock signal (see Sec.10.4 on whether to emit or omit these).
 
 ### 10.13 Deliberate exclusions
 
 Some PDG features were not carried over.
 
-**Probe signals as a distinct category was initially excluded** and reintroduced in 0.8 as a dedicated `bindKind` (see §6.2, §6.8). Probes are modeled as variables with `bindKind: "probe"` / `"rwprobe"`, not as a separate vertex list. CFG predicates that PDG tracks as "probe signals" are ordinary `uint<1>` variables in `uhdi`.
+**Probe signals as a distinct category was initially excluded** and reintroduced in 0.8 as a dedicated `bindKind` (see Sec.6.2, Sec.6.8). Probes are modeled as variables with `bindKind: "probe"` / `"rwprobe"`, not as a separate vertex list. CFG predicates that PDG tracks as "probe signals" are ordinary `uint<1>` variables in `uhdi`.
 
-**Explicit CFG block.** PDG has a standalone `cfg` section with `stmtRef`/`predStmtRef`/`trueBranch`/`falseBranch`. In `uhdi`, control flow is already expressed through nested `block` statements in §7 with `guardRef`. Duplication is unnecessary.
+**Explicit CFG block.** PDG has a standalone `cfg` section with `stmtRef`/`predStmtRef`/`trueBranch`/`falseBranch`. In `uhdi`, control flow is already expressed through nested `block` statements in Sec.7 with `guardRef`. Duplication is unnecessary.
 
-> **Open question (§12):** if direct PDG -> `uhdi` lossless conversion is required, CFG may need to be re-introduced. Deferred pending consumer-tool requirements.
+> **Open question (Sec.12):** if direct PDG -> `uhdi` lossless conversion is required, CFG may need to be re-introduced. Deferred pending consumer-tool requirements.
 
 ### 10.14 Invariants
 
@@ -1948,7 +1948,7 @@ Some PDG features were not carried over.
 4. `clocked: true` is incompatible with kinds `Declaration`, `Clock`, `Reset`.
 5. Self-loops within one cycle (`from == to` with `clocked: false`) are errors.
 6. Duplicate edges (same `from`, `to`, `kind`, `condition`) -- linter warning.
-7. `Declaration` edges are uni-directional: the reverse (`decl_of_X ← use_of_X`) should not exist.
+7. `Declaration` edges are uni-directional: the reverse (`decl_of_X <- use_of_X`) should not exist.
 
 ---
 
@@ -1956,7 +1956,7 @@ Some PDG features were not carried over.
 
 JSON Schema cannot express all invariants. A separate linter must validate:
 
-- Cross-pool reference integrity (every `*Ref` resolves to an existing ID). Exception for `ExprOrVarRef` slots (`enableRef`, `guardRef`, `matchRef`): the id resolves first against the expressions pool and then against the variables pool. The §9.3 MVP transitional shape is recognised as a single token by the rule "if the string contains `&` or equals `<complex>`, treat it as a literal predicate snapshot and do not attempt resolution"; this exception is removed when the MVP shape is retired.
+- Cross-pool reference integrity (every `*Ref` resolves to an existing ID). Exception for `ExprOrVarRef` slots (`enableRef`, `guardRef`, `matchRef`): the id resolves first against the expressions pool and then against the variables pool. The Sec.9.3 MVP transitional shape is recognised as a single token by the rule "if the string contains `&` or equals `<complex>`, treat it as a literal predicate snapshot and do not attempt resolution"; this exception is removed when the MVP shape is retired.
 - No cycles in types (struct membership, vector elements).
 - No cycles in expressions (via `exprRef` chains).
 - No cycles in scope instantiation.
@@ -1964,13 +1964,13 @@ JSON Schema cannot express all invariants. A separate linter must validate:
 - Opcode arity constraints.
 - **Opcode / repr-level consistency**: source-level opcodes (`Mux`, `Cat`, `Fill`, `VecInit`) only in `source`-kind representations; 4-state compare opcodes (`===`, `!==`, `==?`, `!=?`) only in `hdl`-kind representations.
 - Boolean context for conditions (`uint<1>` results).
-- Bi-directional consistency of `ownerScopeRef` ↔ `variableRefs` **when `variableRefs` is present** (the field is now optional).
-- **Per-representation status/value consistency** (§6.6 invariant 4) -- evaluated independently in each repr entry.
+- Bi-directional consistency of `ownerScopeRef` <-> `variableRefs` **when `variableRefs` is present** (the field is now optional).
+- **Per-representation status/value consistency** (Sec.6.6 invariant 4) -- evaluated independently in each repr entry.
 - `bindKind: "probe"` / `"rwprobe"` variables must not have `value.sigName` in `hdl`-kind repr; must not be a `varRef` target of a `Data` edge (only `Declaration` edges).
-- Representation keys used in entities ⊆ top-level representation keys.
+- Representation keys used in entities subset top-level representation keys.
 - Location file indices within bounds of the owning representation's files array.
 - Uniqueness of names/IDs where required.
-- Breakpoint `enableRef` and `watchpoint.matchRef` reference an expression *or* a variable (§7.4 `ExprOrVarRef`) with `uint<1>` result (for `matchRef`: with result type matching the watched variable when `kind: "value"`). The MVP `&`-joined predicate string (§9.3) is exempt -- the implicit result type is `uint<1>` by construction.
+- Breakpoint `enableRef` and `watchpoint.matchRef` reference an expression *or* a variable (Sec.7.4 `ExprOrVarRef`) with `uint<1>` result (for `matchRef`: with result type matching the watched variable when `kind: "value"`). The MVP `&`-joined predicate string (Sec.9.3) is exempt -- the implicit result type is `uint<1>` by construction.
 - Breakpoint `watchpoint.kind` of `rising`/`falling` only on variables whose type is `uint<1>`.
 - Breakpoint `watchpoint.kind: "value"` requires `matchRef` present.
 - Breakpoint `throttle.maxHits` and `throttle.period` are mutually exclusive.
@@ -1991,20 +1991,20 @@ Recommended: warn on unreachable expressions, duplicate `priority` within one so
 
 ### Format-wide
 - Exact semantics of `bitVector` ordering (LSB-first vs MSB-first) -- needs decision.
-- Binary encoding (CBOR or Protobuf variant) for the main document. CBOR is already specified for dataflow chunks (§10.8) but no consumer reads chunked output yet; binary encoding for the *rest* of the document remains open and unimplemented.
+- Binary encoding (CBOR or Protobuf variant) for the main document. CBOR is already specified for dataflow chunks (Sec.10.8) but no consumer reads chunked output yet; binary encoding for the *rest* of the document remains open and unimplemented.
 - Derived SQLite index format analogous to hgdb's runtime representation.
 - Merging protocol for documents produced by independent tools.
 - Reference implementation: emitter (Chisel/CIRCT) and adapters (to hgdb, HGLDD).
 - Test suite of canonical small-circuit examples.
 
-### Dataflow layer (§10)
+### Dataflow layer (Sec.10)
 - Whether `assignDelay` should live on vertices in addition to edges (PDG has both). Current decision: edges only. Revisit if PDG-lossless conversion is required.
-- Explicit CFG block is not stored (control flow is already in §7 scope body). Revisit if PDG -> `uhdi` lossless conversion is required.
-- Chunking validated on real designs -- current §10.8 recommendation (one chunk per top-scope) needs benchmarking on RocketChip-scale targets.
+- Explicit CFG block is not stored (control flow is already in Sec.7 scope body). Revisit if PDG -> `uhdi` lossless conversion is required.
+- Chunking validated on real designs -- current Sec.10.8 recommendation (one chunk per top-scope) needs benchmarking on RocketChip-scale targets.
 
 
 ### Resolved in 0.8 (no longer open)
-- ~~Probe signals as ordinary synthetic variables.~~ Resolved: added dedicated `bindKind: "probe"` / `"rwprobe"` (§6.2) with distinct dataflow semantics (§6.8).
+- ~~Probe signals as ordinary synthetic variables.~~ Resolved: added dedicated `bindKind: "probe"` / `"rwprobe"` (Sec.6.2) with distinct dataflow semantics (Sec.6.8).
 
 ---
 
@@ -2014,7 +2014,7 @@ Recommended: warn on unreachable expressions, duplicate `priority` within one so
 
 This section specifies canonical projections from `uhdi` to three legacy hardware debug formats: HGLDD (CIRCT Debug Dialect emitter output, consumed by Tywaves / Surfer / Verdi alpha), hgdb (Hardware Generator Debugger SQLite symbol table), and PDG (Chisel trace / Program Dependency Graph).
 
-Projections are not round-trips. `uhdi` by construction covers the union of all three formats' expressiveness (§2.1-§2.5), so conversion in this direction is always lossy -- the target format lacks fields for information `uhdi` stores. The contract is weaker: after projection, a consumer tool (hgdb-VSCode plugin, Tywaves waveform viewer, PDG-based slicer) must be unable to distinguish documents that originated as `uhdi` from documents emitted natively.
+Projections are not round-trips. `uhdi` by construction covers the union of all three formats' expressiveness (Sec.2.1-Sec.2.5), so conversion in this direction is always lossy -- the target format lacks fields for information `uhdi` stores. The contract is weaker: after projection, a consumer tool (hgdb-VSCode plugin, Tywaves waveform viewer, PDG-based slicer) must be unable to distinguish documents that originated as `uhdi` from documents emitted natively.
 
 Ingestion (the reverse direction: hgdb / HGLDD / PDG -> `uhdi`) is a separate concern requiring auxiliary inputs (VCD, FIRRTL dump) for type-width recovery in two of three cases. It is not specified here.
 
@@ -2022,15 +2022,15 @@ Ingestion (the reverse direction: hgdb / HGLDD / PDG -> `uhdi`) is a separate co
 
 | Projection | `uhdi` layers required on input | Auxiliary inputs |
 |---|---|---|
-| `uhdi` -> HGLDD | §3-§7 core; enum types and module info for Tywaves-extended HGLDD | None |
-| `uhdi` -> hgdb | §3-§7 core + §9 breakpoint metadata | None |
-| `uhdi` -> PDG | §3-§7 core + **§10 dataflow** | None, or dataflow derivation pass if §10 absent |
+| `uhdi` -> HGLDD | Sec.3-Sec.7 core; enum types and module info for Tywaves-extended HGLDD | None |
+| `uhdi` -> hgdb | Sec.3-Sec.7 core + Sec.9 breakpoint metadata | None |
+| `uhdi` -> PDG | Sec.3-Sec.7 core + **Sec.10 dataflow** | None, or dataflow derivation pass if Sec.10 absent |
 
-A `uhdi` document emitted for a source-level consumer (e.g., a Tywaves-targeted emitter that skipped §10) cannot be converted to PDG without first running a dataflow derivation pass. This is a pipeline step, not a limitation; it is documented in §13.5.4.
+A `uhdi` document emitted for a source-level consumer (e.g., a Tywaves-targeted emitter that skipped Sec.10) cannot be converted to PDG without first running a dataflow derivation pass. This is a pipeline step, not a limitation; it is documented in Sec.13.5.4.
 
 ### 13.3 `uhdi` -> HGLDD
 
-The simplest projection. HGLDD is a snapshot format whose information content is a subset of `uhdi` §3-§7. Conversion is a direct transliteration of fields.
+The simplest projection. HGLDD is a snapshot format whose information content is a subset of `uhdi` Sec.3-Sec.7. Conversion is a direct transliteration of fields.
 
 #### 13.3.1 Field mapping
 
@@ -2041,13 +2041,13 @@ The simplest projection. HGLDD is a snapshot format whose information content is
 | `roles.simulation` repr `.files[]` | HDL-side file (anchors `hdl_loc`) |
 | `types[k].kind: "struct"` | deduplicated struct definition (uniqued by JSON content) |
 | `types[k].kind: "enum"` | Tywaves `dbg.enumdef` (Tywaves variant only) |
-| `types[k].kind: "vector"` (nested) | `packed_range` / `unpacked_range` chain per HGLDD §6.1 |
+| `types[k].kind: "vector"` (nested) | `packed_range` / `unpacked_range` chain per HGLDD Sec.6.1 |
 | `variables[k].representations["<hgl-role>"].location` | `hgl_loc` |
 | `variables[k].representations["<hdl-role>"].location` | `hdl_loc` |
 | `variables[k].representations["<hdl-role>"].value.sigName` | `value.sig_name` |
 | `variables[k].representations["<hdl-role>"].value.exprRef` (inlined) | HGLDD expression tree |
-| `variables[k].representations["<authoring-role>"].sourceLangType.typeName` (§6.9) | Tywaves `source_lang_type_info.type_name` (Tywaves variant only) |
-| `…sourceLangType.params[]` `{name,typeName,value}` (§6.9) | Tywaves `source_lang_type_info.params[]` `{name,type,value}` (`typeName`->`type`; module-level params come from the scope's authoring repr) |
+| `variables[k].representations["<authoring-role>"].sourceLangType.typeName` (Sec.6.9) | Tywaves `source_lang_type_info.type_name` (Tywaves variant only) |
+| `...sourceLangType.params[]` `{name,typeName,value}` (Sec.6.9) | Tywaves `source_lang_type_info.params[]` `{name,type,value}` (`typeName`->`type`; module-level params come from the scope's authoring repr) |
 | `variables[k].bindKind` + `direction` | HGLDD port semantic (input / output / inout) |
 | `scopes[k].kind: "extmodule"` | `isExtModule: true` |
 | `scopes[k].kind: "inline"` | inline scope record |
@@ -2057,7 +2057,7 @@ The simplest projection. HGLDD is a snapshot format whose information content is
 
 #### 13.3.2 Required transformations
 
-**Source-level opcode lowering.** If `uhdi` expressions include source-level opcodes (`Mux`, `Cat`, `Fill`, `VecInit` -- §5.3.3) that appear in an `hdl`-kind representation (possible in partial emitters, though forbidden by §5.6 invariant 7), the converter lowers them syntactically:
+**Source-level opcode lowering.** If `uhdi` expressions include source-level opcodes (`Mux`, `Cat`, `Fill`, `VecInit` -- Sec.5.3.3) that appear in an `hdl`-kind representation (possible in partial emitters, though forbidden by Sec.5.6 invariant 7), the converter lowers them syntactically:
 
 - `Mux(s, t, f)` -> `?:(s, t, f)`
 - `Cat(...)` -> `{}(...)`
@@ -2066,11 +2066,11 @@ The simplest projection. HGLDD is a snapshot format whose information content is
 
 A strict converter rejects such documents; a lenient one performs the lowering and emits a warning.
 
-**Bundle choice.** HGLDD supports both consolidated and split forms; the converter preserves whichever the `uhdi` input used (§6.7).
+**Bundle choice.** HGLDD supports both consolidated and split forms; the converter preserves whichever the `uhdi` input used (Sec.6.7).
 
 #### 13.3.3 Dropped layers
 
-§7 scope body, §9 breakpoints, §10 dataflow (except Tywaves-consumed subset). HGLDD consumers do not read these -- observable loss at the consumer level is zero.
+Sec.7 scope body, Sec.9 breakpoints, Sec.10 dataflow (except Tywaves-consumed subset). HGLDD consumers do not read these -- observable loss at the consumer level is zero.
 
 #### 13.3.4 Effort estimate
 
@@ -2090,7 +2090,7 @@ Structural mapping to hgdb's SQLite schema is direct. The non-trivial work is se
 | `Scope Variable` | variables whose `ownerScopeRef` equals the breakpoint's enclosing scope |
 | `Breakpoint.filename` / `.line_num` / `.column` | `Statement.locations["<source-role>"]` |
 | `Breakpoint.instance` | enclosing scope's instance ID |
-| `Breakpoint.enable` | serialized expression string (§13.4.2) |
+| `Breakpoint.enable` | serialized expression string (Sec.13.4.2) |
 
 #### 13.4.2 Expression AST -> SV string serialization
 
@@ -2113,7 +2113,7 @@ precedence (highest -> lowest, matching SV LRM):
    0  ?:
 ```
 
-Emit `(` + left + `op` + right + `)` if parent's precedence ≥ own, else drop parentheses. Unary, reduction, and mux follow standard SV syntax.
+Emit `(` + left + `op` + right + `)` if parent's precedence >= own, else drop parentheses. Unary, reduction, and mux follow standard SV syntax.
 
 Leaf handling:
 - `{varRef: x}` -> the variable's `representations["<hdl-role>"].name`
@@ -2124,7 +2124,7 @@ Leaf handling:
 
 #### 13.4.3 AND-reduction of enclosing guards
 
-hgdb pre-reduces the SSA condition stack into a single `enable` string -- the `firrtl-expand-whens` equivalent done at emit time. `uhdi` keeps `guardRef` on enclosing `StmtBlock`s (structural) and `bp.enableRef` on the connect (semantic, §9.3). The converter must recombine them:
+hgdb pre-reduces the SSA condition stack into a single `enable` string -- the `firrtl-expand-whens` equivalent done at emit time. `uhdi` keeps `guardRef` on enclosing `StmtBlock`s (structural) and `bp.enableRef` on the connect (semantic, Sec.9.3). The converter must recombine them:
 
 ```
 serializeEnable(stmt, enclosingBlocks):
@@ -2143,12 +2143,12 @@ Duplicate sub-expressions across guards may emerge; SV parsing handles the redun
 
 #### 13.4.4 Bundle handling
 
-hgdb requires split form. If the `uhdi` input uses consolidated form (§6.7), the converter expands each struct member into a separate `Variable` row, prefixing names with the parent (`io` struct -> `io.en`, `io.count`, `io.valid`). Vectors use the `indices` array per hgdb spec.
+hgdb requires split form. If the `uhdi` input uses consolidated form (Sec.6.7), the converter expands each struct member into a separate `Variable` row, prefixing names with the parent (`io` struct -> `io.en`, `io.count`, `io.valid`). Vectors use the `indices` array per hgdb spec.
 
 #### 13.4.5 Dropped fields
 
 - `bp.watchpoint`, `bp.throttle`, `bp.category`, `bp.message` -- no hgdb field (partial exception: `watchpoint { kind: "change" }` can be approximated by the `target` attribute).
-- §10 dataflow -- entirely.
+- Sec.10 dataflow -- entirely.
 - Clock domain assignments, reset polarity / kind, delay FIFOs -- not surfaced by the reference projector. Re-introduction is a Phase 3+ item.
 - Rich types -- hgdb variables carry `rtl: bool` and name only; struct / vector / enum type information is discarded.
 - `status: "reconstructed"` / `"lost"` -- hgdb has no such notion; variables in these states are omitted from the `Variable` table unless they have a `sigName` in some repr.
@@ -2221,9 +2221,9 @@ No dominator analysis, no control-flow reconstruction: the `uhdi` body is alread
 
 Dynamic memory writes (`mem[io.idx] := d`) are stored identically in both formats -- N `Index` edges with `condition.exprRef`, one per possible index value. Direct copy, no synthesis.
 
-#### 13.5.4 Pre-condition on §10
+#### 13.5.4 Pre-condition on Sec.10
 
-PDG's dataflow edges are its source of utility for slicing. If the input `uhdi` document lacks §10, the converter must either fail explicitly or invoke a dataflow derivation pass first. The derivation walks §5 expression trees and §7 body connects to synthesize `Data` / `Conditional` / `Index` / `Declaration` edges -- the same computation an emitter performs when producing §10 initially. `Clock` / `Reset` edges are derived from register operand information when not already present in the dataflow layer.
+PDG's dataflow edges are its source of utility for slicing. If the input `uhdi` document lacks Sec.10, the converter must either fail explicitly or invoke a dataflow derivation pass first. The derivation walks Sec.5 expression trees and Sec.7 body connects to synthesize `Data` / `Conditional` / `Index` / `Declaration` edges -- the same computation an emitter performs when producing Sec.10 initially. `Clock` / `Reset` edges are derived from register operand information when not already present in the dataflow layer.
 
 Recommended CLI contract:
 
@@ -2236,14 +2236,14 @@ The second mode is slower and may produce less precise conditional edges (a deri
 
 #### 13.5.5 Dropped fields
 
-- §9 breakpoint metadata -- entirely.
+- Sec.9 breakpoint metadata -- entirely.
 - Multi-clock domains, delays, reset polarity / kind / `initialValue` -- all lost. The reference projector drops dataflow edges of `kind: "Clock"` / `"Reset"` entirely; PDG-consuming slicers infer "clocked" from per-edge bits on `Data` edges instead.
 - Pass origin information -- collapsed into a single `isChiselStatement` Boolean.
 - `status: "reconstructed"` / `"lost"` -- PDG treats all variables as present.
 
 #### 13.5.6 Effort estimate
 
-~2 weeks assuming §10 on input. ~4 weeks if the dataflow-derivation pre-pass is included in the converter itself.
+~2 weeks assuming Sec.10 on input. ~4 weeks if the dataflow-derivation pre-pass is included in the converter itself.
 
 ### 13.6 Round-trip semantics
 
@@ -2257,7 +2257,7 @@ For hgdb: the hgdb-VSCode extension steps through breakpoints with identical `fi
 
 For PDG: a reference slicer produces the same reachable variable set for any (variable, cycle) query.
 
-The reverse composition `uhdi -> X -> uhdi` is **not** an invariant and is not expected to hold. X is smaller than `uhdi` by definition (§2.1); round-tripping through X loses every `uhdi`-specific layer (breakpoints through HGLDD, dataflow through hgdb, pass-origin through all three).
+The reverse composition `uhdi -> X -> uhdi` is **not** an invariant and is not expected to hold. X is smaller than `uhdi` by definition (Sec.2.1); round-tripping through X loses every `uhdi`-specific layer (breakpoints through HGLDD, dataflow through hgdb, pass-origin through all three).
 
 ### 13.7 Compatibility matrix
 
@@ -2265,19 +2265,19 @@ What each projected format supports, when projecting from a maximally-annotated 
 
 | `uhdi` layer | HGLDD out | hgdb out | PDG out |
 |---|---|---|---|
-| §3 representations | source + hdl roles preserved | hdl role only | hdl role only |
-| §4 types (ground) | ✓ | name only | name only |
-| §4 types (struct / vector / enum) | ✓ (enum: Tywaves only) | ✗ | ✗ |
-| §5 expressions | ✓ | serialized to string | ✓ (in edges) |
-| §6 variables (`preserved`) | ✓ | ✓ | ✓ |
-| §6 variables (`reconstructed`) | ✓ (via expression tree) | ✗ | ✗ |
-| §6 variables (`lost`) | name only | ✗ | ✗ |
-| §6 probes | as variables | ✗ | ✓ (in `predicates[]`) |
-| §7 body / control flow | ✗ (no CF model) | flat breakpoints | ✓ (CFG) |
-| §7 verification statements | ✗ | partial (as break-on-false) | partial (as CF vertex with annotation) |
-| §9 breakpoints | ✗ | ✓ | ✗ |
-| §9 watchpoints | ✗ | partial (`change` only) | ✗ |
-| §10 dataflow | ✗ | ✗ | ✓ |
+| Sec.3 representations | source + hdl roles preserved | hdl role only | hdl role only |
+| Sec.4 types (ground) | [ok] | name only | name only |
+| Sec.4 types (struct / vector / enum) | [ok] (enum: Tywaves only) | [x] | [x] |
+| Sec.5 expressions | [ok] | serialized to string | [ok] (in edges) |
+| Sec.6 variables (`preserved`) | [ok] | [ok] | [ok] |
+| Sec.6 variables (`reconstructed`) | [ok] (via expression tree) | [x] | [x] |
+| Sec.6 variables (`lost`) | name only | [x] | [x] |
+| Sec.6 probes | as variables | [x] | [ok] (in `predicates[]`) |
+| Sec.7 body / control flow | [x] (no CF model) | flat breakpoints | [ok] (CFG) |
+| Sec.7 verification statements | [x] | partial (as break-on-false) | partial (as CF vertex with annotation) |
+| Sec.9 breakpoints | [x] | [ok] | [x] |
+| Sec.9 watchpoints | [x] | partial (`change` only) | [x] |
+| Sec.10 dataflow | [x] | [x] | [ok] |
 | clock / reset topology | Tywaves only | not consumed | `clocked` bit only |
 
 This matrix is the practical answer to "which `uhdi` features can I rely on if my consumer is X?" -- reference for emitter authors writing `uhdi` with a known downstream target.
@@ -2288,16 +2288,16 @@ This matrix is the practical answer to "which `uhdi` features can I rely on if m
 
 - **0.1** (2026-04-22) -- Initial draft. Core structure (document, types, expressions, variables, scopes) specified. Optional layers (dataflow) stubbed; two additional layers removed in 1.0.
 - **0.2** (2026-04-22) -- Renamed format from `udbg` to `uhdi` (Unified Hardware Debug Info).
-- **0.3** (2026-04-22) -- Added §9 Breakpoint Metadata (full specification). Expanded `BreakpointMeta` schema with `watchpoint`, `throttle`, `category`, `message`. Added `ScopeBreakpointMeta` with `stopOnEntry`/`stopOnExit`. Renumbered §10-§14.
-- **0.4** (2026-04-22) -- Restored analytical content: expanded §1 with per-format critique, rewrote §2 with 13-axis coverage matrix, intersections, unique features, gaps. Added §6.7 Bundle flattening note. Added Appendix B documenting rejected alternatives.
-- **0.5** (2026-04-22) -- Added §10 Dataflow Graph (full specification with six edge kinds, conditional edges, scalability notes). Open questions inline in the section mark the three non-trivial design choices (Clock/Reset edges beyond PDG, `assignDelay` on edges only, probe signals as ordinary synthetic variables). Updated §13 linter invariants and §14 open questions accordingly.
-- **0.6** (2026-04-22) -- Added clock/reset metadata layer (removed in 1.0). Updated §13 linter (7 new rules) and §14 open questions.
-- **0.7** (2026-04-22) -- Added pass-origin layer (removed in 1.0). Updated §13 linter (6 new rules) and §14 open questions.
-- **0.8** (2026-04-22) -- MLIR-implementability review pass. Breaking changes: (a) §6 -- `status` moved into per-representation record; previously-global status is no longer accepted by schema. (b) §6.2 -- added `probe` / `rwprobe` BindKinds; §6.8 models XMRs. (c) §7.2 -- added `layer_block` scope kind. (d) §7.3 -- added verification statement kinds `assert`, `assume`, `cover`. (e) §5.3 -- opcodes partitioned into IR/HDL-level, HDL-only (4-state), and source-only groups; opcode/repr-level consistency added as §5.6 invariant 7. Non-breaking changes: (f) §9.3 -- added CIRCT implementation note on `enableRef` computation via `ExpandWhensPass`; watchpoint semantics on aggregates clarified. (g) §9.6 -- removed invariant 5 (redundant with schema). (h) §10.4 -- `Clock`/`Reset` edges now MAY be omitted; resolves the main §14 open question on dataflow/clock-domain redundancy. (i) §10.8 -- chunking protocol specified (per-top-scope files with CBOR option). (j) §13 linter updated; resolved items moved out of §14 open questions.
-- **0.9** (2026-04-22) -- Added §15 Conversion to Legacy Formats. Specifies canonical projections `uhdi` -> HGLDD / hgdb / PDG: field-level mappings, required transformations (source-level opcode lowering; AST-to-SV-string serialization with SV precedence table; guard AND-reduction for hgdb; body-flattening pre-order traversal for PDG), dropped fields per target, effort estimates (3-5 days / ~2 weeks / ~2 weeks respectively). §15.2 fixes the pre-condition that `uhdi` -> PDG requires §10 dataflow (explicitly or via derivation pre-pass). §15.6 formalises the round-trip contract: `X -> uhdi -> X` is the regression-test invariant, `uhdi -> X -> uhdi` is not. §15.7 compatibility matrix summarises per-layer coverage per target format. No schema changes; additive documentation only.
-- **0.9.1** (2026-04-24) -- Audit-driven alignment of spec text with the bundled JSON Schemas and reference emitter (`circt:fk-sc/uhdi-pool` / `EmitUHDI`): (a) §7.2 -- documented optional `containerScopeRef` on `inline`-kind scopes (already accepted by `schemas/scopes.schema.json`, emitted by `EmitUHDI::emitInlineScope`). (b) §7.3 -- documented optional `negated: boolean` on `StmtBlock` for the `else` branch of a paired when/else (emitted by `firrtl-uhdi-capture-when` and serialised by `EmitUHDI::emitStatementList`). (c) §7.4 -- JSON-Schema snippet refreshed to list both fields. (d) §7.6 -- added invariants 11 (containerScopeRef target kind) and 12 (when/else negation pairing). No schema-file change; no breaking change for emitters or consumers.
-- **0.9.2** (2026-05-15) -- Second audit-driven alignment pass against the bundled JSON Schemas and the three reference projectors (`uhdi_to_hgldd` / `uhdi_to_hgdb` / `uhdi_to_pdg`). Spec text changes: (a) §3.1 -- `version` schema snippet switched from a `pattern` to `enum: ["1.0"]`, matching the shipped `document.schema.json` and rejecting stale producers immediately. (b) §6.1, §6.4 -- `sourceLangType` listed in the Per-representation enumeration; schema snippet adds a `SourceLangType` `$def`; §6.9 (new) describes the field. (c) §6.9 -- new subsection on source-language type info as carried by Tywaves-aware producers. (d) §7.4 -- `enableRef` / `guardRef` / `matchRef` retyped from `ExprRef` to `ExprOrVarRef`; `negated`'s spec-only `default: false` removed; `Statement` snippet keeps the equivalent `oneOf` form with a note that the shipped schema dispatches via `allOf` + `if/then/else` for better error reporting. (e) §9.3 -- enlarged the MVP-shape note: the `&`-joined predicate string is the schema-legal form during the transition, with an explicit `<complex>` sentinel; long-term target retains the `expressions`-pool indirection. (f) §9.6 -- removed invariant 5 (the line resurrected in earlier merges; 0.8 changelog already documented its retirement, the schema does not list `bp` on `StmtBlock`). (g) §10.8 -- noted that no projector consumes `dataflowChunks` today, so the CBOR option is reserved rather than active. (h) §13 -- exempted the §9.3 MVP `&`-joined / `<complex>` form from the every-`*Ref`-resolves rule. (i) §13.2 -- removed the spurious clock-delays precondition from the `uhdi -> hgdb` row. (k) §15.3.1 -- new row maps `sourceLangType` -> Tywaves `source_lang_type_info`; the `Instantiation` row split so it no longer claims `hdl_obj_name` is emitted; `layer_block` row admits it falls through to a plain inline-scope record. (l) §15.4.1 -- `Generator Variable` row rewritten: per (variable, instance) row, not "literals only". (m) §13.4.5 -- explicit drop of clock-domain delays, multi-clock, reset metadata by the reference projector. (n) §15.5.1 -- `bindKind: "literal"` row no longer claims a constant attribute the reference projector does not emit. (o) §15.5.5 -- documents that `Clock` / `Reset` edges are dropped entirely; only per-edge `clocked` Booleans on the surviving edges remain. (p) §13.7 -- clock/reset cell for hgdb column now reads "not consumed" instead of "delays only". (q) Appendix B -- added B.9 (why not extend HGLDD as base), B.10 (why Python projectors), B.11 (relationship to DWARF). Schema files: `variables.schema.json` carries the new `SourceLangType` `$def` and `sourceLangType` property on `PerRepresentation`. Open work routed to `docs/uhdi-action-plan.md` rather than this changelog: the §9.3 long-term `enableRef` shape (move the AND-reduced predicate into the `expressions` pool, retire the `&`-joined transitional string) is captured there.
-- **0.9.3** (2026-05-21) -- Removed §11 Temporal layer and §12 Provenance layer. No emitter (circt) produced these pools and no consumer (uhdi_to_*) read them; reinstate from git history when a first emitter or consumer ships. Subsequent chapters renumbered: §13 -> §11, §14 -> §12, §15 -> §13. Linter invariants depending on temporal removed; conversion matrix in §13 (formerly §15) condensed accordingly.
+- **0.3** (2026-04-22) -- Added Sec.9 Breakpoint Metadata (full specification). Expanded `BreakpointMeta` schema with `watchpoint`, `throttle`, `category`, `message`. Added `ScopeBreakpointMeta` with `stopOnEntry`/`stopOnExit`. Renumbered Sec.10-Sec.14.
+- **0.4** (2026-04-22) -- Restored analytical content: expanded Sec.1 with per-format critique, rewrote Sec.2 with 13-axis coverage matrix, intersections, unique features, gaps. Added Sec.6.7 Bundle flattening note. Added Appendix B documenting rejected alternatives.
+- **0.5** (2026-04-22) -- Added Sec.10 Dataflow Graph (full specification with six edge kinds, conditional edges, scalability notes). Open questions inline in the section mark the three non-trivial design choices (Clock/Reset edges beyond PDG, `assignDelay` on edges only, probe signals as ordinary synthetic variables). Updated Sec.13 linter invariants and Sec.14 open questions accordingly.
+- **0.6** (2026-04-22) -- Added clock/reset metadata layer (removed in 1.0). Updated Sec.13 linter (7 new rules) and Sec.14 open questions.
+- **0.7** (2026-04-22) -- Added pass-origin layer (removed in 1.0). Updated Sec.13 linter (6 new rules) and Sec.14 open questions.
+- **0.8** (2026-04-22) -- MLIR-implementability review pass. Breaking changes: (a) Sec.6 -- `status` moved into per-representation record; previously-global status is no longer accepted by schema. (b) Sec.6.2 -- added `probe` / `rwprobe` BindKinds; Sec.6.8 models XMRs. (c) Sec.7.2 -- added `layer_block` scope kind. (d) Sec.7.3 -- added verification statement kinds `assert`, `assume`, `cover`. (e) Sec.5.3 -- opcodes partitioned into IR/HDL-level, HDL-only (4-state), and source-only groups; opcode/repr-level consistency added as Sec.5.6 invariant 7. Non-breaking changes: (f) Sec.9.3 -- added CIRCT implementation note on `enableRef` computation via `ExpandWhensPass`; watchpoint semantics on aggregates clarified. (g) Sec.9.6 -- removed invariant 5 (redundant with schema). (h) Sec.10.4 -- `Clock`/`Reset` edges now MAY be omitted; resolves the main Sec.14 open question on dataflow/clock-domain redundancy. (i) Sec.10.8 -- chunking protocol specified (per-top-scope files with CBOR option). (j) Sec.13 linter updated; resolved items moved out of Sec.14 open questions.
+- **0.9** (2026-04-22) -- Added Sec.15 Conversion to Legacy Formats. Specifies canonical projections `uhdi` -> HGLDD / hgdb / PDG: field-level mappings, required transformations (source-level opcode lowering; AST-to-SV-string serialization with SV precedence table; guard AND-reduction for hgdb; body-flattening pre-order traversal for PDG), dropped fields per target, effort estimates (3-5 days / ~2 weeks / ~2 weeks respectively). Sec.15.2 fixes the pre-condition that `uhdi` -> PDG requires Sec.10 dataflow (explicitly or via derivation pre-pass). Sec.15.6 formalises the round-trip contract: `X -> uhdi -> X` is the regression-test invariant, `uhdi -> X -> uhdi` is not. Sec.15.7 compatibility matrix summarises per-layer coverage per target format. No schema changes; additive documentation only.
+- **0.9.1** (2026-04-24) -- Audit-driven alignment of spec text with the bundled JSON Schemas and reference emitter (`circt:fk-sc/uhdi-pool` / `EmitUHDI`): (a) Sec.7.2 -- documented optional `containerScopeRef` on `inline`-kind scopes (already accepted by `schemas/scopes.schema.json`, emitted by `EmitUHDI::emitInlineScope`). (b) Sec.7.3 -- documented optional `negated: boolean` on `StmtBlock` for the `else` branch of a paired when/else (emitted by `firrtl-uhdi-capture-when` and serialised by `EmitUHDI::emitStatementList`). (c) Sec.7.4 -- JSON-Schema snippet refreshed to list both fields. (d) Sec.7.6 -- added invariants 11 (containerScopeRef target kind) and 12 (when/else negation pairing). No schema-file change; no breaking change for emitters or consumers.
+- **0.9.2** (2026-05-15) -- Second audit-driven alignment pass against the bundled JSON Schemas and the three reference projectors (`uhdi_to_hgldd` / `uhdi_to_hgdb` / `uhdi_to_pdg`). Spec text changes: (a) Sec.3.1 -- `version` schema snippet switched from a `pattern` to `enum: ["1.0"]`, matching the shipped `document.schema.json` and rejecting stale producers immediately. (b) Sec.6.1, Sec.6.4 -- `sourceLangType` listed in the Per-representation enumeration; schema snippet adds a `SourceLangType` `$def`; Sec.6.9 (new) describes the field. (c) Sec.6.9 -- new subsection on source-language type info as carried by Tywaves-aware producers. (d) Sec.7.4 -- `enableRef` / `guardRef` / `matchRef` retyped from `ExprRef` to `ExprOrVarRef`; `negated`'s spec-only `default: false` removed; `Statement` snippet keeps the equivalent `oneOf` form with a note that the shipped schema dispatches via `allOf` + `if/then/else` for better error reporting. (e) Sec.9.3 -- enlarged the MVP-shape note: the `&`-joined predicate string is the schema-legal form during the transition, with an explicit `<complex>` sentinel; long-term target retains the `expressions`-pool indirection. (f) Sec.9.6 -- removed invariant 5 (the line resurrected in earlier merges; 0.8 changelog already documented its retirement, the schema does not list `bp` on `StmtBlock`). (g) Sec.10.8 -- noted that no projector consumes `dataflowChunks` today, so the CBOR option is reserved rather than active. (h) Sec.13 -- exempted the Sec.9.3 MVP `&`-joined / `<complex>` form from the every-`*Ref`-resolves rule. (i) Sec.13.2 -- removed the spurious clock-delays precondition from the `uhdi -> hgdb` row. (k) Sec.15.3.1 -- new row maps `sourceLangType` -> Tywaves `source_lang_type_info`; the `Instantiation` row split so it no longer claims `hdl_obj_name` is emitted; `layer_block` row admits it falls through to a plain inline-scope record. (l) Sec.15.4.1 -- `Generator Variable` row rewritten: per (variable, instance) row, not "literals only". (m) Sec.13.4.5 -- explicit drop of clock-domain delays, multi-clock, reset metadata by the reference projector. (n) Sec.15.5.1 -- `bindKind: "literal"` row no longer claims a constant attribute the reference projector does not emit. (o) Sec.15.5.5 -- documents that `Clock` / `Reset` edges are dropped entirely; only per-edge `clocked` Booleans on the surviving edges remain. (p) Sec.13.7 -- clock/reset cell for hgdb column now reads "not consumed" instead of "delays only". (q) Appendix B -- added B.9 (why not extend HGLDD as base), B.10 (why Python projectors), B.11 (relationship to DWARF). Schema files: `variables.schema.json` carries the new `SourceLangType` `$def` and `sourceLangType` property on `PerRepresentation`. Open work routed to `docs/uhdi-action-plan.md` rather than this changelog: the Sec.9.3 long-term `enableRef` shape (move the AND-reduced predicate into the `expressions` pool, retire the `&`-joined transitional string) is captured there.
+- **0.9.3** (2026-05-21) -- Removed Sec.11 Temporal layer and Sec.12 Provenance layer. No emitter (circt) produced these pools and no consumer (uhdi_to_*) read them; reinstate from git history when a first emitter or consumer ships. Subsequent chapters renumbered: Sec.13 -> Sec.11, Sec.14 -> Sec.12, Sec.15 -> Sec.13. Linter invariants depending on temporal removed; conversion matrix in Sec.13 (formerly Sec.15) condensed accordingly.
 
 ---
 
@@ -2309,7 +2309,7 @@ This appendix records design alternatives considered and rejected. If the same q
 
 | Alternative | Rejected because |
 |---|---|
-| Pure nested (everything inline, hgdb-max style) | No dedup; one shared `Bundle` referenced in 50 places -> 50× duplication. Does not scale to RocketChip-size designs. |
+| Pure nested (everything inline, hgdb-max style) | No dedup; one shared `Bundle` referenced in 50 places -> 50x duplication. Does not scale to RocketChip-size designs. |
 | Pure flat + integer index refs (PDG-max style) | Forces every consumer to rebuild hierarchy by traversal. Unnecessarily complex for 80% of use cases (interactive debug, waveform viewing). |
 | ECS (Entity-Component-System with facet tables) | Elegant in the abstract but foreign to the HW toolchain ecosystem. Conversion to/from hgdb/HGLDD becomes a non-trivial join operation. High barrier to entry for contributors. |
 | SQLite as the canonical format | Excellent for runtime queries (this is what hgdb uses internally), but bad for version control, diff, human inspection, and compiler-side emission. Decision: **JSON canonical, SQLite permissible as a derived index.** |
@@ -2355,9 +2355,9 @@ hgdb stores conditions as strings (`"!reset && (opcode == 3)"`), pre-AND-reduced
 
 Considered: take HGLDD's `objects`/`variables`/`scopes` shape and add `body[]` / `bp` / `dataflow` keys to it. Cheaper to implement than a from-scratch format. **Rejected** because:
 
-- *Narrative collapse.* The §1.2 claim is "unified format as a superset of three legacy formats". An HGLDD-rooted document reads as "HGLDD plus debugger extensions" -- a hybrid, not an independent format. The N-way `representations` map (§3.2) and the pool-based layout (B.1) only make sense in a from-scratch design; bolting them onto HGLDD's fixed HGL/HDL pair (B.7) breaks HGLDD's own contract.
-- *Phase 3+ extensibility.* Dataflow (§10) and future optional layers sit naturally as optional sibling pools under the document root. Layered onto HGLDD they become extension keys hanging off a foreign object model, harder to evolve independently.
-- *Defence framing.* "Built a format and projected it back to HGLDD as one of three targets" (§13.3) is stronger than "extended HGLDD with our use case", which would require defending the asymmetry of one consumer being privileged.
+- *Narrative collapse.* The Sec.1.2 claim is "unified format as a superset of three legacy formats". An HGLDD-rooted document reads as "HGLDD plus debugger extensions" -- a hybrid, not an independent format. The N-way `representations` map (Sec.3.2) and the pool-based layout (B.1) only make sense in a from-scratch design; bolting them onto HGLDD's fixed HGL/HDL pair (B.7) breaks HGLDD's own contract.
+- *Phase 3+ extensibility.* Dataflow (Sec.10) and future optional layers sit naturally as optional sibling pools under the document root. Layered onto HGLDD they become extension keys hanging off a foreign object model, harder to evolve independently.
+- *Defence framing.* "Built a format and projected it back to HGLDD as one of three targets" (Sec.13.3) is stronger than "extended HGLDD with our use case", which would require defending the asymmetry of one consumer being privileged.
 
 ### B.10 Python projectors vs in-tree CIRCT-native converters
 
@@ -2371,7 +2371,7 @@ Considered: write the projections (`uhdi -> HGLDD`, `uhdi -> hgdb`, `uhdi -> PDG
 
 Considered: use DWARF (the SW-debug ELF section format) as the carrier for hardware debug info, on the theory that DWARF is a mature, tool-rich standard. **Rejected** because:
 
-- *Domain mismatch.* DWARF models call stacks, lexical scopes, and register-resident variables under the assumption that a program counter drives execution. Hardware has no PC; multiple clocks may be live simultaneously; "variables" are state-holding registers, ports, and wires distinguished by `bindKind` (§6.2) -- a categorization DWARF lacks.
+- *Domain mismatch.* DWARF models call stacks, lexical scopes, and register-resident variables under the assumption that a program counter drives execution. Hardware has no PC; multiple clocks may be live simultaneously; "variables" are state-holding registers, ports, and wires distinguished by `bindKind` (Sec.6.2) -- a categorization DWARF lacks.
 - *No native consumer.* The three real consumers in this work (Tywaves waveform viewer, hgdb debugger, ChiselTrace PDG slicer) read HGLDD / hgdb-SQLite / PDG-JSON respectively. Producing DWARF would require building all three consumer integrations from scratch.
-- *Type system.* Hardware ground types (`uint<W>`, `sint<W>`, `clock`, `reset`, `analog`; §4) and the parameterized aggregates (`struct`, `vector`, `enum`) do not map cleanly onto the C / Fortran / Ada type system DWARF was designed for. The mapping exists but is information-lossy in both directions.
-- *Adoption barrier.* Any extension `uhdi` would need is a hardware-DWARF variant; defending such a proposal under the §1.1 problem statement (existing formats are siloed) just adds a fourth silo rather than unifying the three.
+- *Type system.* Hardware ground types (`uint<W>`, `sint<W>`, `clock`, `reset`, `analog`; Sec.4) and the parameterized aggregates (`struct`, `vector`, `enum`) do not map cleanly onto the C / Fortran / Ada type system DWARF was designed for. The mapping exists but is information-lossy in both directions.
+- *Adoption barrier.* Any extension `uhdi` would need is a hardware-DWARF variant; defending such a proposal under the Sec.1.1 problem statement (existing formats are siloed) just adds a fourth silo rather than unifying the three.

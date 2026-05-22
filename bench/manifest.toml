@@ -87,7 +87,7 @@ reason = "post-DCE: module entry's nested body shape differs because hgdb-circt+
 #
 # Suggested first-run order: GCD (closest in shape to Counter), then Fifo,
 # then TrafficLight (introduces ChiselEnum and is the only one stressing
-# the §4 enum pool / Tywaves dbg.enumdef projection).
+# the Sec.4 enum pool / Tywaves dbg.enumdef projection).
 
 [fixtures.GCD]
 scala = "GCD.scala"

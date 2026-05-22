@@ -228,7 +228,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* && \
     ln -sf /usr/bin/python3 /usr/local/bin/python
 
-# scala-cli — official tarball, pinned by version arg.
+# scala-cli -- official tarball, pinned by version arg.
 RUN curl -fsSL "https://github.com/VirtusLab/scala-cli/releases/download/v${SCALA_CLI_VERSION}/scala-cli-x86_64-pc-linux.gz" \
         | gunzip > /usr/local/bin/scala-cli && \
     chmod +x /usr/local/bin/scala-cli

@@ -1,7 +1,7 @@
 # uhdi-bench
 
-Integration harness: `Scala/Chisel` source → `FIR` → `UHDI` →
-projection → structural diff against the native reference.
+Integration harness: `Scala/Chisel` source -> `FIR` -> `UHDI` ->
+projection -> structural diff against the native reference.
 
 This is the chapter-5 deliverable for the thesis: a numeric matrix
 showing where the uhdi-derived projections converge with native
@@ -24,20 +24,20 @@ documents on this side of the toolchain, so there is nothing to diff
 against.  The `uhdi_to_pdg` projector is validated by
 `converter/test/test_pdg_internals.py` plus the golden fixtures under
 `converter/test/fixtures/expected/pdg/*.pdg.json.json`, which together
-cover the §15.5 mapping rows end-to-end.
+cover the Sec.15.5 mapping rows end-to-end.
 
 ## What runs
 
-For each `(fixture × target)` cell:
+For each `(fixture x target)` cell:
 
-1. **Scala → FIR** -- `bench/fixtures/<Name>.scala` is compiled by
+1. **Scala -> FIR** -- `bench/fixtures/<Name>.scala` is compiled by
    `scala-cli` against the target's Chisel fork (rameloni for
    tywaves, Farid's fork for uhdi, stock 6.4.0 for hgdb).  Result is
    cached under `bench/.cache/scala-fir/<stem>-<pipeline>-<digest>.fir`.
-2. **FIR → UHDI** -- the cached `.fir` is fed to `firtool --emit-uhdi`.
-3. **UHDI → projection** -- the matching `uhdi_common` Backend
+2. **FIR -> UHDI** -- the cached `.fir` is fed to `firtool --emit-uhdi`.
+3. **UHDI -> projection** -- the matching `uhdi_common` Backend
    converts the UHDI document to its target format (see table above).
-4. **FIR → native reference** -- the matching native emitter runs on
+4. **FIR -> native reference** -- the matching native emitter runs on
    the same `.fir` (or its FIRRTL-1.x downgrade for `hgdb_firrtl`).
 5. **Structural diff** -- `uhdi_common.diff_dicts` walks both sides
    element-by-element; `manifest.toml` lists per-cell allowed deltas
@@ -124,7 +124,7 @@ fresh checkout, `pytest` is green-by-default and only flips to
    directives: `compile.py` injects the dep set per pipeline.
 2. `pytest -k <Name>` to confirm the new fixture compiles and the
    cells run end-to-end.
-3. Adjust expectations in `manifest.toml` if specific (fixture × target)
+3. Adjust expectations in `manifest.toml` if specific (fixture x target)
    cells are expected to diverge.
 
 ## Pending fixtures
