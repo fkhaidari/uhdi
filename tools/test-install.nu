@@ -194,7 +194,7 @@ def main [] {
         fail $"($name) installed but does not respond to --help"
       }
     }
-    ok $"hgdb-cli venv installed ((($cli_bins | length)) console scripts respond)"
+    ok $"hgdb-cli venv installed ($cli_bins | length) console scripts respond"
 
     # ---- 8. (optional) end-to-end JitPack -> firtool -------------
     if (($env.UHDI_E2E? | default "0") == "1") {
