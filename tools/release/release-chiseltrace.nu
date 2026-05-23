@@ -111,6 +111,9 @@ def "main build" [
     ^git -C $src_dir remote add origin $versions.CHISELTRACE_URL
     ^git -C $src_dir fetch --depth=1 origin $versions.CHISELTRACE_REV
     ^git -C $src_dir checkout FETCH_HEAD
+    ^git -C $src_dir submodule update --init --recursive
+  } else {
+    ^git -C $src_dir submodule update --init --recursive
   }
 
   # CLI: standalone cargo package, no Tauri deps. Fast (~3-5 min cold).
@@ -120,7 +123,7 @@ def "main build" [
   # GUI: Tauri build -- npm install + vite build + cargo. ~10-15 min cold.
   # `--no-bundle` skips .deb/.AppImage packaging; we ship the raw binary.
   print "Installing GUI frontend deps (npm install)..."
-  ^npm --prefix ($src_dir | path join "gui") install --silent
+  ^npm --prefix ($src_dir | path join "gui") install --include=dev --registry https://registry.npmjs.org
 
   print "Building chiseltrace GUI (cargo tauri build --no-bundle, ~10-15 min cold)..."
   with-env {CARGO_TARGET_DIR: ($src_dir | path join "target")} {
