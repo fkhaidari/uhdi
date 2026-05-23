@@ -6,9 +6,10 @@
 use lib/common.nu *
 
 const REPO = "fkhaidari/uhdi"
+const SCALA_CLI_REPO = "VirtusLab/scala-cli"
 
-# Install firtool, hgdb-py, tywaves, chiseltrace, and print the chisel
-# JitPack snippet.
+# Install firtool, hgdb-py, tywaves, chiseltrace, scala-cli, and print
+# the chisel JitPack snippet.
 def "main all" [
   --prefix: path = ""
   --release-tag: string = ""
@@ -22,7 +23,8 @@ def "main all" [
     # hgdb-cli runs after hgdb-py because it symlinks the bindings.
     # chiseltrace consumes uhdi-to-pdg output, so its order vs. hgdb-cli
     # doesn't matter -- but keep it grouped with the other viewers.
-    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "hgdb-cli"]
+    # scala-cli is needed for the bench compile step.
+    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-cli"]
     | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
     | flatten
     | uniq
@@ -51,6 +53,11 @@ def "main chiseltrace" [--prefix: path = "" --release-tag: string = "" --force] 
   run-single "chiseltrace" $prefix $release_tag $force
 }
 
+# Install scala-cli only (needed for the bench compile step).
+def "main scala-cli" [--prefix: path = "" --force] {
+  run-single "scala-cli" $prefix "" $force
+}
+
 # Install the upstream `hgdb` console debugger (Kuree/hgdb-debugger).
 # Builds a 3.12 venv, pip-installs hgdb-debugger + deps, links the
 # uhdi-tools hgdb python bindings into it, exposes `bin/hgdb` on the
@@ -70,6 +77,7 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
     "hgdb-py" => { install-hgdb-py $p $release_tag $force $work_root }
     "tywaves" => { install-tywaves $p $release_tag $force $work_root }
     "chiseltrace" => { install-chiseltrace $p $release_tag $force $work_root }
+    "scala-cli" => { install-scala-cli $p $force $work_root }
     "hgdb-cli" => { install-hgdb-cli $p $force }
   }
   rm -rf $work_root
@@ -147,6 +155,9 @@ def dispatch [
     }
     "chiseltrace" => {
       try { install-chiseltrace $p $release_tag $force $work_root; ["chiseltrace"] } catch { [] }
+    }
+    "scala-cli" => {
+      try { install-scala-cli $p $force $work_root; ["scala-cli"] } catch { [] }
     }
     "hgdb-cli" => {
       try { install-hgdb-cli $p $force; ["hgdb-cli"] } catch { [] }
@@ -369,6 +380,39 @@ def install-tywaves [p: path release_tag: string force: bool work_root: path] {
   } $p $release_tag $force $work_root
 }
 
+# ---- scala-cli -------------------------------------------------------------
+
+# Download the scala-cli static binary from VirtusLab/scala-cli releases.
+# scala-cli ships as a gzip-compressed single binary (not a tarball), so
+# we decompress with `gunzip` rather than tar. Only linux-x86_64 for now;
+# other platforms can install via https://scala-cli.virtuslab.org/.
+def install-scala-cli [p: path force: bool work_root: path] {
+  print "=== scala-cli ==="
+  let platform = (detect-platform)
+  if $platform != "linux-x86_64" {
+    print -e $"  scala-cli prebuilt is linux-x86_64 only \(got: ($platform)\)"
+    print -e "  Install from https://scala-cli.virtuslab.org/ for other platforms."
+    error make {msg: "platform mismatch"}
+  }
+
+  let target = ($p | path join "bin/scala-cli")
+  if not (ensure-writable $target $force) { return }
+
+  let tag = (resolve-release-tag $SCALA_CLI_REPO "")
+  print $"  Repo:       ($SCALA_CLI_REPO)"
+  print $"  Tag:        ($tag)"
+  print $"  Platform:   ($platform)"
+
+  let gz_url = $"https://github.com/($SCALA_CLI_REPO)/releases/download/($tag)/scala-cli-x86_64-pc-linux.gz"
+  let tmp_gz = ($work_root | path join "scala-cli.gz")
+  print $"  Download:   ($gz_url)"
+  ^curl -fsSL -o $tmp_gz $gz_url
+  mkdir ($p | path join "bin")
+  ^gunzip -c $tmp_gz | save -f $target
+  chmod +x $target
+  print $"  Installed:  ($target)"
+}
+
 # ---- chiseltrace (PDG CLI + Tauri GUI viewer) -----------------------------
 
 # Two binaries in one tarball: `chiseltrace-cli` (slice / DynPDG / convert-
@@ -494,13 +538,14 @@ export def env-hint-lines [
         "hgdb-py" => $"  export HGDB_PY=\"($p)/lib/hgdb/bindings/python\""
         "tywaves" => $"  export TYWAVES=\"($p)/bin/tywaves\""
         "chiseltrace" => $"  export CHISELTRACE=\"($p)/bin/chiseltrace-cli\""
+        "scala-cli" => null  # scala-cli on PATH is sufficient; no extra env var needed
         "hgdb-cli" => $"  export HGDB_DEBUGGER=\"($p)/bin/hgdb\""
         _ => null
       }
     }
     | where {|x| $x != null }
   )
-  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) or ("chiseltrace" in $did) or ("hgdb-cli" in $did) {
+  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) or ("chiseltrace" in $did) or ("scala-cli" in $did) or ("hgdb-cli" in $did) {
     let bin = ($p | path join "bin" | into string)
     if ($bin not-in $path_segments) {
       [$"  export PATH=\"($bin):$PATH\""]

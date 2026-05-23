@@ -29,19 +29,9 @@ scala = "Counter.scala"
 # entry forces a `cp design.vcd <Top>.vcd` workaround (issue #20).
 
 [[fixtures.Counter.expected.tywaves]]
-path = "/HGLDD/file_info/0"
-kind = "missing"
-reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
-
-[[fixtures.Counter.expected.tywaves]]
 path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (`\"\"`); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
-
-[[fixtures.Counter.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
-kind = "missing"
-reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
 
 # hgdb_firrtl: legacy Scala-FIRRTL 1.x reference, runs on the
 # downgraded FIR.  Native operates pre-DCE, so the output port `q`
@@ -105,11 +95,6 @@ scala = "GCD.scala"
 # tywaves: same file_info/1 divergence as Counter (issue #20)
 
 [[fixtures.GCD.expected.tywaves]]
-path = "/HGLDD/file_info/0"
-kind = "missing"
-reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
-
-[[fixtures.GCD.expected.tywaves]]
 path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (\"\")); we synthesize `GCD.sv` so tywaves can find the wave via the HGLDD record"
@@ -162,11 +147,6 @@ scala = "Fifo.scala"
 # tywaves: same file_info/1 and Bundle struct objects divergences as GCD
 
 [[fixtures.Fifo.expected.tywaves]]
-path = "/HGLDD/file_info/0"
-kind = "missing"
-reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
-
-[[fixtures.Fifo.expected.tywaves]]
 path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (\"\"); we synthesize `Fifo.sv` so tywaves can find the wave via the HGLDD record"
@@ -189,11 +169,6 @@ scala = "TywavesTorture.scala"
 # All 12 deltas are expected structural divergences between the two pipelines.
 
 [[fixtures.TywavesTorture.expected.tywaves]]
-path = "/HGLDD/file_info/0"
-kind = "missing"
-reason = "file_info path format differs: ours has leading '/' (absolute), rameloni native omits it"
-
-[[fixtures.TywavesTorture.expected.tywaves]]
 path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native rameloni firtool leaves the HDL slot empty (\"\"); we synthesize TywavesTorture.sv"
@@ -205,11 +180,6 @@ reason = "objects differ: UHDI side has 6 objects with source_lang_type_info/cto
 
 [fixtures.TrafficLight]
 scala = "TrafficLight.scala"
-
-[[fixtures.TrafficLight.expected.tywaves]]
-path = "/HGLDD/file_info/0"
-kind = "missing"
-reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
 
 [[fixtures.TrafficLight.expected.tywaves]]
 path = "/HGLDD/file_info/1"
@@ -235,6 +205,16 @@ reason = "objects differ: ours adds source_lang_type_info on all port_vars (nati
 
 [fixtures.ChiselTraceTorture]
 scala = "ChiselTraceTorture.scala"
+
+[[fixtures.ChiselTraceTorture.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native firtool leaves the HDL slot empty (''); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
+
+[[fixtures.ChiselTraceTorture.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
 
 [[fixtures.ChiselTraceTorture.expected.pdg]]
 path_regex = "/cfg/[0-9]+"
@@ -302,6 +282,16 @@ scala = "HgdbTorture.scala"
 # hgdb_circt: still pending (E2 — hgdb-circt hangs >300 s).
 # hgdb_firrtl: compared empirically 2026-05-23; all 46 deltas classified below.
 
+[[fixtures.HgdbTorture.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native firtool leaves the HDL slot empty (''); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
+
+[[fixtures.HgdbTorture.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
+
 [[fixtures.HgdbTorture.expected.hgdb_firrtl]]
 path_regex = "/breakpoint/[0-9]+"
 kind = "missing"
@@ -321,3 +311,70 @@ reason = "[CIRCT G5] same Vec register naming divergence as /variable: `reg_` (n
 path_regex = "/assignment/[0-9]+"
 kind = "missing"
 reason = "[CONV G6+G7] two converter gaps: (G6) assignment.value uses UHDI dotted names (io.out, io.q, sub0.io_in) where native uses flat hgdb-firrtl convention (io_out, io_q, sub0.io.in); (G7) acc assignment breakpoint_key contains _GEN (CIRCT) vs _T_2/_T_3 (FIRRTL 1.x) so the superset check cannot match the native row"
+
+# ---- HgdbTortureLite ---------------------------------------------------------
+#
+# Subset of HgdbTorture compatible with hgdb-circt (LLVM-16 fork).
+# hgdb-circt crashes/hangs on eq(signal, literal) conditions when a submodule
+# with a non-standard clock port is present -- so this fixture avoids that
+# pattern.  Covers: Sub with myClk, deep guard stack (3 levels), compound
+# and-guard, single write site for acc.
+#
+# hgdb_circt gaps (same classes as Counter/GCD):
+#   G1 [CIRCT] generator tag: ours="uhdi", native="circt"
+#   G2 [CIRCT] table/variables: ours richer (source_lang_type_info, enum_defs)
+# hgdb_firrtl gaps (same classes as HgdbTorture):
+#   G1 [CIRCT] intermediate breakpoints: FIRRTL 1.x emits more bp per statement
+#   G5 [CIRCT] Vec register RTL name: reg_ (native) vs reg_0 (ours)
+#   G6 [CONV] assignment.value dotted vs flat naming convention
+# tywaves gaps:
+#   issue #20: native firtool leaves HDL slot empty; we synthesize <top>.sv
+#   objects: UHDI emits source_lang_type_info; native does not
+
+[fixtures.HgdbTortureLite]
+scala = "HgdbTortureLite.scala"
+
+[[fixtures.HgdbTortureLite.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native firtool leaves the HDL slot empty (''); we synthesize `HgdbTortureLite.sv` so tywaves can find the wave via the HGLDD record"
+
+[[fixtures.HgdbTortureLite.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
+
+[[fixtures.HgdbTortureLite.expected.hgdb_circt]]
+path = "/generator"
+kind = "value"
+reason = "[CIRCT G1] generator tag: ours emits 'uhdi', native hgdb-circt emits 'circt'"
+
+[[fixtures.HgdbTortureLite.expected.hgdb_circt]]
+path_regex = "/table/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G2] table entries: ours emits richer scope/instance records with source_lang_type_info; native hgdb-circt emits minimal records"
+
+[[fixtures.HgdbTortureLite.expected.hgdb_circt]]
+path_regex = "/variables/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G2] variables: ours emits additional variable entries from UHDI; native hgdb-circt emits a subset"
+
+[[fixtures.HgdbTortureLite.expected.hgdb_firrtl]]
+path_regex = "/breakpoint/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G1] FIRRTL 1.x emits more breakpoints than CIRCT: one bp per statement operand (intermediate col) vs one per statement; preserves nested guard tokens at each level"
+
+[[fixtures.HgdbTortureLite.expected.hgdb_firrtl]]
+path_regex = "/assignment/[0-9]+"
+kind = "missing"
+reason = "[CONV G6] assignment.value uses UHDI dotted names (io.out, sub0.io_in) where native uses flat hgdb-firrtl convention (io_out, sub0.io.in)"
+
+[[fixtures.HgdbTortureLite.expected.hgdb_firrtl]]
+path_regex = "/variable/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G5] Vec register RTL name: FIRRTL 1.x emits `reg_` (no index suffix); CIRCT emits `reg_0`"
+
+[[fixtures.HgdbTortureLite.expected.hgdb_firrtl]]
+path_regex = "/generator_variable/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G5] same Vec register naming divergence as /variable: `reg_` (native) vs `reg_0` (ours)"

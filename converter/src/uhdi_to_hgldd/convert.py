@@ -219,6 +219,10 @@ def _loc_to_hgldd(loc, repr_key, ctx):
         raw_path = ctx.hdl_file_path
     if not raw_path:
         return None
+    if not is_hdl:
+        # Native firtool emits source paths without a leading slash; strip it
+        # so our file_info[0] matches the reference byte-for-byte.
+        raw_path = raw_path.lstrip("/")
     add = ctx.files.add_hdl if is_hdl else ctx.files.add_source
     out = {"file": add(raw_path) + 1}  # HGLDD is 1-indexed.
     if "beginLine" in loc:
@@ -745,7 +749,8 @@ def convert(uhdi):
         objects = list(_struct_objects(ctx))
         objects.extend(_scope_object(sid, s, ctx)
                        for sid, s in ctx.scopes.items()
-                       if s.get("kind") in ("module", "extmodule"))
+                       if s.get("kind") in ("module", "extmodule")
+                       and "_Verification_" not in (s.get("name") or sid))
 
         # No HDL files: point past end (else 1 would tag first source as HDL).
         hdl_start = (ctx.files.hdl_start
