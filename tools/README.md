@@ -206,10 +206,10 @@ operates on its own artifact and tags so the workflow scales:
 
 | Script | Artifact | Tag convention |
 |--------|----------|----------------|
-| `nu release-firtool.nu build --from-docker --release <tag>` | `firtool-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | `firtool-vX.Y.Z` |
-| `nu release-hgdb-py.nu build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
-| `nu release-tywaves.nu build --from-docker --release <tag>` | `tywaves-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to firtool's tag |
-| `nu release-chiseltrace.nu build --release <tag>` | `chiseltrace-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` (CLI + GUI) | upload to firtool's tag |
+| `nu release-firtool.nu build --from-docker --release <tag>` | `firtool-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | `artifacts-vX.Y.Z` |
+| `nu release-hgdb-py.nu build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to same tag |
+| `nu release-tywaves.nu build --from-docker --release <tag>` | `tywaves-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to same tag |
+| `nu release-chiseltrace.nu build --release <tag>` | `chiseltrace-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` (CLI + GUI) | upload to same tag |
 | `nu release-chisel.nu <tag>` | JitPack build at `https://jitpack.io/#fkhaidari/chisel/<tag>` | `vX.Y.Z-uhdi` |
 
 `release-hgdb-py.nu`, `release-tywaves.nu`, and `release-chiseltrace.nu`
