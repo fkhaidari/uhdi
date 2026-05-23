@@ -6,7 +6,7 @@
       "condition": "",
       "name": "io.out",
       "scope_id": null,
-      "value": "io.out"
+      "value": "io_out"
     }
   ],
   "breakpoint": [

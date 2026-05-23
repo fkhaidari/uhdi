@@ -1,0 +1,294 @@
+{
+  "expressions": {
+    "expr_0": {
+      "opcode": "'{",
+      "operands": [
+        {"exprRef": "expr_1"},
+        {"exprRef": "expr_2"}
+      ]
+    },
+    "expr_1": {
+      "opcode": "'{",
+      "operands": [
+        {"sigName": "io_items_0_a"},
+        {"sigName": "io_items_0_b"}
+      ]
+    },
+    "expr_2": {
+      "opcode": "'{",
+      "operands": [
+        {"sigName": "io_items_1_a"},
+        {"sigName": "io_items_1_b"}
+      ]
+    }
+  },
+  "format": {
+    "name": "uhdi",
+    "version": "1.0"
+  },
+  "producer": {
+    "name": "circt"
+  },
+  "representations": {
+    "chisel": {
+      "files": [
+        "/tmp/VecOfStruct.scala"
+      ],
+      "kind": "source",
+      "language": "Chisel"
+    },
+    "verilog": {
+      "files": [
+        ""
+      ],
+      "kind": "hdl",
+      "language": "SystemVerilog"
+    }
+  },
+  "roles": {
+    "authoring": "chisel",
+    "canonical": "verilog",
+    "simulation": "verilog"
+  },
+  "scopes": {
+    "VecOfStruct": {
+      "body": [
+        {
+          "kind": "decl",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 5,
+              "file": 0
+            }
+          },
+          "varRef": "var_clock"
+        },
+        {
+          "kind": "decl",
+          "locations": {
+            "chisel": {
+              "beginColumn": 7,
+              "beginLine": 5,
+              "file": 0
+            }
+          },
+          "varRef": "var_reset"
+        },
+        {
+          "kind": "decl",
+          "locations": {
+            "chisel": {
+              "beginColumn": 14,
+              "beginLine": 6,
+              "file": 0
+            }
+          },
+          "varRef": "var_io"
+        }
+      ],
+      "kind": "module",
+      "name": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 7,
+            "beginLine": 5,
+            "file": 0
+          },
+          "name": "VecOfStruct",
+          "sourceLangType": {
+            "typeName": "VecOfStruct"
+          }
+        },
+        "verilog": {
+          "location": {
+            "beginLine": 2,
+            "file": 0
+          },
+          "name": "VecOfStruct"
+        }
+      },
+      "variableRefs": [
+        "var_clock",
+        "var_reset",
+        "var_io",
+        "var_io__items",
+        "var_io__items__0__a",
+        "var_io__items__0__b",
+        "var_io__items__1__a",
+        "var_io__items__1__b"
+      ]
+    }
+  },
+  "top": ["VecOfStruct"],
+  "types": {
+    "VecOfStruct_io": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "items",
+          "typeRef": "VecOfStruct_io_items"
+        }
+      ]
+    },
+    "VecOfStruct_io_item": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "a",
+          "typeRef": "uint8"
+        },
+        {
+          "name": "b",
+          "typeRef": "uint4"
+        }
+      ]
+    },
+    "VecOfStruct_io_items": {
+      "elementRef": "VecOfStruct_io_item",
+      "kind": "vector",
+      "size": 2
+    },
+    "bool": {
+      "kind": "uint",
+      "width": 1
+    },
+    "uint4": {
+      "kind": "uint",
+      "width": 4
+    },
+    "uint8": {
+      "kind": "uint",
+      "width": 8
+    }
+  },
+  "variables": {
+    "var_clock": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 7, "beginLine": 5, "file": 0},
+          "name": "clock",
+          "sourceLangType": {"typeName": "IO[Clock]"},
+          "status": "preserved"
+        },
+        "verilog": {
+          "name": "clock",
+          "status": "preserved",
+          "value": {"sigName": "clock"}
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_reset": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 7, "beginLine": 5, "file": 0},
+          "name": "reset",
+          "sourceLangType": {"typeName": "IO[Bool]"},
+          "status": "preserved"
+        },
+        "verilog": {
+          "name": "reset",
+          "status": "preserved",
+          "value": {"sigName": "reset"}
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_io": {
+      "bindKind": "node",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 14, "beginLine": 6, "file": 0},
+          "name": "io",
+          "sourceLangType": {"typeName": "IO[AnonymousBundle]"},
+          "status": "preserved"
+        },
+        "verilog": {
+          "status": "preserved",
+          "value": {"exprRef": "expr_0"}
+        }
+      },
+      "typeRef": "VecOfStruct_io"
+    },
+    "var_io__items": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 14, "beginLine": 6, "file": 0},
+          "name": "items",
+          "sourceLangType": {
+            "typeName": "IO[Item[2]]",
+            "params": [
+              {"name": "gen", "typeName": "=> T"},
+              {"name": "length", "typeName": "Int", "value": "2"}
+            ]
+          },
+          "status": "preserved"
+        }
+      },
+      "typeRef": "VecOfStruct_io_items"
+    },
+    "var_io__items__0__a": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 14, "beginLine": 6, "file": 0},
+          "name": "a",
+          "sourceLangType": {"typeName": "IO[UInt<8>]"},
+          "status": "preserved"
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_io__items__0__b": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 14, "beginLine": 6, "file": 0},
+          "name": "b",
+          "sourceLangType": {"typeName": "IO[UInt<4>]"},
+          "status": "preserved"
+        }
+      },
+      "typeRef": "uint4"
+    },
+    "var_io__items__1__a": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 14, "beginLine": 6, "file": 0},
+          "name": "a",
+          "sourceLangType": {"typeName": "IO[UInt<8>]"},
+          "status": "preserved"
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_io__items__1__b": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "VecOfStruct",
+      "representations": {
+        "chisel": {
+          "location": {"beginColumn": 14, "beginLine": 6, "file": 0},
+          "name": "b",
+          "sourceLangType": {"typeName": "IO[UInt<4>]"},
+          "status": "preserved"
+        }
+      },
+      "typeRef": "uint4"
+    }
+  }
+}

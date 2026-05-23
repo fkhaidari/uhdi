@@ -244,8 +244,20 @@ def _type_description(type_ref, ctx):
     if kind == "struct":
         return {"type_name": type_ref}
     if kind == "vector":
-        elem = dict(_type_description(descriptor.get("elementRef", ""), ctx))
-        if (size := int(descriptor.get("size", 0))) > 0:
+        elem_ref = descriptor.get("elementRef", "")
+        elem_type = ctx.types.get(elem_ref) or {}
+        size = int(descriptor.get("size", 0))
+        # Vec[Bundle]: native HGLDD names the type after the last numbered
+        # element object (<vec_id>_<size-2>), not after the element struct.
+        # For size==1 there are no numbered elements so use the base name.
+        if elem_type.get("kind") == "struct" and size > 0:
+            if size >= 2:
+                last_name = f"{type_ref}_{size - 2}"
+            else:
+                last_name = type_ref
+            return {"type_name": last_name, "unpacked_range": [size - 1, 0]}
+        elem = dict(_type_description(elem_ref, ctx))
+        if size > 0:
             existing = elem.get("unpacked_range") or []
             elem["unpacked_range"] = [size - 1, 0, *existing]
         return elem
@@ -382,6 +394,31 @@ def _struct_objects(ctx):
         if (tref and (ctx.types.get(tref) or {}).get("kind") == "struct"):
             struct_parent_by_tid.setdefault(tref, parent_id)
 
+    # Build index: struct_elem_ref -> list of (vec_type_id, size, vec_loc)
+    # for Vec[Bundle] cases. Used to emit per-element struct objects after
+    # the element's base struct is emitted.
+    vec_by_elem: Dict[str, List[Tuple[str, int, Any]]] = {}
+    for vtid, vd in ctx.types.items():
+        if vd.get("kind") != "vector":
+            continue
+        eref = vd.get("elementRef", "")
+        if not eref or (ctx.types.get(eref) or {}).get("kind") != "struct":
+            continue
+        size = int(vd.get("size", 0))
+        if size < 1:
+            continue
+        # Locate a representative hgl_loc from variables whose typeRef is
+        # this vector type.
+        vec_loc = None
+        for v in ctx.variables.values():
+            if v.get("typeRef") == vtid:
+                hgl = (v.get("representations", {}).get(ctx.authoring_repr, {})
+                       or {})
+                vec_loc = _loc_to_hgldd(hgl.get("location"), ctx.authoring_repr, ctx)
+                if vec_loc:
+                    break
+        vec_by_elem.setdefault(eref, []).append((vtid, size, vec_loc))
+
     out = []
     for tid in _topo_sorted_struct_ids(ctx):
         d = ctx.types.get(tid) or {}
@@ -420,6 +457,49 @@ def _struct_objects(ctx):
         if struct_loc:
             obj["hgl_loc"] = struct_loc
         out.append(obj)
+
+        # Vec[Bundle]: emit one base object + (size-1) numbered element
+        # objects for every vector whose elementRef is this struct.
+        # Native firtool pattern (depth=N):
+        #   <vec_id>          -- base (no suffix)
+        #   <vec_id>_0        -- element 0
+        #   ...
+        #   <vec_id>_{N-2}    -- element N-2  (N-1 numbered total)
+        # port_vars on all element objects mirror the element struct's
+        # port_vars without source_lang_type_info (native omits SLT here).
+        for vtid, size, vec_loc in vec_by_elem.get(tid, []):
+            # Build per-element port_vars: same members, no SLT, with loc.
+            elem_pvs = []
+            for m in d.get("members") or []:
+                mname = m.get("name", "")
+                epv = {"var_name": mname,
+                       **_type_description(m.get("typeRef", ""), ctx)}
+                loc = vec_loc or struct_loc
+                if loc:
+                    epv["hgl_loc"] = loc
+                mref = m.get("typeRef", "")
+                if (eid := ctx.enum_id_by_type.get(mref)) is not None:
+                    epv["enum_def_ref"] = eid
+                elem_pvs.append(epv)
+            # Base object (no numeric suffix).
+            base_obj: Dict[str, Any] = {
+                "kind": "struct",
+                "obj_name": vtid,
+                "port_vars": elem_pvs,
+            }
+            if vec_loc:
+                base_obj["hgl_loc"] = vec_loc
+            out.append(base_obj)
+            # Numbered element objects: indices 0 .. size-2.
+            for i in range(size - 1):
+                elem_obj: Dict[str, Any] = {
+                    "kind": "struct",
+                    "obj_name": f"{vtid}_{i}",
+                    "port_vars": elem_pvs,
+                }
+                if vec_loc:
+                    elem_obj["hgl_loc"] = vec_loc
+                out.append(elem_obj)
     return out
 
 

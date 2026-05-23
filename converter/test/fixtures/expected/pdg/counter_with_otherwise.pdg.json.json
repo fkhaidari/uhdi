@@ -1,0 +1,212 @@
+{
+  "cfg": [
+    {
+      "stmtRef": 3
+    },
+    {
+      "falseBranch": [
+        {
+          "stmtRef": 6
+        }
+      ],
+      "stmtRef": 4,
+      "trueBranch": [
+        {
+          "stmtRef": 5
+        }
+      ]
+    },
+    {
+      "stmtRef": 7
+    }
+  ],
+  "edges": [
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 4,
+      "kind": "Data",
+      "to": 1
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 5,
+      "kind": "Declaration",
+      "to": 3
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 5,
+      "kind": "Conditional",
+      "to": 4
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Data",
+      "to": 3
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Declaration",
+      "to": 3
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 6,
+      "kind": "Conditional",
+      "to": 4
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 7,
+      "kind": "Data",
+      "to": 3
+    },
+    {
+      "clocked": false,
+      "condition": null,
+      "from": 7,
+      "kind": "Declaration",
+      "to": 2
+    }
+  ],
+  "predicates": [],
+  "vertices": [
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 4,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "input_clock",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 5,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "input_reset",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 7,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "output_q",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": true,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "Definition",
+      "line": 9,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "Reg[u8]_r",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "ControlFlow",
+      "line": 5,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "cond_on_[reset]",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "r",
+      "char": 7,
+      "clocked": true,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 11,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "connect_r",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "r",
+      "char": 7,
+      "clocked": true,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 13,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "connect_r",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "q",
+      "char": 5,
+      "clocked": false,
+      "condition": null,
+      "file": "Counter.scala",
+      "isChiselStatement": true,
+      "kind": "Connection",
+      "line": 14,
+      "modulePath": [
+        "Counter"
+      ],
+      "name": "connect_q",
+      "relatedSignal": null
+    }
+  ]
+}

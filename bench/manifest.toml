@@ -29,9 +29,19 @@ scala = "Counter.scala"
 # entry forces a `cp design.vcd <Top>.vcd` workaround (issue #20).
 
 [[fixtures.Counter.expected.tywaves]]
+path = "/HGLDD/file_info/0"
+kind = "missing"
+reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
+
+[[fixtures.Counter.expected.tywaves]]
 path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (`\"\"`); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
+
+[[fixtures.Counter.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
 
 # hgdb_firrtl: legacy Scala-FIRRTL 1.x reference, runs on the
 # downgraded FIR.  Native operates pre-DCE, so the output port `q`
@@ -92,8 +102,222 @@ reason = "post-DCE: module entry's nested body shape differs because hgdb-circt+
 [fixtures.GCD]
 scala = "GCD.scala"
 
+# tywaves: same file_info/1 divergence as Counter (issue #20)
+
+[[fixtures.GCD.expected.tywaves]]
+path = "/HGLDD/file_info/0"
+kind = "missing"
+reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
+
+[[fixtures.GCD.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native firtool leaves the HDL slot empty (\"\")); we synthesize `GCD.sv` so tywaves can find the wave via the HGLDD record"
+
+[[fixtures.GCD.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "uhdi_to_hgldd does not project Bundle-typed io ports into separate struct objects; native firtool emits one object entry per Bundle type (e.g. GCD_io).  Tracked as future converter enhancement"
+
+# hgdb_circt: same generator + table + variables divergences as Counter,
+# plus GCD has no post-DCE port folding so the variables delta has
+# a different root cause (sort-order differs between our alphabetical
+# reg-order and native reverse-id-order emission)
+
+[[fixtures.GCD.expected.hgdb_circt]]
+path = "/generator"
+kind = "value"
+reason = "informational: producer is `uhdi` (our converter), native is `circt` (hgdb-circt firtool pass).  Field is documentation, not consumed by hgdb runtime"
+
+[[fixtures.GCD.expected.hgdb_circt]]
+path_regex = "/variables/[0-9]+"
+kind = "missing"
+reason = "variable pool order differs: our converter emits alphabetical by registration order (y, x, busy), native emits reverse-id-order (busy, io.q, io.rdy); dict-level membership check rejects entries that appear only in native ordering"
+
+[[fixtures.GCD.expected.hgdb_circt]]
+path_regex = "/table/[0-9]+"
+kind = "missing"
+reason = "structural divergence: our table entry carries `type:\"module\"` and string-ID variable refs; native hgdb-circt omits `type` and inlines variable data.  Same semantic content, incompatible shape"
+
+# hgdb_firrtl: baseline available after E1 fix (2026-05-23).  16 deltas,
+# all the same CIRCT naming gaps as HgdbTorture (G1-G4/G6):
+#   G1: intermediate bp at col=9/16/21 absent (CIRCT emits one bp per stmt)
+#   G2: `!0 && ...` preserved by FIRRTL 1.x, CIRCT folds `!0` -> `reset`
+#   G4: _T/_T_1 node names (FIRRTL 1.x) vs simplified condition (CIRCT)
+#   G6: assignment.value uses dotted UHDI names; native uses flat RTL names
+
+[[fixtures.GCD.expected.hgdb_firrtl]]
+path_regex = "/breakpoint/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G1+G2+G4] FIRRTL 1.x emits intermediate bp (col=9/16/21 per operand) absent in CIRCT; preserves `!0 &&` prefix where CIRCT folds reset; uses _T/_T_1 node names in conditions where CIRCT simplifies the expression"
+
+[[fixtures.GCD.expected.hgdb_firrtl]]
+path_regex = "/assignment/[0-9]+"
+kind = "missing"
+reason = "[CONV G6+G4] assignment.value uses UHDI dotted names (e.g. io.x) vs hgdb-firrtl flat RTL names (io_x); breakpoint_key contains CIRCT condition strings that differ from FIRRTL 1.x _T/_T_1 names (G4), preventing superset match"
+
 [fixtures.Fifo]
 scala = "Fifo.scala"
 
+# tywaves: same file_info/1 and Bundle struct objects divergences as GCD
+
+[[fixtures.Fifo.expected.tywaves]]
+path = "/HGLDD/file_info/0"
+kind = "missing"
+reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
+
+[[fixtures.Fifo.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native firtool leaves the HDL slot empty (\"\"); we synthesize `Fifo.sv` so tywaves can find the wave via the HGLDD record"
+
+[[fixtures.Fifo.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "uhdi_to_hgldd does not project Bundle-typed io ports into separate struct objects; native firtool emits one object entry per Bundle type (e.g. Fifo_io).  Tracked as future converter enhancement"
+
+[fixtures.TywavesTorture]
+scala = "TywavesTorture.scala"
+
+# tywaves: ours=uhdi pipeline (6 objects, enum_defs, 29 SLT, ctor-params)
+# vs native=rameloni firtool (10 objects, enum_defs, no SLT).
+# Differences:
+#   1. file_info: ours has leading '/' in path, native does not.
+#   2. objects: ours and native overlap in 6 modules but differ in port_vars
+#      counts, line numbers, and source_lang_type_info presence (UHDI richer).
+#      Native has 4 extra Vec[Bundle] element objects (bvec_0/1/2/3) -- T8.
+# All 12 deltas are expected structural divergences between the two pipelines.
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path = "/HGLDD/file_info/0"
+kind = "missing"
+reason = "file_info path format differs: ours has leading '/' (absolute), rameloni native omits it"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native rameloni firtool leaves the HDL slot empty (\"\"); we synthesize TywavesTorture.sv"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "objects differ: UHDI side has 6 objects with source_lang_type_info/ctor-params; rameloni native has 10 objects (4 extra Vec[Bundle] element structs for io_bvec -- T8) with different port_vars counts and line numbers. Counter-based diff sees all as missing."
+
 [fixtures.TrafficLight]
 scala = "TrafficLight.scala"
+
+[[fixtures.TrafficLight.expected.tywaves]]
+path = "/HGLDD/file_info/0"
+kind = "missing"
+reason = "file_info path format: ours emits absolute path (leading '/'), rameloni native firtool omits the leading '/'"
+
+[[fixtures.TrafficLight.expected.tywaves]]
+path = "/HGLDD/file_info/1"
+kind = "missing"
+reason = "issue #20: native firtool leaves the HDL slot empty (\"\"); we synthesize `TrafficLight.sv` so tywaves can find the wave via the HGLDD record"
+
+[[fixtures.TrafficLight.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "objects differ: ours adds source_lang_type_info on all port_vars (native omits it); also T10: constant operand in enum comparison emits integer_num=0 (ours) vs bit_vector=\"00\" (native, knows enum width). Both cause JSON-canonical mismatch on the whole object."
+
+# ---- ChiselTraceTorture ------------------------------------------------------
+#
+# Exercises the uhdi_to_pdg converter against the native chiseltrace fork
+# (ChiselStage(addChiselTrace=true)).  Three [CIRCT] gaps are intentional:
+#   #6 dynamic memory index (mem.read/write with dynamic addr)
+#   #7 Vec register with dynamic index (regs(io.sel) := ...)
+#   #8 Mux with signal selector (Mux(io.cond, x, y))
+# All gaps require CIRCT-level probe insertion that is not visible in UHDI;
+# the converter cannot synthesise probes from FIRRTL alone.
+# Five [OK] cases (combinational chain, nested when, register, assert,
+# submodule) produce zero unexpected deltas.
+
+[fixtures.ChiselTraceTorture]
+scala = "ChiselTraceTorture.scala"
+
+[[fixtures.ChiselTraceTorture.expected.pdg]]
+path_regex = "/cfg/[0-9]+"
+kind = "missing"
+reason = "[CIRCT gaps #6-8] native chiseltrace synthesises when-block predicate nodes (pred_io_en/we/cond) and emits stmt-scope CFG entries for Vec/Mux/mem probe chains; UHDI converter sees no probes in the IR and produces a smaller cfg array"
+
+[[fixtures.ChiselTraceTorture.expected.pdg]]
+path_regex = "/edges/[0-9]+"
+kind = "missing"
+reason = "[CIRCT gaps #6-8] missing probe-indexed edges: (1) Vec scalarization -- native splits regs→regs.0..regs.n and emits Index edges; UHDI keeps aggregate; (2) dynamic mem index -- native inserts probe_rd_idx/probe_wr_idx and emits Index edges; UHDI has no probes; (3) Mux selector -- native inserts mux probe and emits Conditional edges; UHDI keeps plain ?: with no predicate"
+
+[[fixtures.ChiselTraceTorture.expected.pdg]]
+path_regex = "/predicates/[0-9]+"
+kind = "missing"
+reason = "[CIRCT gaps #6-8] native chiseltrace inserts compiler-synthesised probe signals (pred_io_en, pred_io_we, pred_io_cond) for when-block guard tracking; UHDI IR contains no probe metadata so the converter emits an empty predicates list"
+
+[[fixtures.ChiselTraceTorture.expected.pdg]]
+path_regex = "/vertices/[0-9]+"
+kind = "missing"
+reason = "[CIRCT gaps #6-8] native chiseltrace scalarises Vec/mem aggregates into per-element vertices (regs.0..regs.n, mem.0..mem.n) and adds probe vertices (probe_*, io_dout_MPORT, _io_dout_WIRE); UHDI keeps aggregates and has no probes, yielding fewer vertices"
+
+# ---- HgdbTorture -------------------------------------------------------------
+#
+# Exercises the uhdi_to_hgdb converter against the hgdb-firrtl native baseline.
+# Empirically compared 2026-05-23 after rebuilding _hgdb.so for python-3.12 (E1 fixed).
+# hgdb_circt remains in _PENDING_CELLS: LLVM-16 fork hangs >300 s (E2).
+#
+# Table sizes:  ours vs native (hgdb-firrtl)
+#   instance       : 3   vs 3    [OK]
+#   breakpoint     : 69  vs 53   ours richer (native skips intermediate bp)
+#   variable       : 31  vs 29   ours richer (2 extra clock entries)
+#   assignment     : 28  vs 22   ours richer (6 extra sub-port connects)
+#   scope          : 3   vs 0    ours only (hgdb-firrtl omits scope table)
+#   context_var    : 719 vs 0    ours only (hgdb-firrtl omits context_var table)
+#   annotation     : 1   vs 0    ours only (hgdb-firrtl omits annotation table)
+#
+# All 46 reported deltas are "missing in ours" relative to native because the
+# diff runs in superset mode (checks native ⊆ ours).  The causes:
+#
+# G1 [CIRCT] Intermediate breakpoints absent (L80-82, sub0/sub1, 12 bp):
+#   FIRRTL 1.x emits one bp per statement operand (col=18 for the LHS token),
+#   CIRCT emits one bp per statement.  Native also expands _T/_T_1 tokens into
+#   the full boolean expression; ours keeps CIRCT-simplified form.
+# G2 [CIRCT] `!reset && 1` simplified to `!reset` (L91-93, 6 bp):
+#   CIRCT constant-folds `x && 1` → `x`; FIRRTL 1.x preserves the literal.
+# G3 [CIRCT] Intermediate breakpoints absent (L125, 3 bp):
+#   Native emits 4 bp at col=13/21/24/31; ours emits only col=31.
+# G4 [CIRCT] Condition token name mismatch for T3 (L126/131/132, 3 bp):
+#   Native writes `_T_2`/`_T_3` (FIRRTL 1.x node names); ours writes `_GEN`
+#   (CIRCT node name) / expanded expression.  Same logical condition, different
+#   intermediate identifier.  This is the T3 gap seen from the native side.
+# G5 [CIRCT] Vec register RTL name: `reg_` (native) vs `reg_0` (ours):
+#   FIRRTL 1.x names the Vec element `reg_` (no index suffix); CIRCT uses
+#   `reg_0`.  Affects variable and generator_variable tables (2 entries each).
+# G6 [CONV] assignment.value uses dotted names (ours) vs flat (native):
+#   native: `io_out`, `io_q`, `sub0.io.in`; ours: `io.out`, `io.q`, `sub0.io_in`.
+#   Ours follows UHDI variable_value; native follows hgdb-firrtl naming convention.
+# G7 [CONV] assignment breakpoint_key mismatches due to G4:
+#   acc assignments at L126/132 have _GEN vs _T_2 in the key string, so the
+#   superset check cannot find the matching native assignment row.
+
+[fixtures.HgdbTorture]
+scala = "HgdbTorture.scala"
+
+# hgdb_circt: still pending (E2 — hgdb-circt hangs >300 s).
+# hgdb_firrtl: compared empirically 2026-05-23; all 46 deltas classified below.
+
+[[fixtures.HgdbTorture.expected.hgdb_firrtl]]
+path_regex = "/breakpoint/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G1-G4] FIRRTL 1.x emits more breakpoints than CIRCT: (G1) one bp per statement operand (col=18 intermediate) vs one per statement; (G2) preserves `!reset && 1` where CIRCT folds to `!reset`; (G3) 3 extra intermediate bp at L125; (G4) _T_2/_T_3 node names (FIRRTL 1.x) vs _GEN/expanded (CIRCT) -- same logical condition, different IR token"
+
+[[fixtures.HgdbTorture.expected.hgdb_firrtl]]
+path_regex = "/variable/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G5] Vec register RTL name: FIRRTL 1.x emits `reg_` (no index suffix); CIRCT emits `reg_0`. Both refer to the same Vec element; naming convention differs between the two frontends"
+
+[[fixtures.HgdbTorture.expected.hgdb_firrtl]]
+path_regex = "/generator_variable/[0-9]+"
+kind = "missing"
+reason = "[CIRCT G5] same Vec register naming divergence as /variable: `reg_` (native) vs `reg_0` (ours)"
+
+[[fixtures.HgdbTorture.expected.hgdb_firrtl]]
+path_regex = "/assignment/[0-9]+"
+kind = "missing"
+reason = "[CONV G6+G7] two converter gaps: (G6) assignment.value uses UHDI dotted names (io.out, io.q, sub0.io_in) where native uses flat hgdb-firrtl convention (io_out, io_q, sub0.io.in); (G7) acc assignment breakpoint_key contains _GEN (CIRCT) vs _T_2/_T_3 (FIRRTL 1.x) so the superset check cannot match the native row"

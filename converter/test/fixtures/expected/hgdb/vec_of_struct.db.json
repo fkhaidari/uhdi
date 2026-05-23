@@ -1,0 +1,70 @@
+{
+  "annotation": [
+    {
+      "name": "clock",
+      "value": "VecOfStruct.clock"
+    }
+  ],
+  "assignment": [],
+  "breakpoint": [
+    {
+      "column_num": 14,
+      "condition": "1",
+      "filename": "/tmp/VecOfStruct.scala",
+      "instance_name": "VecOfStruct",
+      "line_num": 6,
+      "trigger": ""
+    }
+  ],
+  "context_variable": [
+    {
+      "breakpoint_key": "VecOfStruct@/tmp/VecOfStruct.scala:6:14|1",
+      "name": "clock",
+      "type": 0,
+      "variable_value": "clock"
+    },
+    {
+      "breakpoint_key": "VecOfStruct@/tmp/VecOfStruct.scala:6:14|1",
+      "name": "reset",
+      "type": 0,
+      "variable_value": "reset"
+    }
+  ],
+  "event": [],
+  "generator_variable": [
+    {
+      "annotation": "",
+      "instance_name": "VecOfStruct",
+      "name": "clock",
+      "variable_value": "clock"
+    },
+    {
+      "annotation": "",
+      "instance_name": "VecOfStruct",
+      "name": "reset",
+      "variable_value": "reset"
+    }
+  ],
+  "instance": [
+    {
+      "annotation": "",
+      "name": "VecOfStruct"
+    }
+  ],
+  "scope": [
+    {
+      "breakpoints": "1",
+      "scope": 1
+    }
+  ],
+  "variable": [
+    {
+      "is_rtl": 1,
+      "value": "clock"
+    },
+    {
+      "is_rtl": 1,
+      "value": "reset"
+    }
+  ]
+}
