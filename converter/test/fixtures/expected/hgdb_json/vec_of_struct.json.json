@@ -1,0 +1,56 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "name": "VecOfStruct",
+      "scope": [
+        {
+          "filename": "/tmp/VecOfStruct.scala",
+          "scope": [
+            {
+              "column": 7,
+              "line": 5,
+              "type": "decl",
+              "variable": "0"
+            },
+            {
+              "column": 7,
+              "line": 5,
+              "type": "decl",
+              "variable": "1"
+            }
+          ],
+          "type": "block"
+        }
+      ],
+      "type": "module",
+      "variables": [
+        {
+          "name": "clock",
+          "rtl": true,
+          "value": "clock"
+        },
+        {
+          "name": "reset",
+          "rtl": true,
+          "value": "reset"
+        }
+      ]
+    }
+  ],
+  "top": "VecOfStruct",
+  "variables": [
+    {
+      "id": "0",
+      "name": "clock",
+      "rtl": true,
+      "value": "clock"
+    },
+    {
+      "id": "1",
+      "name": "reset",
+      "rtl": true,
+      "value": "reset"
+    }
+  ]
+}

@@ -222,6 +222,18 @@ def _source_name(stable_id, ctx):
     return getattr(ctx, "_dotted_names", {}).get(name, name)
 
 
+def _flat_rtl_name(name: str) -> str:
+    """Normalize a dotted Chisel port path to a flat RTL signal name.
+
+    ``io.x`` -> ``io_x``, ``io.data.x`` -> ``io_data_x``.
+    Cross-module refs like ``sub0.io.field`` (first segment is an instance
+    name) are returned unchanged.
+    """
+    if name.startswith("io."):
+        return name.replace(".", "_")
+    return name
+
+
 def _serialize_enable(enable_ref, ctx):
     """Serialize capture-when's `&`-joined tokens to SV fragment.
 
@@ -284,7 +296,7 @@ def _walk_body(body, ctx, instance_id, out_bps, out_scope_bps,
             lhs = _source_name(stmt.get("varRef") or "", ctx)
             if lhs:
                 out_assignments.append(
-                    (lhs, lhs, bp_id, "", None))
+                    (lhs, _flat_rtl_name(lhs), bp_id, "", None))
 
     def _is_self_connect(stmt):
         """Check if stmt is synthetic no-op self-connect from bundle decomposition."""

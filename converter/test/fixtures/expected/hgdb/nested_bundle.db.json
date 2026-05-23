@@ -11,14 +11,14 @@
       "condition": "",
       "name": "io.cmd.ready",
       "scope_id": null,
-      "value": "io.cmd.ready"
+      "value": "io_cmd_ready"
     },
     {
       "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:20:10|1",
       "condition": "",
       "name": "io.out",
       "scope_id": null,
-      "value": "io.out"
+      "value": "io_out"
     }
   ],
   "breakpoint": [

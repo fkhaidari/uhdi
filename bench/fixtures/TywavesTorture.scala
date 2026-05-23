@@ -114,5 +114,33 @@ class TywavesTorture(width: Int = 8, depth: Int = 4) extends Module {
 }
 
 object Main extends App {
-  print(ChiselStage.emitCHIRRTL(new TywavesTorture, args))
+  // Use new ChiselStage(withDebug=true) if available (rameloni-chisel fork)
+  // so AddTywavesAnnotations runs and TywavesAnnotation entries land in the
+  // FIR (needed for source_lang_type_info in rameloni firtool).
+  // withDebug is only in rameloni-chisel; our Chisel 7.x fork lacks it, so
+  // we probe via reflection and fall back to plain emitCHIRRTL.
+  val withDebugCtor = try {
+    val c = Class.forName("circt.stage.ChiselStage")
+    Some(c.getConstructor(classOf[Boolean]))
+  } catch { case _: Exception => None }
+
+  withDebugCtor match {
+    case Some(ctor) =>
+      val stageClass = Class.forName("circt.stage.ChiselStage")
+      val stage = ctor.newInstance(java.lang.Boolean.TRUE)
+      val executeMethod = stageClass.getMethod("execute",
+        classOf[Array[String]], classOf[firrtl.AnnotationSeq])
+      import chisel3.stage.ChiselGeneratorAnnotation
+      import firrtl.AnnotationSeq
+      val annos: AnnotationSeq = Seq(ChiselGeneratorAnnotation(() => new TywavesTorture))
+      val tmpDir = java.nio.file.Files.createTempDirectory("tywaves-debug-").toFile
+      tmpDir.deleteOnExit()
+      executeMethod.invoke(stage,
+        Array("--target", "chirrtl", "--target-dir", tmpDir.getAbsolutePath) ++ args,
+        annos)
+      val firFile = new java.io.File(tmpDir, "TywavesTorture.fir")
+      print(scala.io.Source.fromFile(firFile).mkString)
+    case None =>
+      print(ChiselStage.emitCHIRRTL(new TywavesTorture, args))
+  }
 }

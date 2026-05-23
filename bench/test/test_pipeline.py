@@ -20,7 +20,7 @@ def _scala_fixtures() -> list[pathlib.Path]:
 
 
 _TARGET_TO_PIPELINE = {
-    "tywaves":     "tywaves",
+    "tywaves":     "uhdi",   # ours=uhdi->hgldd; native uses tywaves pipeline + rameloni firtool
     "hgdb_circt":  "hgdb",
     "hgdb_firrtl": "hgdb",
     # No `pdg` entry: PDG has no native reference to diff against (the
@@ -45,7 +45,7 @@ def _expectations_for(fixture_stem: str, target: str) -> CellExpectations:
 # when/elsewhen chains emit empty hgdb breakpoint / variable rows).
 # Skip these cells until the gaps are fixed in a dedicated workstream;
 # see Stage 3 risk register + bench/README.md "Pending fixtures".
-_PENDING_FIXTURES = {"GCD", "Fifo", "TrafficLight"}
+_PENDING_FIXTURES = {"TrafficLight"}
 
 # Per-tool torture fixtures (Hgdb/Tywaves/ChiselTrace Torture) each target ONE
 # tool and deliberately exercise gaps; they are analysed manually via
@@ -55,14 +55,13 @@ _PENDING_FIXTURES = {"GCD", "Fifo", "TrafficLight"}
 #   - HgdbTorture is a hgdb design; tywaves diff is meaningless, and the
 #     hgdb-circt LLVM-16 fork hangs >300s on it. hgdb_firrtl is the real cell
 #     but its native side needs python-3.11 ABI bindings (env limit E1).
-#   - TywavesTorture uses enum intrinsics -> tywaves-fork firtool crashes;
-#     only meaningful via `dump_pair --pipeline uhdi`.
+#   - TywavesTorture/tywaves: now active -- uhdi pipeline + rameloni firtool baseline.
+#     hgdb_circt/hgdb_firrtl: no meaningful native baseline for this design.
 #   - *Native.scala sidecars carry no `Main`; not bench cells at all.
 _PENDING_CELLS = {
     ("HgdbTorture", "tywaves"),
     ("HgdbTorture", "hgdb_circt"),
     ("HgdbTorture", "hgdb_firrtl"),
-    ("TywavesTorture", "tywaves"),
     ("TywavesTorture", "hgdb_circt"),
     ("TywavesTorture", "hgdb_firrtl"),
     ("ChiselTraceTorture", "tywaves"),
@@ -99,8 +98,16 @@ def test_pipeline(scala: pathlib.Path, target: str, toolchain) -> None:
     except RuntimeError as e:
         pytest.skip(str(e))
 
+    # tywaves target: native --emit-hgldd needs tywaves-pipeline FIR (rameloni firtool).
+    tywaves_fir = None
+    if target == "tywaves":
+        try:
+            tywaves_fir = compile_for(scala, get_pipeline("tywaves"))
+        except (CompileError, RuntimeError) as e:
+            pytest.skip(f"tywaves pipeline compile failed for {scala.name}: {e}")
+
     try:
-        ours, native = run_target(fir, target, toolchain)
+        ours, native = run_target(fir, target, toolchain, tywaves_fir=tywaves_fir)
     except RuntimeError as e:
         pytest.skip(f"{target} target not runnable: {e}")
 

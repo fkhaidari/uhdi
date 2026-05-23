@@ -1,0 +1,260 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "/tmp/VecOfStruct.scala",
+      "VecOfStruct.sv"
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "kind": "struct",
+      "obj_name": "VecOfStruct_io_item",
+      "port_vars": [
+        {
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "a"
+        },
+        {
+          "packed_range": [
+            3,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "b"
+        }
+      ]
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 6,
+        "end_column": 14,
+        "end_line": 6,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "VecOfStruct_io_items",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 6,
+            "end_column": 14,
+            "end_line": 6,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "a"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 6,
+            "end_column": 14,
+            "end_line": 6,
+            "file": 1
+          },
+          "packed_range": [
+            3,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "b"
+        }
+      ]
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 6,
+        "end_column": 14,
+        "end_line": 6,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "VecOfStruct_io_items_0",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 6,
+            "end_column": 14,
+            "end_line": 6,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "a"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 6,
+            "end_column": 14,
+            "end_line": 6,
+            "file": 1
+          },
+          "packed_range": [
+            3,
+            0
+          ],
+          "type_name": "logic",
+          "var_name": "b"
+        }
+      ]
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 6,
+        "end_column": 14,
+        "end_line": 6,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "VecOfStruct_io",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 6,
+            "end_column": 14,
+            "end_line": 6,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "params": [
+              {
+                "name": "gen",
+                "type": "=> T"
+              },
+              {
+                "name": "length",
+                "type": "Int",
+                "value": "2"
+              }
+            ],
+            "type_name": "IO[Item[2]]"
+          },
+          "type_name": "VecOfStruct_io_items_0",
+          "unpacked_range": [
+            1,
+            0
+          ],
+          "var_name": "items"
+        }
+      ]
+    },
+    {
+      "children": [],
+      "hdl_loc": {
+        "begin_line": 2,
+        "end_line": 2,
+        "file": 2
+      },
+      "hgl_loc": {
+        "begin_column": 7,
+        "begin_line": 5,
+        "end_column": 7,
+        "end_line": 5,
+        "file": 1
+      },
+      "kind": "module",
+      "module_name": "VecOfStruct",
+      "obj_name": "VecOfStruct",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 5,
+            "end_column": 7,
+            "end_line": 5,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 5,
+            "end_column": 7,
+            "end_line": 5,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 6,
+            "end_column": 14,
+            "end_line": 6,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[AnonymousBundle]"
+          },
+          "type_name": "VecOfStruct_io",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "io_items_0_a"
+                  },
+                  {
+                    "sig_name": "io_items_0_b"
+                  }
+                ]
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "io_items_1_a"
+                  },
+                  {
+                    "sig_name": "io_items_1_b"
+                  }
+                ]
+              }
+            ]
+          },
+          "var_name": "io"
+        }
+      ],
+      "source_lang_type_info": {
+        "type_name": "VecOfStruct"
+      }
+    }
+  ]
+}

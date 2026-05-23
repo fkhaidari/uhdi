@@ -47,6 +47,21 @@ _BIND_TO_KIND: Dict[str, str] = {
 }
 _PROBE_BINDKINDS = frozenset({"probe", "rwprobe"})
 
+# firtool --emit-uhdi maps both wire and reg to bindKind="node" when the
+# variable is preserved but its kind information lives in
+# sourceLangType.typeName ("Reg[...]" / "Mem[...]").  Fall back to that
+# field when bindKind alone is not enough.
+def _is_clocked(var: Dict[str, Any]) -> bool:
+    if (var.get("bindKind") or "") in ("reg", "mem"):
+        return True
+    type_name: str = (
+        ((var.get("representations") or {}).get("chisel") or {})
+        .get("sourceLangType", {})
+        .get("typeName", "")
+    )
+    return type_name.startswith(("Reg[", "Mem[", "SyncReadMem[", "Mem."))
+
+
 # Sec.10 edge kinds that chiseltrace's PDGSpecEdgeKind enum does not have.
 # Sec.15.7 compatibility matrix: PDG keeps only the `clocked` bit from clocks/resets.
 _DROPPED_EDGE_KINDS = frozenset({"Clock", "Reset"})
@@ -191,7 +206,7 @@ def _var_vertex(scope_id: str, var_id: str, var: Dict[str, Any], ctx: _Ctx
         name = authoring
         assigns_to = authoring
 
-    clocked = bind in ("reg", "mem")
+    clocked = _is_clocked(var)
     is_chisel = (var.get("representations") or {}).get("chisel") is not None
 
     node = _loc_fields(_authoring_loc(var, ctx), ctx)
@@ -239,7 +254,7 @@ def _connection_vertex(stmt: Dict[str, Any], scope_id: str, ctx: _Ctx
     target_ref = stmt.get("varRef") or ""
     target_var = resolve_var_by_ref(target_ref, ctx)
     target_name = resolve_authoring_name(target_ref, ctx) or target_ref
-    clocked = (target_var.get("bindKind") or "") in ("reg", "mem")
+    clocked = _is_clocked(target_var) if target_var else False
 
     node = _loc_fields(_stmt_loc(stmt, ctx), ctx)
     node.update({
@@ -303,7 +318,9 @@ def _walk_body(body: List[Dict[str, Any]], scope_id: str, ctx: _Ctx,
     `stmt_guard_chain` parallels too: the list of ControlFlow vertex indices
     that surround each appended statement vertex (for Conditional edges)."""
     cfg: List[Dict[str, Any]] = []
-    for stmt in body:
+    i = 0
+    while i < len(body):
+        stmt = body[i]
         kind = stmt.get("kind")
         if kind == "block":
             guard_ref = stmt.get("guardRef")
@@ -325,7 +342,24 @@ def _walk_body(body: List[Dict[str, Any]], scope_id: str, ctx: _Ctx,
                 entry["predStmtRef"] = pred_idx
             if sub:
                 entry["trueBranch"] = sub
-            entry["falseBranch"] = None
+            # Lookahead: pair with negated sibling (otherwise-branch).
+            nxt = body[i + 1] if i + 1 < len(body) else None
+            if (
+                nxt is not None
+                and nxt.get("kind") == "block"
+                and nxt.get("guardRef") == guard_ref
+                and guard_ref is not None
+                and nxt.get("negated") is True
+                and stmt.get("negated") is not True
+            ):
+                false_sub = _walk_body(nxt.get("body") or [], scope_id, ctx,
+                                       vertices, stmt_vertex_index,
+                                       stmt_guard_chain, inner_chain)
+                entry["falseBranch"] = false_sub if false_sub else None
+                i += 2
+            else:
+                entry["falseBranch"] = None
+                i += 1
             cfg.append(entry)
         elif kind == "connect":
             vertex = _connection_vertex(stmt, scope_id, ctx)
@@ -334,6 +368,7 @@ def _walk_body(body: List[Dict[str, Any]], scope_id: str, ctx: _Ctx,
             stmt_vertex_index.append(v_idx)
             stmt_guard_chain.append(list(guard_chain))
             cfg.append({"stmtRef": v_idx})
+            i += 1
         elif kind == "decl":
             # Variable vertex was already emitted in the per-scope pre-pass;
             # the CFG carries a stmtRef to it so consumers see the declaration
@@ -345,6 +380,7 @@ def _walk_body(body: List[Dict[str, Any]], scope_id: str, ctx: _Ctx,
                 decl_idx = ctx.var_to_vertex.get((scope_id, canonical))
             if decl_idx is not None:
                 cfg.append({"stmtRef": decl_idx})
+            i += 1
         elif kind in ("assert", "assume", "cover"):
             cond_ref = stmt.get("condRef")
             cf = _controlflow_vertex(cond_ref, stmt, scope_id, ctx, annotation=kind)
@@ -353,7 +389,10 @@ def _walk_body(body: List[Dict[str, Any]], scope_id: str, ctx: _Ctx,
             stmt_vertex_index.append(v_idx)
             stmt_guard_chain.append(list(guard_chain))
             cfg.append({"stmtRef": v_idx})
-        # "none" / unknown: skip silently (spec Sec.15.5.2).
+            i += 1
+        else:
+            # "none" / unknown: skip silently (spec Sec.15.5.2).
+            i += 1
     return cfg
 
 
@@ -683,14 +722,34 @@ def _flatten_stmts(body: List[Dict[str, Any]],
                    out: List[Dict[str, Any]]) -> None:
     """Pre-order flatten mirroring _walk_body's vertex-emit order.
     Skips `decl` (no statement vertex emitted) and `none`."""
-    for stmt in body:
+    i = 0
+    while i < len(body):
+        stmt = body[i]
         kind = stmt.get("kind")
         if kind == "block":
+            guard_ref = stmt.get("guardRef")
             out.append(stmt)
             _flatten_stmts(stmt.get("body") or [], out)
+            # Lookahead: pair with negated sibling (otherwise-branch).
+            nxt = body[i + 1] if i + 1 < len(body) else None
+            if (
+                nxt is not None
+                and nxt.get("kind") == "block"
+                and nxt.get("guardRef") == guard_ref
+                and guard_ref is not None
+                and nxt.get("negated") is True
+                and stmt.get("negated") is not True
+            ):
+                _flatten_stmts(nxt.get("body") or [], out)
+                i += 2
+            else:
+                i += 1
         elif kind in ("connect", "assert", "assume", "cover"):
             out.append(stmt)
-        # `decl` and `none`: not vertex-emitting in _walk_body.
+            i += 1
+        else:
+            # `decl` and `none`: not vertex-emitting in _walk_body.
+            i += 1
 
 
 @register

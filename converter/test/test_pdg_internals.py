@@ -654,3 +654,43 @@ def test_project_explicit_edges_single_varref_endpoint_still_works():
     data_edges = [e for e in out["edges"] if e["kind"] == "Data"]
     assert len(data_edges) == 1
     assert data_edges[0]["kind"] == "Data"
+
+
+# ---------------------------------------------------------------------------
+# T11: falseBranch for when/otherwise pairs
+# ---------------------------------------------------------------------------
+
+def test_convert_emits_false_branch_for_negated_sibling():
+    """when/otherwise: the negated sibling is absorbed into falseBranch of the
+    first CF entry — not emitted as a separate top-level CFG record."""
+    import json, pathlib
+    fixture_path = (
+        pathlib.Path(__file__).parent / "fixtures" / "uhdi" /
+        "counter_with_otherwise.uhdi.json"
+    )
+    uhdi = json.loads(fixture_path.read_text())
+    out = pdg_convert(uhdi)
+
+    cfg = out["cfg"]
+
+    # Find the CF entry for the when/otherwise block (guardRef = var_Counter_reset,
+    # not negated). It must have a non-None falseBranch.
+    cf_vertices = [v for v in out["vertices"] if v.get("kind") == "ControlFlow"]
+    # There should be exactly one CF vertex (for the single when/otherwise pair).
+    assert len(cf_vertices) == 1, f"expected 1 CF vertex, got {len(cf_vertices)}"
+
+    # The cfg list must contain exactly one block-level entry (the when/otherwise
+    # pair is one record), plus one connect entry for q := r.
+    block_entries = [e for e in cfg if "trueBranch" in e or "falseBranch" in e]
+    assert len(block_entries) == 1, (
+        f"negated sibling must NOT appear as a separate top-level cfg entry; "
+        f"got {len(block_entries)} block entries"
+    )
+
+    block_entry = block_entries[0]
+    assert block_entry.get("falseBranch") is not None, (
+        "falseBranch must be non-None for a when/otherwise pair"
+    )
+    assert len(block_entry["falseBranch"]) == 1, (
+        "falseBranch should contain the connect from the otherwise body"
+    )

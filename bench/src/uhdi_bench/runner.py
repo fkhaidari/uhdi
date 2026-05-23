@@ -20,6 +20,7 @@ from typing import Any, Dict, Tuple
 class Toolchain:
     """Resolved binary paths for one bench invocation."""
     firtool: pathlib.Path
+    tywaves_firtool: pathlib.Path | None = None  # rameloni fork: handles EnumComponentAnnotation
     hgdb_circt_firtool: pathlib.Path | None = None
     hgdb_firrtl_jar: pathlib.Path | None = None
     hgdb_python: pathlib.Path | None = None  # bindings/python root
@@ -72,6 +73,21 @@ def discover_toolchain() -> Toolchain:
     else:
         firtool = practice / "circt" / "build" / "bin" / "firtool"
 
+    tywaves_firtool: pathlib.Path | None = None
+    if (env := os.environ.get("TYWAVES_FIRTOOL")):
+        tywaves_firtool = pathlib.Path(env)
+    elif (opt := pathlib.Path("/opt/tywaves-circt/bin/firtool")).is_file():
+        tywaves_firtool = opt
+    else:
+        # rameloni/tywaves-chisel installs its patched firtool via `make install-firtool-fork-bin`
+        for candidate in (
+            practice / "tywaves-chisel" / "tmp" / "bin" / "firtool-type-dbg-info-0.1.5",
+            practice / "chisel" / "out" / "circt" / "installDir.dest" / "bin" / "firtool",
+        ):
+            if candidate.is_file():
+                tywaves_firtool = candidate
+                break
+
     hgdb_circt_path: pathlib.Path | None = None
     if (env := os.environ.get("HGDB_CIRCT_FIRTOOL")):
         hgdb_circt_path = pathlib.Path(env)
@@ -110,6 +126,7 @@ def discover_toolchain() -> Toolchain:
 
     return Toolchain(
         firtool=firtool,
+        tywaves_firtool=tywaves_firtool,
         hgdb_circt_firtool=hgdb_circt_path,
         hgdb_firrtl_jar=hgdb_firrtl_jar,
         hgdb_python=hgdb_py,
@@ -330,9 +347,14 @@ def _canonical_hgldd(doc: Dict[str, Any]) -> Dict[str, Any]:
 
 def run_target(fir: pathlib.Path, target: str,
                toolchain: Toolchain,
-               scala_path: pathlib.Path | None = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+               scala_path: pathlib.Path | None = None,
+               tywaves_fir: pathlib.Path | None = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Run one (fixture, target) cell. Returns (uhdi_derived, native);
-    caller does the structural diff."""
+    caller does the structural diff.
+
+    tywaves_fir: optional separate FIR compiled via the tywaves pipeline
+    (rameloni-chisel) for the native --emit-hgldd side. If None, `fir` is
+    reused for both sides (only works when fir has no EnumComponentAnnotation)."""
     from uhdi_common.backend import discover, get
 
     discover()
@@ -340,10 +362,12 @@ def run_target(fir: pathlib.Path, target: str,
     try:
         uhdi_doc = _emit_uhdi(fir, workdir, toolchain.firtool)
         if target == "tywaves":
+            native_firtool = toolchain.tywaves_firtool or toolchain.firtool
+            native_fir = tywaves_fir or fir
             backend = get("hgldd")
             ours = _canonical_hgldd(backend.convert(uhdi_doc, None))
             native = _canonical_hgldd(
-                _emit_native_hgldd(fir, workdir, toolchain.firtool))
+                _emit_native_hgldd(native_fir, workdir, native_firtool))
             return ours, native
         if target == "hgdb_circt":
             if toolchain.hgdb_circt_firtool is None:

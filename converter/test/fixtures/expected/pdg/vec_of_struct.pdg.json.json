@@ -1,0 +1,65 @@
+{
+  "cfg": [
+    {
+      "stmtRef": 0
+    },
+    {
+      "stmtRef": 1
+    },
+    {
+      "stmtRef": 2
+    }
+  ],
+  "edges": [],
+  "predicates": [],
+  "vertices": [
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 7,
+      "clocked": false,
+      "condition": null,
+      "file": "/tmp/VecOfStruct.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 5,
+      "modulePath": [
+        "VecOfStruct"
+      ],
+      "name": "input_clock",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 7,
+      "clocked": false,
+      "condition": null,
+      "file": "/tmp/VecOfStruct.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 5,
+      "modulePath": [
+        "VecOfStruct"
+      ],
+      "name": "input_reset",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "io",
+      "char": 14,
+      "clocked": false,
+      "condition": null,
+      "file": "/tmp/VecOfStruct.scala",
+      "isChiselStatement": true,
+      "kind": "DataDefinition",
+      "line": 6,
+      "modulePath": [
+        "VecOfStruct"
+      ],
+      "name": "io",
+      "relatedSignal": null
+    }
+  ]
+}
