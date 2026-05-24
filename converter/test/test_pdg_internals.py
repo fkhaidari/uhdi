@@ -663,7 +663,8 @@ def test_project_explicit_edges_single_varref_endpoint_still_works():
 def test_convert_emits_false_branch_for_negated_sibling():
     """when/otherwise: the negated sibling is absorbed into falseBranch of the
     first CF entry — not emitted as a separate top-level CFG record."""
-    import json, pathlib
+    import json
+    import pathlib
     fixture_path = (
         pathlib.Path(__file__).parent / "fixtures" / "uhdi" /
         "counter_with_otherwise.uhdi.json"

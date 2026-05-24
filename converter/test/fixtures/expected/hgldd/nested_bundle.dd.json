@@ -1,7 +1,7 @@
 {
   "HGLDD": {
     "file_info": [
-      "/tmp/uhdi-verify/nested/NestedBundle.scala",
+      "tmp/uhdi-verify/nested/NestedBundle.scala",
       "NestedBundle.sv"
     ],
     "hdl_file_index": 2,
