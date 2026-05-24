@@ -25,7 +25,10 @@ def "main all" [
     # doesn't matter -- but keep it grouped with the other viewers.
     # scala-cli is needed for the bench compile step.
     # hgdb-circt/hgdb-firrtl unlock the hgdb_circt/hgdb_firrtl bench cells.
-    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-circt" "hgdb-firrtl" "hgdb-cli"]
+    # ivy2-* unpack the publishLocal'd Chisel forks into ~/.ivy2/local so
+    # the uhdi/tywaves/chiseltrace bench pipelines resolve without a manual
+    # `mill publishLocal` (the SNAPSHOTs aren't on Maven Central/JitPack).
+    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-circt" "hgdb-firrtl" "ivy2-uhdi" "ivy2-tywaves" "ivy2-chiseltrace" "hgdb-cli"]
     | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
     | flatten
     | uniq
@@ -69,6 +72,21 @@ def "main hgdb-firrtl" [--prefix: path = "" --release-tag: string = "" --force] 
   run-single "hgdb-firrtl" $prefix $release_tag $force
 }
 
+# Unpack the uhdi Chisel fork (debug intrinsics) into ~/.ivy2/local.
+def "main ivy2-uhdi" [--prefix: path = "" --release-tag: string = "" --force] {
+  run-single "ivy2-uhdi" $prefix $release_tag $force
+}
+
+# Unpack the tywaves Chisel fork into ~/.ivy2/local.
+def "main ivy2-tywaves" [--prefix: path = "" --release-tag: string = "" --force] {
+  run-single "ivy2-tywaves" $prefix $release_tag $force
+}
+
+# Unpack the chiseltrace Chisel fork into ~/.ivy2/local.
+def "main ivy2-chiseltrace" [--prefix: path = "" --release-tag: string = "" --force] {
+  run-single "ivy2-chiseltrace" $prefix $release_tag $force
+}
+
 # Install the upstream `hgdb` console debugger (Kuree/hgdb-debugger).
 # Builds a 3.12 venv, pip-installs hgdb-debugger + deps, links the
 # uhdi-tools hgdb python bindings into it, exposes `bin/hgdb` on the
@@ -91,6 +109,9 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
     "scala-cli" => { install-scala-cli $p $force $work_root }
     "hgdb-circt" => { install-hgdb-circt $p $release_tag $force $work_root }
     "hgdb-firrtl" => { install-hgdb-firrtl $p $release_tag $force $work_root }
+    "ivy2-uhdi" => { install-ivy2-local "uhdi" $release_tag $force $work_root }
+    "ivy2-tywaves" => { install-ivy2-local "tywaves" $release_tag $force $work_root }
+    "ivy2-chiseltrace" => { install-ivy2-local "chiseltrace" $release_tag $force $work_root }
     "hgdb-cli" => { install-hgdb-cli $p $force }
   }
   rm -rf $work_root
@@ -177,6 +198,15 @@ def dispatch [
     }
     "hgdb-firrtl" => {
       try { install-hgdb-firrtl $p $release_tag $force $work_root; ["hgdb-firrtl"] } catch { [] }
+    }
+    "ivy2-uhdi" => {
+      try { install-ivy2-local "uhdi" $release_tag $force $work_root; ["ivy2-uhdi"] } catch { [] }
+    }
+    "ivy2-tywaves" => {
+      try { install-ivy2-local "tywaves" $release_tag $force $work_root; ["ivy2-tywaves"] } catch { [] }
+    }
+    "ivy2-chiseltrace" => {
+      try { install-ivy2-local "chiseltrace" $release_tag $force $work_root; ["ivy2-chiseltrace"] } catch { [] }
     }
     "hgdb-cli" => {
       try { install-hgdb-cli $p $force; ["hgdb-cli"] } catch { [] }
@@ -501,6 +531,33 @@ def install-hgdb-firrtl [p: path release_tag: string force: bool work_root: path
   mkdir ($p | path join "bin")
   cp $jar $target
   print $"  Installed:  ($target)"
+}
+
+# ---- ivy2-local (publishLocal'd Chisel forks) -----------------------------
+
+# Unpack a `mill publishLocal`'d Chisel fork tarball into ~/.ivy2/local so
+# scala-cli's `--repository ivy2Local` resolves the bench SNAPSHOTs. The
+# forks (uhdi debug-intrinsics, tywaves, chiseltrace) carry custom Chisel +
+# compiler-plugin builds that aren't on Maven Central or JitPack (their old
+# mill build.sc doesn't publish a JitPack-compatible plugin artifactId), so
+# shipping the prebuilt ivy layout is the only offline-friendly path.
+def install-ivy2-local [variant: string release_tag: string force: bool work_root: path] {
+  print $"=== ivy2-($variant) ==="
+  let tag = (resolve-release-tag $REPO $release_tag)
+  print $"  Repo:       ($REPO)"
+  print $"  Tag:        ($tag)"
+
+  let ivy2_local = ($env.HOME | path join ".ivy2/local")
+  # Marker: the org dir the tarball populates. Present without --force means
+  # some fork is already unpacked; we still extract (tarballs are additive,
+  # different SNAPSHOT version dirs) but skip the redundant download.
+  let pattern = $"ivy2-local-($variant)-*.tar.gz"
+  let tmp = ($work_root | path join $"ivy2-($variant)")
+  let tarball = (dl-release-asset $REPO $tag $pattern $tmp)
+
+  mkdir $ivy2_local
+  ^tar -xzf $tarball -C $ivy2_local
+  print $"  Installed:  ($ivy2_local) \(($variant) Chisel fork\)"
 }
 
 # ---- hgdb-cli (hgdb console debugger + uhdi converters) -------------------
