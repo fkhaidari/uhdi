@@ -24,7 +24,8 @@ def "main all" [
     # chiseltrace consumes uhdi-to-pdg output, so its order vs. hgdb-cli
     # doesn't matter -- but keep it grouped with the other viewers.
     # scala-cli is needed for the bench compile step.
-    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-cli"]
+    # hgdb-circt/hgdb-firrtl unlock the hgdb_circt/hgdb_firrtl bench cells.
+    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-circt" "hgdb-firrtl" "hgdb-cli"]
     | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
     | flatten
     | uniq
@@ -58,6 +59,16 @@ def "main scala-cli" [--prefix: path = "" --force] {
   run-single "scala-cli" $prefix "" $force
 }
 
+# Install hgdb-circt firtool (legacy --hgdb=<file> flag, LLVM-16 era).
+def "main hgdb-circt" [--prefix: path = "" --release-tag: string = "" --force] {
+  run-single "hgdb-circt" $prefix $release_tag $force
+}
+
+# Install hgdb-firrtl.jar (Scala FIRRTL 1.x, requires Java 17).
+def "main hgdb-firrtl" [--prefix: path = "" --release-tag: string = "" --force] {
+  run-single "hgdb-firrtl" $prefix $release_tag $force
+}
+
 # Install the upstream `hgdb` console debugger (Kuree/hgdb-debugger).
 # Builds a 3.12 venv, pip-installs hgdb-debugger + deps, links the
 # uhdi-tools hgdb python bindings into it, exposes `bin/hgdb` on the
@@ -78,6 +89,8 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
     "tywaves" => { install-tywaves $p $release_tag $force $work_root }
     "chiseltrace" => { install-chiseltrace $p $release_tag $force $work_root }
     "scala-cli" => { install-scala-cli $p $force $work_root }
+    "hgdb-circt" => { install-hgdb-circt $p $release_tag $force $work_root }
+    "hgdb-firrtl" => { install-hgdb-firrtl $p $release_tag $force $work_root }
     "hgdb-cli" => { install-hgdb-cli $p $force }
   }
   rm -rf $work_root
@@ -158,6 +171,12 @@ def dispatch [
     }
     "scala-cli" => {
       try { install-scala-cli $p $force $work_root; ["scala-cli"] } catch { [] }
+    }
+    "hgdb-circt" => {
+      try { install-hgdb-circt $p $release_tag $force $work_root; ["hgdb-circt"] } catch { [] }
+    }
+    "hgdb-firrtl" => {
+      try { install-hgdb-firrtl $p $release_tag $force $work_root; ["hgdb-firrtl"] } catch { [] }
     }
     "hgdb-cli" => {
       try { install-hgdb-cli $p $force; ["hgdb-cli"] } catch { [] }
@@ -452,6 +471,38 @@ def install-chiseltrace [p: path release_tag: string force: bool work_root: path
   print $"  Installed:  ($target)"
 }
 
+# ---- hgdb-circt (legacy firtool with --hgdb=<file>) -----------------------
+
+def install-hgdb-circt [p: path release_tag: string force: bool work_root: path] {
+  install-tarball-component {
+    name: "hgdb-circt"
+    pattern: "hgdb-circt-firtool-{platform}-*.tar.gz"
+    target_rel: "bin/hgdb-circt-firtool"
+    extract_rel: "bin"
+    chmod_rel: "bin/hgdb-circt-firtool"
+  } $p $release_tag $force $work_root
+}
+
+# ---- hgdb-firrtl (Scala FIRRTL 1.x fat jar) --------------------------------
+
+def install-hgdb-firrtl [p: path release_tag: string force: bool work_root: path] {
+  print "=== hgdb-firrtl ==="
+  let tag = (resolve-release-tag $REPO $release_tag)
+  print $"  Repo:       ($REPO)"
+  print $"  Tag:        ($tag)"
+
+  let target = ($p | path join "bin/hgdb-firrtl.jar")
+  if not (ensure-writable $target $force) { return }
+
+  let asset_name = $"hgdb-firrtl-($tag).jar"
+  let tmp = ($work_root | path join "hgdb-firrtl")
+  let jar = (dl-release-asset $REPO $tag $asset_name $tmp)
+
+  mkdir ($p | path join "bin")
+  cp $jar $target
+  print $"  Installed:  ($target)"
+}
+
 # ---- hgdb-cli (hgdb console debugger + uhdi converters) -------------------
 
 # Shared $prefix/cli-venv with: hgdb-debugger (console + linked _hgdb.so),
@@ -539,13 +590,15 @@ export def env-hint-lines [
         "tywaves" => $"  export TYWAVES=\"($p)/bin/tywaves\""
         "chiseltrace" => $"  export CHISELTRACE=\"($p)/bin/chiseltrace-cli\""
         "scala-cli" => null  # scala-cli on PATH is sufficient; no extra env var needed
+        "hgdb-circt" => $"  export HGDB_CIRCT_FIRTOOL=\"($p)/bin/hgdb-circt-firtool\""
+        "hgdb-firrtl" => $"  export HGDB_FIRRTL_JAR=\"($p)/bin/hgdb-firrtl.jar\""
         "hgdb-cli" => $"  export HGDB_DEBUGGER=\"($p)/bin/hgdb\""
         _ => null
       }
     }
     | where {|x| $x != null }
   )
-  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) or ("chiseltrace" in $did) or ("scala-cli" in $did) or ("hgdb-cli" in $did) {
+  let path_hint = if ("firtool" in $did) or ("tywaves" in $did) or ("chiseltrace" in $did) or ("scala-cli" in $did) or ("hgdb-circt" in $did) or ("hgdb-cli" in $did) {
     let bin = ($p | path join "bin" | into string)
     if ($bin not-in $path_segments) {
       [$"  export PATH=\"($bin):$PATH\""]
