@@ -59,7 +59,7 @@ Python) is a structural reflection of the IR/format split.
 Domain mismatch: DWARF assumes PC-driven execution, software-style lexical scopes,
 and registers; in hardware there is no PC, there are multiple concurrently live
 clock domains, and "variables" are `bindKind: "port"/"reg"/"wire"/...` (Sec.6.2) --
-categories that DWARF does not have. Additionally, none of the three real consumers
+categories that DWARF does not have. None of the three real consumers
 (Tywaves, hgdb, ChiselTrace) reads DWARF -- three new integrations would have to be
 built from scratch. The full argument is in Appendix B.11
 (`docs/uhdi-spec.md:3088-3094`). Proposing a hardware-DWARF extension would

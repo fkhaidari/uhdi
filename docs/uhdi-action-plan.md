@@ -25,7 +25,7 @@ uhdi is a unified debug information format for hardware generators, built as a *
 
 1. **Format** -- N-way representations, pool-based structure, layered optionality (spec).
 2. **Infrastructure** -- two CIRCT passes and one emitter producing uhdi from Chisel designs.
-3. **Independent projections** -- `uhdi-to-hgldd` and `uhdi-to-hgdb` as Python converters. Python is intentional: a reference implementation, explicitly decoupled from the compiler, emphasizing that the format is an independent entity, not an internal CIRCT representation.
+3. **Independent projections** -- `uhdi-to-hgldd` and `uhdi-to-hgdb` as Python converters. Python is intentional: a reference implementation, explicitly decoupled from the compiler. The format is an independent entity, not an internal CIRCT representation.
 
 ### Why a pool-based format from scratch, rather than extending HGLDD
 
