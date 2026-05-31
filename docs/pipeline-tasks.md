@@ -227,7 +227,7 @@ expression). The extra bp at col=13/21/24 cover sub-expressions of the same comp
 
 This is the T3 gap seen from the native side: FIRRTL 1.x names the compound-guard intermediate
 node `_T_2`/`_T_3`; CIRCT names it `_GEN`. The logical condition is identical; the identifier
-differs between the two frontends. Additionally, ours expands `io.opcode == 10` (hex literal)
+differs between the two frontends. Ours also expands `io.opcode == 10` (hex literal)
 while native writes `_T_3`.
 
 **Impact:** debugger condition string differs but evaluates identically at runtime.
