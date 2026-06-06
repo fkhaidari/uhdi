@@ -37,15 +37,16 @@ _TYWAVES = Pipeline(
     repositories=("ivy2Local",),
 )
 
-# Shares tywaves SNAPSHOT; override via UHDI_BENCH_UHDI_CHISEL.
-# scala_version must match the published chisel-plugin cross
-# (plugin.cross[2.13.18] -- only 2.13.18 jars exist in ivy2Local).
+# Official Chisel: PR #5276 (circt_debug_* intrinsics) shipped in 7.13.0,
+# so the uhdi pipeline no longer needs the publishLocal'd fork.  The
+# emitted intrinsics and the resulting UHDI JSON are byte-identical to the
+# old 7.1.1+210-c6faff5e fork across the bench fixtures.  Override via
+# UHDI_BENCH_UHDI_CHISEL.
 _UHDI = Pipeline(
     name="uhdi",
     scala_version="2.13.18",
-    chisel_dep="org.chipsalliance::chisel:7.1.1+210-c6faff5e-SNAPSHOT",
-    plugin_dep="org.chipsalliance:::chisel-plugin:7.1.1+210-c6faff5e-SNAPSHOT",
-    repositories=("ivy2Local",),
+    chisel_dep="org.chipsalliance::chisel:7.13.0",
+    plugin_dep="org.chipsalliance:::chisel-plugin:7.13.0",
     fixture_flags=("--with-experimental-debug-intrinsics",),
 )
 

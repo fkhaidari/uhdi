@@ -48,11 +48,10 @@ def main [
     "HGDB_REV"
     "CHISEL_TYWAVES_URL"
     "CHISEL_TYWAVES_REV"
-    "CHISEL_UHDI_URL"
-    "CHISEL_UHDI_REV"
     "TYWAVES_URL"
     "TYWAVES_REV"
     "CHISEL_STOCK_VERSION"
+    "CHISEL_UHDI_VERSION"
     "SCALA_CLI_VERSION"
   ]
   let build_args = (

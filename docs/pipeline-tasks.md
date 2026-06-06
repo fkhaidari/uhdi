@@ -3,7 +3,7 @@
 Document derived from running three torture fixtures (`bench/fixtures/{Hgdb,Tywaves,ChiselTrace}Torture.scala`)
 via both paths: **native** (firtool `--emit-hgldd` / hgdb-firrtl / chiseltrace plugin) and
 **UHDI + converter** (`firtool --emit-uhdi` -> `uhdi_to_{hgldd,hgdb,pdg}`).
-Date: 2026-05-23 (updated 2026-05-23). CIRCT pin `43a716db1`, chisel uhdi-fork `7.1.1+210-c6faff5e`, chiseltrace chisel-fork `6.4.3-tywaves-chiseltrace-SNAPSHOT`.
+Date: 2026-05-23 (updated 2026-05-23). CIRCT pin `43a716db1`, chisel uhdi `7.13.0` (official; PR #5276), chiseltrace chisel-fork `6.4.3-tywaves-chiseltrace-SNAPSHOT`.
 
 **Experimental verification 2026-05-23:** all three torture fixtures ran through `bench/compare_fixture.py` with 0 surprises — HgdbTorture/hgdb_firrtl (46/46), TywavesTorture/tywaves (9/9), ChiselTraceTorture/pdg (246/246). Open tasks T2, T3, T4, T8, T10, T11, T13, G1-G7 confirmed via live pipeline run; no regressions detected.
 

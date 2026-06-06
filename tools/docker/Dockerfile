@@ -125,9 +125,8 @@ RUN cd /src/hgdb/bindings/python && \
 FROM docker.io/eclipse-temurin:21-jdk AS chisel-publish
 ARG CHISEL_TYWAVES_URL
 ARG CHISEL_TYWAVES_REV
-ARG CHISEL_UHDI_URL
-ARG CHISEL_UHDI_REV
 ARG CHISEL_STOCK_VERSION
+ARG CHISEL_UHDI_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
@@ -174,16 +173,15 @@ RUN git-pin chisel-tywaves "$CHISEL_TYWAVES_URL" "$CHISEL_TYWAVES_REV" && \
     sbt -Dsbt.override.build.repos=true -Dsbt.ivy.home=/root/.ivy2 -Dsbt.coursier.home=/root/.cache/coursier \
         -Dsbt.log.format=true \
         "unipublish / publishLocal"
-# chisel-uhdi uses Mill 1.0.6-jvm with build.mill (not build.sc); the
-# repo's bundled ./mill launcher auto-downloads the matching jar.
-# `unipublish[2.13]` bundles every public module into one artifact.
-RUN git-pin chisel-uhdi "$CHISEL_UHDI_URL" "$CHISEL_UHDI_REV" && \
-    cd chisel-uhdi && \
-    ./mill unipublish[2.13].publishLocal
-# Seed coursier cache with stock chisel for offline bench resolution.
+# Seed coursier cache with stock chisel (hgdb pipeline) and the official
+# uhdi chisel (PR #5276 landed in 7.13.0, so no fork to publishLocal) for
+# offline bench resolution.
 RUN cs fetch "org.chipsalliance::chisel:${CHISEL_STOCK_VERSION}" \
         "org.chipsalliance:::chisel-plugin:${CHISEL_STOCK_VERSION}" \
         --scala-version 2.13.14 || true
+RUN cs fetch "org.chipsalliance::chisel:${CHISEL_UHDI_VERSION}" \
+        "org.chipsalliance:::chisel-plugin:${CHISEL_UHDI_VERSION}" \
+        --scala-version 2.13.18 || true
 
 # ---- surfer-tywaves (waveform viewer; binary renamed to `tywaves`) -------
 # Mirrored from gitlab.com/rameloni/surfer-tywaves-demo to fkhaidari/surfer-tywaves.
