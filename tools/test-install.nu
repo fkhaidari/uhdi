@@ -1,9 +1,8 @@
 #!/usr/bin/env nu
 # Smoke tests for tools/install.nu. Reads env vars (no flags):
 #   UHDI_TAG     fkhaidari/uhdi release (default: latest)
-#   CHISEL_TAG   fkhaidari/chisel JitPack tag (default: latest *-uhdi)
-#   UHDI_E2E=1   also resolve chisel from JitPack + compile a tiny mill
-#                project (slow, needs `mill` on PATH)
+#   UHDI_E2E=1   also resolve chisel from Maven Central + compile a tiny
+#                mill project (slow, needs `mill` on PATH)
 
 use lib/common.nu *
 use std/assert
@@ -27,7 +26,6 @@ def main [] {
         $prefix
       ]
       | append (if (($env.UHDI_TAG? | default "") | is-not-empty) { ["--release-tag" $env.UHDI_TAG] } else { [] })
-      | append (if (($env.CHISEL_TAG? | default "") | is-not-empty) { ["--chisel-tag" $env.CHISEL_TAG] } else { [] })
     )
     # `all` returns 0 even if hgdb-py is missing on this platform
     # (linux-x86_64 only), but firtool + chisel + tywaves must succeed.
@@ -89,19 +87,11 @@ def main [] {
 
     # ---- 4. chisel snippet ---------------------------------------
     section "chisel"
-    let chisel_args = (
-      [
-        "chisel"
-      ] | append (if (($env.CHISEL_TAG? | default "") | is-not-empty) { ["--chisel-tag" $env.CHISEL_TAG] } else { [] })
-    )
-    let snippet = (^bash ($REPO_ROOT | path join "tools/install.sh") ...$chisel_args | complete | get stdout)
-    if not ($snippet | str contains "jitpack.io") {
-      fail "chisel snippet does not mention jitpack.io"
+    let snippet = (^bash ($REPO_ROOT | path join "tools/install.sh") chisel | complete | get stdout)
+    if not ($snippet | str contains "org.chipsalliance::chisel:7.13.0") {
+      fail "chisel snippet does not contain the official Maven Central coord"
     }
-    if not ($snippet =~ 'com\.github\.fkhaidari\.chisel.*-uhdi') {
-      fail "chisel snippet does not contain a -uhdi coord"
-    }
-    ok "chisel snippet printed with jitpack repo + uhdi coord"
+    ok "chisel snippet printed with official Maven Central coord"
 
     # ---- 5. tywaves ----------------------------------------------
     section "tywaves"
@@ -196,9 +186,9 @@ def main [] {
     }
     ok $"hgdb-cli venv installed ($cli_bins | length) console scripts respond"
 
-    # ---- 8. (optional) end-to-end JitPack -> firtool -------------
+    # ---- 8. (optional) end-to-end Maven Central -> firtool -------
     if (($env.UHDI_E2E? | default "0") == "1") {
-      run-e2e $snippet
+      run-e2e
     }
   } catch {|e|
     rm -rf $prefix
@@ -210,7 +200,7 @@ def main [] {
   print "=== all tests passed ==="
 }
 
-def run-e2e [snippet: string] {
+def run-e2e [] {
   section "e2e"
   if (which mill | is-empty) {
     skip "mill not on PATH; skipping e2e"
@@ -219,19 +209,6 @@ def run-e2e [snippet: string] {
 
   let e2e = (mktemp -d | str trim)
   try {
-    # Read tag from the chisel snippet (single source of truth).
-    let ctag = (
-      $snippet
-      | parse --regex 'com\.github\.fkhaidari\.chisel.+:(?<t>v[^"]+-uhdi)'
-      | get t?
-      | default []
-      | first
-      | default ""
-    )
-    if ($ctag | is-empty) {
-      error make {msg: "could not extract chisel tag from snippet"}
-    }
-
     # Raw single-quote strings (no interpolation), then `str replace`
     # the placeholder. Avoids escaping parens/braces against nu's
     # `$"..."` interpolation parser.
@@ -254,17 +231,13 @@ object Main extends App {
       '//| mill-version: 1.0.6-jvm
 import mill._
 import mill.scalalib._
-import coursier.maven.MavenRepository
 
 object app extends ScalaModule {
   def scalaVersion = "2.13.18"
   def mainClass = Task { Some("Main") }
-  def repositoriesTask = Task.Anon {
-    super.repositoriesTask() ++ Seq(MavenRepository("https://jitpack.io"))
-  }
   def mvnDeps = Seq(
-    ivy"com.github.fkhaidari.chisel::chisel:CHISEL_TAG",
-    ivy"com.github.fkhaidari.chisel:chisel-plugin_2.13.18:CHISEL_TAG",
+    ivy"org.chipsalliance::chisel:CHISEL_VERSION",
+    ivy"org.chipsalliance:::chisel-plugin:CHISEL_VERSION",
   )
   def scalacOptions = Task {
     val plugin = compileClasspath()
@@ -272,19 +245,19 @@ object app extends ScalaModule {
       .map(p => s"-Xplugin:${p.path}")
     Seq("-Ymacro-annotations") ++ plugin
   }
-}' | str replace --all "CHISEL_TAG" $ctag
+}' | str replace --all "CHISEL_VERSION" "7.13.0"
     )
     $mill_src | save -f ($e2e | path join "build.mill")
 
-    print "Resolving chisel from JitPack and compiling..."
+    print "Resolving chisel from Maven Central and compiling..."
     cd $e2e
     try {
       ^mill app.compile
     } catch {
-      error make {msg: "mill compile failed against JitPack"}
+      error make {msg: "mill compile failed against Maven Central"}
     }
     cd $REPO_ROOT
-    ok "JitPack chisel resolved and compiled"
+    ok "Maven Central chisel resolved and compiled"
   } catch {|e|
     rm -rf $e2e
     error make {msg: $e.msg}

@@ -9,7 +9,7 @@ prebuilt copies of every fork the bench needs:
 | `/opt/hgdb-circt/bin/firtool` | hgdb-circt `--hgdb=<file>` | `HGDB_CIRCT_URL` @ `HGDB_CIRCT_REV` |
 | `/opt/hgdb-firrtl/bin/hgdb-firrtl.jar` | Scala FIRRTL 1.x assembly | `HGDB_FIRRTL_URL` @ `HGDB_FIRRTL_REV` |
 | `/opt/hgdb/bindings/python/` | toml2hgdb + `_hgdb` C ext | `HGDB_URL` @ `HGDB_REV` |
-| `/opt/ivy2-local/` (-> `~/.ivy2/local/`) | mill publishLocal of both Chisel forks | `CHISEL_TYWAVES_*` + `CHISEL_UHDI_*` |
+| `/opt/ivy2-local/` (-> `~/.ivy2/local/`) | mill publishLocal of the tywaves Chisel fork | `CHISEL_TYWAVES_*` |
 | `/opt/coursier-cache/` | seeded Maven cache w/ stock chisel | `CHISEL_STOCK_VERSION` |
 
 Chiseltrace (`CHISELTRACE_URL` / `CHISELTRACE_REV` in `versions.env`)
@@ -34,8 +34,8 @@ GitHub Release on `fkhaidari/uhdi`, provisions a shared
 `<prefix>/cli-venv` with the upstream hgdb console (`hgdb-debugger`),
 the libhgdb runtime (`hgdb-replay` / `hgdb-db`), and the in-tree
 `uhdi-converter` (`uhdi-to-hgldd` / `uhdi-to-hgdb` / `uhdi-to-pdg`),
-and prints the JitPack snippet for the chisel fork. **No Docker
-required on the consumer side.**
+and prints the official Maven Central coordinate snippet for chisel.
+**No Docker required on the consumer side.**
 
 Host prerequisites (preflighted by the installer with apt hints):
 `curl` + `tar` (used to bootstrap `nu` and fetch tarballs) and
@@ -58,8 +58,7 @@ Subcommands: `firtool`, `hgdb-py`, `chisel` (prints snippet only),
 `tywaves`, `chiseltrace`, `hgdb-cli`, `all`. Each accepts `--prefix DIR`
 (default `$HOME/.local/uhdi-tools`); pin a release with `--release-tag`
 (one release on `fkhaidari/uhdi` carries firtool, hgdb-py, tywaves, and
-chiseltrace) or `--chisel-tag` (separate, JitPack tag on
-`fkhaidari/chisel`). Hint exports are printed at the end so the same
+chiseltrace). Hint exports are printed at the end so the same
 install plugs into `bench/runner.py`'s env-var discovery.
 
 Caveats:
@@ -70,9 +69,9 @@ Caveats:
   built against the uhdi-tools image's glibc. Other platforms fall
   back to `tools/release/release-hgdb-py.nu build`.
 - `chisel` is JVM-only. `install.sh chisel` writes nothing; it just
-  prints the resolver + coord block to paste into `build.mill` /
-  `build.sbt` / `scala-cli`. The build tool fetches it from JitPack
-  on first compile.
+  prints the official Maven Central coordinate block to paste into
+  `build.mill` / `build.sbt` / `scala-cli`. The build tool fetches it
+  from Maven Central on first compile.
 - `tywaves` is the surfer waveform viewer with tywaves rendering
   patches; built from a mirror of
   `gitlab.com/rameloni/surfer-tywaves-demo` at
@@ -123,8 +122,8 @@ local builds.
 
 The remaining sections are for the repository owner: how the image
 tag is derived, when CI rebakes the image, and how to cut releases
-of firtool / hgdb-py / chisel. Day-to-day consumers don't need any
-of it.
+of firtool / hgdb-py / tywaves / chiseltrace. Day-to-day consumers
+don't need any of it.
 
 ## Pre-commit hook (recommended)
 
@@ -210,7 +209,6 @@ operates on its own artifact and tags so the workflow scales:
 | `nu release-hgdb-py.nu build --from-docker --release <tag>` | `hgdb-py-linux-x86_64-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to same tag |
 | `nu release-tywaves.nu build --from-docker --release <tag>` | `tywaves-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` | upload to same tag |
 | `nu release-chiseltrace.nu build --release <tag>` | `chiseltrace-${platform}-${tag}.tar.gz` on `fkhaidari/uhdi` (CLI + GUI) | upload to same tag |
-| `nu release-chisel.nu <tag>` | JitPack build at `https://jitpack.io/#fkhaidari/chisel/<tag>` | `vX.Y.Z-uhdi` |
 
 `release-hgdb-py.nu`, `release-tywaves.nu`, and `release-chiseltrace.nu`
 all use `gh release upload --clobber` if the tag exists, so attaching
@@ -227,5 +225,5 @@ post-release smoke test:
 ```sh
 UHDI_TAG=firtool-v0.1.1 nu tools/test-install.nu
 # UHDI_E2E=1 also scaffolds a tiny mill project, resolves chisel from
-# JitPack, and runs firtool --emit-uhdi end-to-end (needs `mill`).
+# Maven Central, and runs firtool --emit-uhdi end-to-end (needs `mill`).
 ```

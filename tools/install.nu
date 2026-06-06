@@ -7,13 +7,15 @@ use lib/common.nu *
 
 const REPO = "fkhaidari/uhdi"
 const SCALA_CLI_REPO = "VirtusLab/scala-cli"
+# Official Chisel on Maven Central; PR #5276 (circt_debug_* intrinsics)
+# shipped in 7.13.0, so the uhdi pipeline no longer needs a fork.
+const CHISEL_VERSION = "7.13.0"
 
 # Install firtool, hgdb-py, tywaves, chiseltrace, scala-cli, and print
-# the chisel JitPack snippet.
+# the official chisel Maven Central coordinate snippet.
 def "main all" [
   --prefix: path = ""
   --release-tag: string = ""
-  --chisel-tag: string = ""
   --force
 ] {
   let p = (resolve-prefix $prefix)
@@ -25,11 +27,12 @@ def "main all" [
     # doesn't matter -- but keep it grouped with the other viewers.
     # scala-cli is needed for the bench compile step.
     # hgdb-circt/hgdb-firrtl unlock the hgdb_circt/hgdb_firrtl bench cells.
-    # ivy2-* unpack the publishLocal'd Chisel forks into ~/.ivy2/local so
-    # the uhdi/tywaves/chiseltrace bench pipelines resolve without a manual
-    # `mill publishLocal` (the SNAPSHOTs aren't on Maven Central/JitPack).
-    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-circt" "hgdb-firrtl" "ivy2-uhdi" "ivy2-tywaves" "ivy2-chiseltrace" "hgdb-cli"]
-    | each {|c| dispatch $c $p $release_tag $chisel_tag $force $work_root }
+    # ivy2-* unpack the publishLocal'd tywaves/chiseltrace Chisel forks into
+    # ~/.ivy2/local so those bench pipelines resolve without a manual `mill
+    # publishLocal` (the SNAPSHOTs aren't on Maven Central/JitPack). The uhdi
+    # pipeline uses official Maven Central chisel, so it needs no ivy2-local.
+    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-circt" "hgdb-firrtl" "ivy2-tywaves" "ivy2-chiseltrace" "hgdb-cli"]
+    | each {|c| dispatch $c $p $release_tag $force $work_root }
     | flatten
     | uniq
   )
@@ -72,11 +75,6 @@ def "main hgdb-firrtl" [--prefix: path = "" --release-tag: string = "" --force] 
   run-single "hgdb-firrtl" $prefix $release_tag $force
 }
 
-# Unpack the uhdi Chisel fork (debug intrinsics) into ~/.ivy2/local.
-def "main ivy2-uhdi" [--prefix: path = "" --release-tag: string = "" --force] {
-  run-single "ivy2-uhdi" $prefix $release_tag $force
-}
-
 # Unpack the tywaves Chisel fork into ~/.ivy2/local.
 def "main ivy2-tywaves" [--prefix: path = "" --release-tag: string = "" --force] {
   run-single "ivy2-tywaves" $prefix $release_tag $force
@@ -109,7 +107,6 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
     "scala-cli" => { install-scala-cli $p $force $work_root }
     "hgdb-circt" => { install-hgdb-circt $p $release_tag $force $work_root }
     "hgdb-firrtl" => { install-hgdb-firrtl $p $release_tag $force $work_root }
-    "ivy2-uhdi" => { install-ivy2-local "uhdi" $release_tag $force $work_root }
     "ivy2-tywaves" => { install-ivy2-local "tywaves" $release_tag $force $work_root }
     "ivy2-chiseltrace" => { install-ivy2-local "chiseltrace" $release_tag $force $work_root }
     "hgdb-cli" => { install-hgdb-cli $p $force }
@@ -118,24 +115,23 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
   print-env-hints $p [$component]
 }
 
-# Print the chisel JitPack snippet (writes nothing to disk).
+# Print the official chisel Maven Central coordinate snippet (writes
+# nothing to disk).
 def "main chisel" [
-  --chisel-tag: string = ""
   # Other flags accepted for symmetry with `all`.
   --prefix: path = ""
   --release-tag: string = ""
   --force
 ] {
-  install-chisel $chisel_tag
+  install-chisel
 }
 
 def main [
   --prefix: path = ""
   --release-tag: string = ""
-  --chisel-tag: string = ""
   --force
 ] {
-  main all --prefix $prefix --release-tag $release_tag --chisel-tag $chisel_tag --force=$force
+  main all --prefix $prefix --release-tag $release_tag --force=$force
 }
 
 # ---- internal helpers ------------------------------------------------------
@@ -169,7 +165,6 @@ def dispatch [
   component: string
   p: path
   release_tag: string
-  chisel_tag: string
   force: bool
   work_root: path
 ]: nothing -> list<string> {
@@ -182,7 +177,7 @@ def dispatch [
       try { install-hgdb-py $p $release_tag $force $work_root; ["hgdb-py"] } catch { [] }
     }
     "chisel" => {
-      try { install-chisel $chisel_tag; [] } catch { [] }
+      try { install-chisel; [] } catch { [] }
     }
     "tywaves" => {
       try { install-tywaves $p $release_tag $force $work_root; ["tywaves"] } catch { [] }
@@ -198,9 +193,6 @@ def dispatch [
     }
     "hgdb-firrtl" => {
       try { install-hgdb-firrtl $p $release_tag $force $work_root; ["hgdb-firrtl"] } catch { [] }
-    }
-    "ivy2-uhdi" => {
-      try { install-ivy2-local "uhdi" $release_tag $force $work_root; ["ivy2-uhdi"] } catch { [] }
     }
     "ivy2-tywaves" => {
       try { install-ivy2-local "tywaves" $release_tag $force $work_root; ["ivy2-tywaves"] } catch { [] }
@@ -274,14 +266,6 @@ export def apply-platform-pattern [pattern: string platform: string]: nothing ->
   $pattern | str replace --all "{platform}" $platform
 }
 
-# First name ending in `-uhdi`, or empty string. fkhaidari/chisel
-# tags are like `v0.1.1-uhdi`; this filters out unrelated work on
-# the same fork.
-export def pick-uhdi-tag [names: list<string>]: nothing -> string {
-  let m = ($names | where {|n| $n | str ends-with "-uhdi" } | first)
-  if ($m == null) { "" } else { $m }
-}
-
 # ---- tarball-component install ---------------------------------------------
 
 # Generic install path: download a tarball matching `pattern` from a
@@ -351,70 +335,37 @@ def install-hgdb-py [p: path release_tag: string force: bool work_root: path] {
 
 # ---- chisel (snippet only) -------------------------------------------------
 
-def install-chisel [chisel_tag: string] {
-  print "=== chisel (JitPack snippet) ==="
-  let resolved = if ($chisel_tag | is-empty) or ($chisel_tag == "latest") {
-    resolve-chisel-tag
-  } else { $chisel_tag }
-  print $"  Tag:        ($resolved)"
+def install-chisel [] {
+  print "=== chisel (Maven Central snippet) ==="
+  print $"  Version:    ($CHISEL_VERSION)"
   print ""
-  print-chisel-snippet $resolved
+  print-chisel-snippet $CHISEL_VERSION
 }
 
-# fkhaidari/chisel ships JitPack tags via release-chisel.nu, which only
-# creates git tags (no GitHub Releases). Prefer /tags; fall back to
-# /releases for forward compatibility. Filter to *-uhdi tags so we don't
-# pick up unrelated work on the same fork.
-def resolve-chisel-tag []: nothing -> string {
-  let from_tags = (
-    try {
-      pick-uhdi-tag (
-        gh-api-get "https://api.github.com/repos/fkhaidari/chisel/tags?per_page=100"
-        | get name
-      )
-    } catch { "" }
-  )
-  if (not ($from_tags | is-empty)) { return $from_tags }
-  let from_releases = (
-    try {
-      pick-uhdi-tag (
-        gh-api-get "https://api.github.com/repos/fkhaidari/chisel/releases?per_page=30"
-        | get tag_name
-      )
-    } catch { "" }
-  )
-  if (not ($from_releases | is-empty)) { return $from_releases }
-  print -e "  no *-uhdi tag found in fkhaidari/chisel; printing placeholder"
-  "<chisel-tag>"
-}
-
-def print-chisel-snippet [tag: string] {
+def print-chisel-snippet [version: string] {
   # Raw single-quote string (no nu interpolation) + `str replace` for
-  # the tag placeholder. Avoids escaping every paren / quote against
-  # nu's `$"..."` parser.
+  # the version placeholder. Avoids escaping every paren / quote against
+  # nu's `$"..."` parser. Official chisel is on Maven Central, so no
+  # extra resolver is needed.
   let template = '# --- Mill (build.mill, Mill 0.11+ / 1.x) -----------------------------------
-import coursier.maven.MavenRepository
-def repositoriesTask = Task.Anon {
-    super.repositoriesTask() ++ Seq(MavenRepository("https://jitpack.io"))
-}
 // in your ScalaModule:
 def mvnDeps = Seq(
-    ivy"com.github.fkhaidari.chisel::chisel:CHISEL_TAG",
-    ivy"com.github.fkhaidari.chisel:chisel-plugin_2.13.18:CHISEL_TAG",
+    ivy"org.chipsalliance::chisel:CHISEL_VERSION",
+)
+def scalacPluginMvnDeps = Seq(
+    ivy"org.chipsalliance:::chisel-plugin:CHISEL_VERSION",
 )
 
 # --- sbt (build.sbt) -------------------------------------------------------
-resolvers += "jitpack" at "https://jitpack.io"
 libraryDependencies ++= Seq(
-    "com.github.fkhaidari.chisel" %% "chisel" % "CHISEL_TAG",
-    "com.github.fkhaidari.chisel" % "chisel-plugin_2.13.18" % "CHISEL_TAG",
+    "org.chipsalliance" %% "chisel" % "CHISEL_VERSION",
 )
+addCompilerPlugin("org.chipsalliance" % "chisel-plugin_2.13.18" % "CHISEL_VERSION")
 
 # --- scala-cli -------------------------------------------------------------
-//> using repository "https://jitpack.io"
-//> using dep "com.github.fkhaidari.chisel::chisel:CHISEL_TAG"
-//> using dep "com.github.fkhaidari.chisel:chisel-plugin_2.13.18:CHISEL_TAG"'
-  print ($template | str replace --all "CHISEL_TAG" $tag)
+//> using dep "org.chipsalliance::chisel:CHISEL_VERSION"
+//> using plugin "org.chipsalliance:::chisel-plugin:CHISEL_VERSION"'
+  print ($template | str replace --all "CHISEL_VERSION" $version)
 }
 
 # ---- tywaves ---------------------------------------------------------------
@@ -537,7 +488,7 @@ def install-hgdb-firrtl [p: path release_tag: string force: bool work_root: path
 
 # Unpack a `mill publishLocal`'d Chisel fork tarball into ~/.ivy2/local so
 # scala-cli's `--repository ivy2Local` resolves the bench SNAPSHOTs. The
-# forks (uhdi debug-intrinsics, tywaves, chiseltrace) carry custom Chisel +
+# forks (tywaves, chiseltrace) carry custom Chisel +
 # compiler-plugin builds that aren't on Maven Central or JitPack (their old
 # mill build.sc doesn't publish a JitPack-compatible plugin artifactId), so
 # shipping the prebuilt ivy layout is the only offline-friendly path.
