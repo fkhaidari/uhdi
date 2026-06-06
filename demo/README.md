@@ -65,17 +65,15 @@ That installs `firtool` (with `--emit-uhdi`), the hgdb python bindings,
 the tywaves binary, the upstream `hgdb` console debugger and `libhgdb`
 runtime tools (`hgdb-replay` / `hgdb-db`), and the
 `uhdi-to-hgldd` / `uhdi-to-hgdb` converters into a shared Python venv.
-Also prints a JitPack snippet for the modified Chisel artefact -- add
-the snippet exports to your shell profile.
 
 ### Run any demo
 ```sh
 cd demo/gcd
 ./run.sh
 ```
-The first run takes ~30 s on a warm cache (mill resolves Chisel from
-JitPack, firtool runs through `--emit-uhdi`, and the two python
-converters produce HGLDD/HGDB). Output:
+The first run takes ~30 s on a warm cache (mill resolves Chisel 7.13.0
+from Maven Central, firtool runs through `--emit-uhdi`, and the two
+python converters produce HGLDD/HGDB). Output:
 
 | File | What it is |
 |------|-----------|
@@ -254,7 +252,7 @@ regular files.
 
 ```text
 my-chisel-project/
-|-- build.mill           # mill module + chisel JitPack dep + scopt workaround
+|-- build.mill           # mill module + official chisel 7.13.0 dep
 |-- millw                # self-bootstrapping mill launcher
 |-- .mill-version
 |-- app/
