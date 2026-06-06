@@ -33,6 +33,11 @@ path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (`\"\"`); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
 
+[[fixtures.Counter.expected.tywaves]]
+path_regex = "/objects/[0-9]+"
+kind = "missing"
+reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
+
 # hgdb_firrtl: legacy Scala-FIRRTL 1.x reference, runs on the
 # downgraded FIR.  Native operates pre-DCE, so the output port `q`
 # survives as a separate variable with sigName=q; our converter sees
