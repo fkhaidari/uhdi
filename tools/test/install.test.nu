@@ -1,8 +1,7 @@
 #!/usr/bin/env nu
 # Unit tests for tools/install.nu helpers. The big install-tarball-component
-# and resolve-chisel-tag are network/filesystem-bound, so they're tested
-# only via end-to-end test-install.nu; what we cover here is the pure
-# logic each one delegates to.
+# is network/filesystem-bound, so it's tested only via end-to-end
+# test-install.nu; what we cover here is the pure logic it delegates to.
 
 use ../install.nu *
 use _runner.nu *
@@ -98,26 +97,6 @@ def main [] {
       name: "apply-platform-pattern multiple occurrences"
       body: {||
         assert equal (apply-platform-pattern "{platform}/x/{platform}" "macos-aarch64") "macos-aarch64/x/macos-aarch64"
-      }
-    }
-
-    # ---- pick-uhdi-tag -----------------------------------------
-    {
-      name: "pick-uhdi-tag picks first match"
-      body: {||
-        assert equal (pick-uhdi-tag ["v0.1.0" "v0.1.1-uhdi" "v0.1.2-uhdi"]) "v0.1.1-uhdi"
-      }
-    }
-    {
-      name: "pick-uhdi-tag empty when none match"
-      body: {||
-        assert equal (pick-uhdi-tag ["v0.1.0" "v0.2.0"]) ""
-      }
-    }
-    {
-      name: "pick-uhdi-tag empty input"
-      body: {||
-        assert equal (pick-uhdi-tag []) ""
       }
     }
 
