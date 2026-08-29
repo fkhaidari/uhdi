@@ -52,6 +52,7 @@
         "literal",
         "mem",
         "synthetic",
+        "instance",
         "probe",
         "rwprobe"
       ]

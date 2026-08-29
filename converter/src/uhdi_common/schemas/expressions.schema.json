@@ -8,6 +8,10 @@
     "VarRef": {
       "type": "string"
     },
+    "FieldName": {
+      "description": "Name of the aggregate field this operand fills. Emitted on the operands of `'{` so a consumer joins them to `types.*.members` by name rather than by position.",
+      "type": "string"
+    },
     "LeafVar": {
       "type": "object",
       "required": [
@@ -17,6 +21,9 @@
       "properties": {
         "varRef": {
           "$ref": "#/$defs/VarRef"
+        },
+        "name": {
+          "$ref": "#/$defs/FieldName"
         }
       }
     },
@@ -33,6 +40,9 @@
         "width": {
           "type": "integer",
           "minimum": 0
+        },
+        "name": {
+          "$ref": "#/$defs/FieldName"
         }
       }
     },
@@ -46,6 +56,9 @@
         "bitVector": {
           "type": "string",
           "pattern": "^[01xzXZ?]+$"
+        },
+        "name": {
+          "$ref": "#/$defs/FieldName"
         }
       }
     },
@@ -58,6 +71,9 @@
       "properties": {
         "sigName": {
           "type": "string"
+        },
+        "name": {
+          "$ref": "#/$defs/FieldName"
         }
       }
     },
@@ -70,6 +86,9 @@
       "properties": {
         "exprRef": {
           "$ref": "#/$defs/ExprRef"
+        },
+        "name": {
+          "$ref": "#/$defs/FieldName"
         }
       }
     },

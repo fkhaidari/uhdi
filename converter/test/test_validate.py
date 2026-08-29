@@ -408,6 +408,51 @@ def test_iter_errors_accepts_fieldname_on_dot_opcode():
     )
 
 
+# ---- operand field names, instance bind kind, scope source type -----------
+
+
+def test_iter_errors_accepts_name_on_struct_operand():
+    """An operand of `'{` names the field it fills, so members join by name."""
+    doc = _minimal_valid_doc()
+    doc["expressions"]["agg_expr"] = {
+        "opcode": "'{",
+        "operands": [{"name": "count", "sigName": "r"},
+                     {"name": "valid", "exprRef": "r_plus_1"}],
+    }
+    assert not list(validate.iter_errors(doc))
+
+
+def test_iter_errors_flags_operand_carrying_only_a_name():
+    """`name` is optional decoration; an operand still needs its discriminator."""
+    doc = _minimal_valid_doc()
+    doc["expressions"]["bad_expr"] = {
+        "opcode": "'{",
+        "operands": [{"name": "count"}],
+    }
+    assert list(validate.iter_errors(doc))
+
+
+def test_iter_errors_accepts_instance_bind_kind():
+    """Instance variables (uhdi-instance-vars) bind to a module instance."""
+    doc = _minimal_valid_doc()
+    doc["variables"]["var_Counter_sub"] = {
+        "typeRef": "u8",
+        "bindKind": "instance",
+        "ownerScopeRef": "Counter",
+    }
+    assert not list(validate.iter_errors(doc))
+
+
+def test_iter_errors_accepts_source_lang_type_on_scope():
+    """Module parameters live on the authoring representation, not on the HDL one."""
+    doc = _minimal_valid_doc()
+    doc["scopes"]["Counter"]["representations"]["chisel"]["sourceLangType"] = {
+        "typeName": "Counter",
+        "params": [{"name": "width", "typeName": "Int", "value": "8"}],
+    }
+    assert not list(validate.iter_errors(doc))
+
+
 # ---- enum_width_errors ----------------------------------------------------
 
 

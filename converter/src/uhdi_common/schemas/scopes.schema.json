@@ -461,6 +461,9 @@
               },
               "location": {
                 "$ref": "#/$defs/Location"
+              },
+              "sourceLangType": {
+                "$ref": "https://uhdi/variables.schema.json#/$defs/SourceLangType"
               }
             }
           }
