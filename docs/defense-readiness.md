@@ -50,7 +50,7 @@ passes, the boundary between "uhdi as a format" and "uhdi as CIRCT's internal IR
 would blur. The Python projectors read the same JSON that any external tool reads --
 this demonstrates the format's portability. The full argument is in Appendix B.10
 (`docs/uhdi-spec.md:3080-3086`). C++ MLIR code does exist -- it is the producer
-side: `EmitUHDI.cpp` + two passes `firrtl-uhdi-init` / `hw-uhdi-verilog-snapshot`
+side: `EmitUHDI.cpp` + two passes `firrtl-uhdi-init` / `firrtl-uhdi-instance-vars`
 (see `docs/uhdi-action-plan.md:46-47`); this split (emitter in C++, projectors in
 Python) is a structural reflection of the IR/format split.
 

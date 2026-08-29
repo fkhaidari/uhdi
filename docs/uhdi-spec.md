@@ -2366,7 +2366,7 @@ Considered: write the projections (`uhdi -> HGLDD`, `uhdi -> hgdb`, `uhdi -> PDG
 
 - *Format-independence claim.* A C++ projector inside CIRCT would erase the line between "uhdi the format" and "uhdi the CIRCT-internal IR shape". Python projectors reading the same JSON any external tool would read demonstrate that the format is portable, not coupled to CIRCT lifetimes.
 - *Surface area.* The three Python projectors (`uhdi_to_hgldd`, `uhdi_to_hgdb`, `uhdi_to_pdg`) are ~3000 LOC total; in-tree CIRCT projectors would be larger and slower to iterate on. Scope fit for a thesis-sized deliverable.
-- *Where the C++ does live.* The emitter that *produces* `uhdi` from CIRCT (`EmitUHDI.cpp` plus the two passes `firrtl-uhdi-init` / `hw-uhdi-verilog-snapshot`) is C++ MLIR -- that part is intrinsically tied to CIRCT IR walks. The emitter / projector split mirrors the IR / format split.
+- *Where the C++ does live.* The emitter that *produces* `uhdi` from CIRCT (`EmitUHDI.cpp` plus the two passes `firrtl-uhdi-init` / `firrtl-uhdi-instance-vars`) is C++ MLIR -- that part is intrinsically tied to CIRCT IR walks. The emitter / projector split mirrors the IR / format split.
 
 ### B.11 Relationship to DWARF
 
