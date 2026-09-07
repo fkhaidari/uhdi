@@ -229,21 +229,26 @@
                 "opcode": "'{",
                 "operands": [
                   {
-                    "sig_name": "io_items_0_a"
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_items_0_a"
+                      },
+                      {
+                        "sig_name": "io_items_0_b"
+                      }
+                    ]
                   },
                   {
-                    "sig_name": "io_items_0_b"
-                  }
-                ]
-              },
-              {
-                "opcode": "'{",
-                "operands": [
-                  {
-                    "sig_name": "io_items_1_a"
-                  },
-                  {
-                    "sig_name": "io_items_1_b"
+                    "opcode": "'{",
+                    "operands": [
+                      {
+                        "sig_name": "io_items_1_a"
+                      },
+                      {
+                        "sig_name": "io_items_1_b"
+                      }
+                    ]
                   }
                 ]
               }

@@ -3,12 +3,15 @@
   "$id": "https://uhdi/scopes.schema.json",
   "$defs": {
     "ScopeRef": {
+      "description": "Key into the scopes pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "VarRef": {
+      "description": "Key into the variables pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "ExprRef": {
+      "description": "Key into the expressions pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "ExprOrVarRef": {

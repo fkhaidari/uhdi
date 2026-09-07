@@ -8,7 +8,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
 from uhdi_common.expressions import walk as walk_expression
-from uhdi_common.refs import loc_file_path, owner_scope, resolve_sig_name, root_scopes
+from uhdi_common.refs import (loc_file_path, owner_scope, parent_var_id,
+                              resolve_sig_name, root_scopes)
 
 
 class HGLDDConversionError(ConversionError):
@@ -153,18 +154,17 @@ def _populate_enum_index(ctx: "_Context") -> None:
 
 def _populate_subfields_index(ctx: "_Context") -> None:
     """Index every `bindKind=="synthetic"` Variable under
-    `subfields_by_parent[parent_id][field_name]`. The producer emits
-    synthetic ids as `<parent_id>__<flat_field_path>`, where the leaf
-    chisel-repr `name` is the bare field name. Recurses naturally
-    because nested struct levels produce ids like
-    `parent__in__a` -> parsed parent `parent__in` (a synthetic of its
-    own, itself indexed under `parent`)."""
+    `subfields_by_parent[parent_id][field_name]`, `parent_id` coming from
+    `memberRefs` (the producer chains aggregate levels together with it),
+    where the leaf chisel-repr `name` is the bare field name. Recurses
+    naturally because a nested struct level is itself a `memberRefs`
+    member of its own parent."""
     for vid, v in ctx.variables.items():
         if v.get("bindKind") != "synthetic":
             continue
-        if "__" not in vid:
+        parent_id = parent_var_id(vid, ctx)
+        if parent_id is None:
             continue
-        parent_id, _, _ = vid.rpartition("__")
         name = ((v.get("representations", {}) or {})
                 .get(ctx.authoring_repr, {}) or {}).get("name")
         if not name:

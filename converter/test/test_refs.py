@@ -239,9 +239,9 @@ def _name(n):
 
 
 def test_dotted_name_map_reconstructs_bundle_paths():
-    """Synthetic subfields (`<io>__q`) recover `io_q` -> `io.q`."""
+    """Synthetic subfields (linked via `memberRefs`) recover `io_q` -> `io.q`."""
     ctx = _ctx(variables={
-        "b": {**_name("io"), "bindKind": "node"},
+        "b": {**_name("io"), "bindKind": "node", "memberRefs": ["b__q", "b__rdy"]},
         "b__q": {**_name("q"), "bindKind": "synthetic"},
         "b__rdy": {**_name("rdy"), "bindKind": "synthetic"},
         "io_q": {**_name("io_q"), "bindKind": "port"},
@@ -251,10 +251,10 @@ def test_dotted_name_map_reconstructs_bundle_paths():
 
 
 def test_dotted_name_map_handles_nested_bundles():
-    """Nested subfields chain: `io_sub_x` -> `io.sub.x`."""
+    """Nested subfields chain via `memberRefs`: `io_sub_x` -> `io.sub.x`."""
     ctx = _ctx(variables={
-        "b": {**_name("io"), "bindKind": "node"},
-        "b__sub": {**_name("sub"), "bindKind": "synthetic"},
+        "b": {**_name("io"), "bindKind": "node", "memberRefs": ["b__sub"]},
+        "b__sub": {**_name("sub"), "bindKind": "synthetic", "memberRefs": ["b__sub__x"]},
         "b__sub__x": {**_name("x"), "bindKind": "synthetic"},
     })
     m = build_dotted_name_map(ctx)

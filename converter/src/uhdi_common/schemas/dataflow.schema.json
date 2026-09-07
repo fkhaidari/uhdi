@@ -3,9 +3,11 @@
   "$id": "https://uhdi/dataflow.schema.json",
   "$defs": {
     "VarRef": {
+      "description": "Key into the variables pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "ExprRef": {
+      "description": "Key into the expressions pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "EndpointRef": {

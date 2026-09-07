@@ -3,6 +3,7 @@
   "$id": "https://uhdi/document.schema.json",
   "$defs": {
     "ScopeRef": {
+      "description": "Key into the scopes pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "Representation": {

@@ -83,3 +83,16 @@ class BaseContext:
             for vid in (scope or {}).get("variableRefs") or []:
                 index.setdefault(vid, sid)
         return index
+
+    @cached_property
+    def _parent_by_member_id(self) -> Dict[str, str]:
+        """Aggregate member variable id -> its parent variable id, from
+        every variable's `memberRefs`. `memberRefs` ids are opaque (spec:
+        unique within the variables pool, no structure a consumer may
+        rely on) -- this is the only supported way to find a member's
+        parent."""
+        index: Dict[str, str] = {}
+        for vid, var in self.variables.items():
+            for member_id in (var or {}).get("memberRefs") or []:
+                index.setdefault(member_id, vid)
+        return index

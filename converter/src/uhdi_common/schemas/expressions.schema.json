@@ -3,9 +3,11 @@
   "$id": "https://uhdi/expressions.schema.json",
   "$defs": {
     "ExprRef": {
+      "description": "Key into the expressions pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "VarRef": {
+      "description": "Key into the variables pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "FieldName": {

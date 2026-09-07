@@ -3,6 +3,7 @@
   "$id": "https://uhdi/types.schema.json",
   "$defs": {
     "TypeRef": {
+      "description": "Key into the types pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "GroundInt": {

@@ -204,6 +204,7 @@
     },
     "var_io": {
       "bindKind": "node",
+      "memberRefs": ["var_io__items"],
       "ownerScopeRef": "VecOfStruct",
       "representations": {
         "chisel": {
@@ -234,7 +235,8 @@
             ]
           },
           "status": "preserved"
-        }
+        },
+        "verilog": {"value": {"exprRef": "expr_0"}}
       },
       "typeRef": "VecOfStruct_io_items"
     },

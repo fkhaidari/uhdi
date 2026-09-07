@@ -46,10 +46,16 @@ def resolve_authoring_name(ref: str, ctx: BaseContext) -> Optional[str]:
     return str(name) if name is not None else None
 
 
+def parent_var_id(var_id: str, ctx: BaseContext) -> Optional[str]:
+    """Variable id owning `var_id` as an aggregate member, from `memberRefs`.
+    None if `var_id` is not listed in any variable's `memberRefs`."""
+    return ctx._parent_by_member_id.get(var_id)
+
+
 def build_dotted_name_map(ctx: BaseContext) -> Dict[str, str]:
     """Map a flattened RTL-style name (`io_q`) to its dotted source name
     (`io.q`), reconstructed from the synthetic subfield variables the
-    producer emits as `<parent_id>__<field>`.
+    producer chains together via `memberRefs`.
 
     firtool flattens aggregate ports (`io.q` -> sig `io_q`); the authoring
     name of the flat port variable is the underscored leaf, so hgdb would
@@ -62,15 +68,15 @@ def build_dotted_name_map(ctx: BaseContext) -> Dict[str, str]:
         leaf = resolve_authoring_name(vid, ctx)
         if leaf is None:
             return None
-        if "__" not in vid:
+        parent = parent_var_id(vid, ctx)
+        if parent is None:
             return [leaf]
-        parent, _, _ = vid.rpartition("__")
         head = parts(parent)
         return None if head is None else head + [leaf]
 
     out: Dict[str, str] = {}
     for vid, var in ctx.variables.items():
-        if var.get("bindKind") != "synthetic" or "__" not in vid:
+        if var.get("bindKind") != "synthetic" or parent_var_id(vid, ctx) is None:
             continue
         p = parts(vid)
         if not p:

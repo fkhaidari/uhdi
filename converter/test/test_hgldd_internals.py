@@ -1212,6 +1212,7 @@ def _alu_with_sourcelang_and_enum():
     # Parent aggregate Variable.
     doc["variables"]["var_io"] = {
         "typeRef": "Alu_io", "bindKind": "node", "ownerScopeRef": "Alu",
+        "memberRefs": ["var_io__in", "var_io__out"],
         "representations": {
             "chisel": {
                 "name": "io",
@@ -1223,6 +1224,7 @@ def _alu_with_sourcelang_and_enum():
     # Synthetic per-field leaves.
     doc["variables"]["var_io__in"] = {
         "typeRef": "Alu_io_in", "bindKind": "synthetic", "ownerScopeRef": "Alu",
+        "memberRefs": ["var_io__in__a", "var_io__in__b", "var_io__in__op"],
         "representations": {"chisel": {
             "name": "in", "sourceLangType": {"typeName": "IO[Operands]"}}},
     }

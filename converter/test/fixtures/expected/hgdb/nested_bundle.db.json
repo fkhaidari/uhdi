@@ -42,6 +42,18 @@
   "context_variable": [
     {
       "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:19:16|1",
+      "name": "bits",
+      "type": 0,
+      "variable_value": "io_cmd_bits"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:20:10|1",
+      "name": "bits",
+      "type": 0,
+      "variable_value": "io_cmd_bits"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:19:16|1",
       "name": "clock",
       "type": 0,
       "variable_value": "clock"
@@ -102,6 +114,30 @@
     },
     {
       "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:19:16|1",
+      "name": "out",
+      "type": 0,
+      "variable_value": "io_cmd_bits"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:20:10|1",
+      "name": "out",
+      "type": 0,
+      "variable_value": "io_cmd_bits"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:19:16|1",
+      "name": "ready",
+      "type": 0,
+      "variable_value": "io_cmd_ready"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:20:10|1",
+      "name": "ready",
+      "type": 0,
+      "variable_value": "io_cmd_ready"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:19:16|1",
       "name": "reset",
       "type": 0,
       "variable_value": "reset"
@@ -111,6 +147,18 @@
       "name": "reset",
       "type": 0,
       "variable_value": "reset"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:19:16|1",
+      "name": "valid",
+      "type": 0,
+      "variable_value": "io_cmd_valid"
+    },
+    {
+      "breakpoint_key": "NestedBundle@/tmp/uhdi-verify/nested/NestedBundle.scala:20:10|1",
+      "name": "valid",
+      "type": 0,
+      "variable_value": "io_cmd_valid"
     }
   ],
   "event": [],
@@ -118,6 +166,12 @@
     {
       "annotation": "",
       "instance_name": "NestedBundle",
+      "name": "bits",
+      "variable_value": "io_cmd_bits"
+    },
+    {
+      "annotation": "",
+      "instance_name": "NestedBundle",
       "name": "clock",
       "variable_value": "clock"
     },
@@ -148,8 +202,26 @@
     {
       "annotation": "",
       "instance_name": "NestedBundle",
+      "name": "out",
+      "variable_value": "io_cmd_bits"
+    },
+    {
+      "annotation": "",
+      "instance_name": "NestedBundle",
+      "name": "ready",
+      "variable_value": "io_cmd_ready"
+    },
+    {
+      "annotation": "",
+      "instance_name": "NestedBundle",
       "name": "reset",
       "variable_value": "reset"
+    },
+    {
+      "annotation": "",
+      "instance_name": "NestedBundle",
+      "name": "valid",
+      "variable_value": "io_cmd_valid"
     }
   ],
   "instance": [
@@ -175,7 +247,23 @@
     },
     {
       "is_rtl": 1,
+      "value": "io_cmd_bits"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_cmd_bits"
+    },
+    {
+      "is_rtl": 1,
       "value": "io_cmd_ready"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_cmd_ready"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_cmd_valid"
     },
     {
       "is_rtl": 1,

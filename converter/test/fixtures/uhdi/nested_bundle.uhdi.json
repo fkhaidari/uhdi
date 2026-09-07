@@ -368,6 +368,10 @@
     },
     "var_ad9cdce0_0000": {
       "bindKind": "node",
+      "memberRefs": [
+        "var_ad9cdce0_0000__cmd",
+        "var_ad9cdce0_0000__out"
+      ],
       "ownerScopeRef": "NestedBundle",
       "representations": {
         "chisel": {
@@ -393,6 +397,11 @@
     },
     "var_ad9cdce0_0000__cmd": {
       "bindKind": "synthetic",
+      "memberRefs": [
+        "var_ad9cdce0_0000__cmd__ready",
+        "var_ad9cdce0_0000__cmd__valid",
+        "var_ad9cdce0_0000__cmd__bits"
+      ],
       "ownerScopeRef": "NestedBundle",
       "representations": {
         "chisel": {
@@ -431,6 +440,11 @@
             "typeName": "IO[UInt<8>]"
           },
           "status": "preserved"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_cmd_bits"
+          }
         }
       },
       "typeRef": "uint8"
@@ -450,6 +464,11 @@
             "typeName": "IO[Bool]"
           },
           "status": "preserved"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_cmd_ready"
+          }
         }
       },
       "typeRef": "bool"
@@ -469,6 +488,11 @@
             "typeName": "IO[Bool]"
           },
           "status": "preserved"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_cmd_valid"
+          }
         }
       },
       "typeRef": "bool"
@@ -488,6 +512,11 @@
             "typeName": "IO[UInt<8>]"
           },
           "status": "preserved"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_cmd_bits"
+          }
         }
       },
       "typeRef": "uint8"

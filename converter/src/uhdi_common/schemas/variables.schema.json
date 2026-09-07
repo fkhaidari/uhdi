@@ -3,15 +3,19 @@
   "$id": "https://uhdi/variables.schema.json",
   "$defs": {
     "VarRef": {
+      "description": "Key into the variables pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "TypeRef": {
+      "description": "Key into the types pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "ExprRef": {
+      "description": "Key into the expressions pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "ScopeRef": {
+      "description": "Key into the scopes pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
     "Location": {
