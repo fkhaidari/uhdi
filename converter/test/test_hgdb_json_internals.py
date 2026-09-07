@@ -252,6 +252,15 @@ def test_convert_top_field_is_list_when_multiple():
     assert out["top"] == ["Top", "Aux"]
 
 
+def test_convert_without_top_matches_derived_top():
+    # Format dropped `top`; single un-instantiated module -> derived root
+    # matches the same document with `top` declared explicitly.
+    doc_with_top = _doc_skeleton()
+    doc_without_top = _doc_skeleton()
+    del doc_without_top["top"]
+    assert hgdb_json_convert(doc_with_top) == hgdb_json_convert(doc_without_top)
+
+
 def test_convert_drops_non_dict_instance_entries():
     doc = _doc_skeleton()
     doc["scopes"]["Top"]["instantiates"] = ["bad-string-entry"]

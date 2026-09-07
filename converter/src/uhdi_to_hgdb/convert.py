@@ -19,6 +19,7 @@ from uhdi_common.refs import (
     resolve_authoring_name,
     resolve_sig_name,
     resolve_var_by_ref,
+    root_scopes,
 )
 
 
@@ -114,7 +115,7 @@ def _instance_rows(ctx):
         finally:
             on_path.discard(scope_id)
 
-    for top in ctx.uhdi.get("top") or []:
+    for top in root_scopes(ctx):
         if top not in ctx.scopes:
             raise HGDBConversionError(f"top references unknown scope '{top}'")
         top_id = visit(top, top)

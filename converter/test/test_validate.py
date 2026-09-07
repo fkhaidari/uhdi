@@ -150,6 +150,14 @@ def test_referential_errors_flags_dangling_type_ref():
     assert any("typeRef" in e and "ghost_type" in e for e in errs)
 
 
+def test_iter_errors_and_referential_errors_clean_without_top():
+    # Format dropped `top`; a document that omits it entirely is still clean.
+    doc = _minimal_valid_doc()
+    del doc["top"]
+    assert list(validate.iter_errors(doc)) == []
+    assert validate.referential_errors(doc) == []
+
+
 def test_referential_errors_flags_dangling_top_scope():
     doc = _minimal_valid_doc()
     doc["top"] = ["nope"]

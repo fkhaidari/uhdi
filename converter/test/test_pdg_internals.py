@@ -229,6 +229,15 @@ def test_convert_emits_required_top_level_keys():
     assert out["predicates"] == [] and out["cfg"] == []
 
 
+def test_convert_without_top_matches_derived_top():
+    # Format dropped `top`; single un-instantiated module -> derived root
+    # matches the same document with `top` declared explicitly.
+    doc_with_top = _doc()
+    doc_without_top = _doc()
+    del doc_without_top["top"]
+    assert pdg_convert(doc_with_top) == pdg_convert(doc_without_top)
+
+
 def test_convert_maps_bindkind_to_vertex_kind():
     """Table Sec.15.5.1: each uhdi bindKind takes a specific PDG kind."""
     variables = {

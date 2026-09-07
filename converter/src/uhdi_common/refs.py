@@ -1,13 +1,14 @@
 """Cross-pool reference resolvers.
 
-Pure functions over `BaseContext` (requires pool accessors). Two categories:
+Pure functions over `BaseContext` (requires pool accessors). Categories:
 
   * `resolve_*`: lookup stable_id/ref -> resolved value (no raise, None/"" on miss)
   * `loc_*`: read Location dict fields with defaulting strategy (HGLDD packs into hgl_loc,
-             hgdb stores as separate columns)"""
+             hgdb stores as separate columns)
+  * `root_scopes`: ordered root scope ids, from `top` or derived"""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 from .context import BaseContext
 
@@ -94,6 +95,26 @@ def resolve_var_by_ref(ref: str, ctx: BaseContext) -> Dict[str, Any]:
     return {}
 
 
+def root_scopes(ctx: BaseContext) -> List[str]:
+    """Ordered root scope ids to treat as top-level.
+
+    Returns `uhdi["top"]` when present and non-empty. Otherwise derives
+    roots from the instantiation graph: every `module`-kind scope that no
+    other scope's `instantiates` references, in document order. Format
+    dropped the required `top` field; this backfills it for documents
+    that omit it."""
+    top = ctx.uhdi.get("top")
+    if top:
+        return list(top)
+    referenced = set()
+    for scope in ctx.scopes.values():
+        for inst in (scope or {}).get("instantiates") or []:
+            ref = inst.get("scopeRef") if isinstance(inst, dict) else inst
+            if ref:
+                referenced.add(ref)
+    return [sid for sid, scope in ctx.scopes.items()
+            if (scope or {}).get("kind", "module") == "module"
+            and sid not in referenced]
 
 
 def loc_file_path(loc: Optional[Dict[str, Any]], repr_key: str,

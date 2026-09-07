@@ -14,6 +14,7 @@ from uhdi_common.refs import (
     loc_line,
     resolve_authoring_name,
     resolve_sig_name,
+    root_scopes,
 )
 
 
@@ -202,7 +203,7 @@ def convert(uhdi: Dict[str, Any]) -> Dict[str, Any]:
     ctx._dotted_names = build_dotted_name_map(ctx)
 
     try:
-        top_names = list(uhdi.get("top") or [])
+        top_names = list(root_scopes(ctx))
         for sid in top_names:
             if sid not in ctx.scopes:
                 raise HGDBJsonConversionError(

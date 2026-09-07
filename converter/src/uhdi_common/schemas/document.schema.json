@@ -87,7 +87,6 @@
   "required": [
     "format",
     "representations",
-    "top",
     "scopes"
   ],
   "additionalProperties": false,

@@ -28,6 +28,7 @@ from uhdi_common.refs import (
     loc_line,
     resolve_authoring_name,
     resolve_var_by_ref,
+    root_scopes,
 )
 
 
@@ -86,7 +87,7 @@ class _Ctx(BaseContext):
 def _collect_scopes(ctx: _Ctx) -> List[str]:
     """Reachable scopes via uhdi.top + instantiates, DFS, dedup preserving order.
     Cycles are silently broken (already-visited scopes are skipped)."""
-    top_ids = list(ctx.uhdi.get("top") or [])
+    top_ids = list(root_scopes(ctx))
     order: List[str] = []
     seen: Set[str] = set()
 

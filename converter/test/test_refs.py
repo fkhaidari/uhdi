@@ -10,6 +10,7 @@ from uhdi_common.refs import (
     resolve_authoring_name,
     resolve_sig_name,
     resolve_var_by_ref,
+    root_scopes,
 )
 
 
@@ -26,6 +27,8 @@ def _ctx(**pools):
         "expressions": pools.get("expressions", {}),
         "types": pools.get("types", {}),
     }
+    if "top" in pools:
+        doc["top"] = pools["top"]
     return BaseContext(uhdi=doc)
 
 
@@ -264,3 +267,48 @@ def test_dotted_name_map_skips_scalars_and_literal_underscores():
         "v": {**_name("foo_bar"), "bindKind": "node"},
     })
     assert build_dotted_name_map(ctx) == {}
+
+
+# ---- root_scopes ------------------------------------------------------
+
+
+def test_root_scopes_uses_declared_top_when_present():
+    ctx = _ctx(top=["A", "B"], scopes={
+        "A": {"kind": "module"}, "B": {"kind": "module"}})
+    assert root_scopes(ctx) == ["A", "B"]
+
+
+def test_root_scopes_derives_single_uninstantiated_module():
+    """No `top`: the lone module scope no one instantiates is the root."""
+    ctx = _ctx(scopes={"Top": {"kind": "module"}})
+    assert root_scopes(ctx) == ["Top"]
+
+
+def test_root_scopes_excludes_instantiated_modules():
+    ctx = _ctx(scopes={
+        "Top": {"kind": "module",
+                "instantiates": [{"as": "l", "scopeRef": "Leaf"}]},
+        "Leaf": {"kind": "module"},
+    })
+    assert root_scopes(ctx) == ["Top"]
+
+
+def test_root_scopes_accepts_bare_id_instantiates_entries():
+    ctx = _ctx(scopes={
+        "Top": {"kind": "module", "instantiates": ["Leaf"]},
+        "Leaf": {"kind": "module"},
+    })
+    assert root_scopes(ctx) == ["Top"]
+
+
+def test_root_scopes_skips_non_module_kinds():
+    ctx = _ctx(scopes={
+        "Top": {"kind": "module"},
+        "Ext": {"kind": "extmodule"},
+    })
+    assert root_scopes(ctx) == ["Top"]
+
+
+def test_root_scopes_empty_declared_top_falls_back_to_derivation():
+    ctx = _ctx(top=[], scopes={"Top": {"kind": "module"}})
+    assert root_scopes(ctx) == ["Top"]

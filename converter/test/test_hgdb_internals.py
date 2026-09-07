@@ -627,6 +627,27 @@ def test_convert_handles_top_with_none_value(tmp_path):
     assert rows == 0
 
 
+def test_convert_without_top_matches_derived_top(tmp_path):
+    # Format dropped `top`; single un-instantiated module -> same instance
+    # table whether `top` is declared or left for derivation.
+    doc_with_top = _doc_skeleton()
+    doc_without_top = _doc_skeleton()
+    del doc_without_top["top"]
+
+    out_with = tmp_path / "with_top.db"
+    out_without = tmp_path / "without_top.db"
+    hgdb_convert(doc_with_top, out_with)
+    hgdb_convert(doc_without_top, out_without)
+
+    def instance_rows(path):
+        conn = sqlite3.connect(str(path))
+        rows = conn.execute("SELECT name, annotation FROM instance").fetchall()
+        conn.close()
+        return rows
+
+    assert instance_rows(out_with) == instance_rows(out_without)
+
+
 def test_convert_emits_unresolved_warnings_at_end(capsys, tmp_path):
     # Unresolved enableRef tokens warn AFTER DB write; file still valid.
     doc = _doc_skeleton()

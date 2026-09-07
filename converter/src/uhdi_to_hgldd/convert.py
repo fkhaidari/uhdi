@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
 from uhdi_common.expressions import walk as walk_expression
-from uhdi_common.refs import loc_file_path
+from uhdi_common.refs import loc_file_path, root_scopes
 
 
 class HGLDDConversionError(ConversionError):
@@ -189,7 +189,7 @@ def _resolve_hdl_file_path(ctx) -> Optional[str]:
     for f in sim_repr.get("files") or []:
         if f:
             return str(f)
-    top_ids = ctx.uhdi.get("top") or []
+    top_ids = root_scopes(ctx)
     if not top_ids:
         return None
     top_scope = ctx.scopes.get(top_ids[0], {}) or {}
@@ -789,7 +789,7 @@ def convert(uhdi):
         ctx.aggregated_leaves = _collect_aggregated_leaves(ctx)
         _populate_subfields_index(ctx)
         _populate_enum_index(ctx)
-        for sid in uhdi.get("top", []):
+        for sid in root_scopes(ctx):
             if sid not in ctx.scopes:
                 raise HGLDDConversionError(
                     f"top references unknown scope '{sid}'")
