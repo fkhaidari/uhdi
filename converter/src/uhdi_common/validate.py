@@ -115,6 +115,7 @@ _REF_TO_POOLS: Dict[str, Tuple[str, ...]] = {
     "elementRef":         ("types",),
     "underlyingTypeRef":  ("types",),
     "varRef":             ("variables",),
+    "memberRefs":         ("variables",),
     "exprRef":            ("expressions",),
     "condRef":            ("expressions",),
     "scopeRef":           ("scopes",),
@@ -239,16 +240,22 @@ def referential_errors(uhdi: Dict[str, Any]) -> List[str]:
     pools = {name: (uhdi.get(name) or {}) for name in pool_names}
     errs: List[str] = []
 
+    def check(ref: str, here: str, candidates: Tuple[str, ...]) -> None:
+        if not any(ref in pools[p] for p in candidates):
+            joined = "|".join(candidates)
+            errs.append(f"{here} -> {joined}[{ref!r}] (not in pool)")
+
     def walk(node: Any, path: str) -> None:
         if isinstance(node, dict):
             for k, v in node.items():
                 here = f"{path}.{k}" if path else k
                 if k in _REF_TO_POOLS and isinstance(v, str):
-                    candidates = _REF_TO_POOLS[k]
-                    if not any(v in pools[p] for p in candidates):
-                        joined = "|".join(candidates)
-                        errs.append(
-                            f"{here} -> {joined}[{v!r}] (not in pool)")
+                    check(v, here, _REF_TO_POOLS[k])
+                elif k in _REF_TO_POOLS and isinstance(v, list):
+                    # memberRefs: a list of ids into one pool.
+                    for i, item in enumerate(v):
+                        if isinstance(item, str):
+                            check(item, f"{here}[{i}]", _REF_TO_POOLS[k])
                 else:
                     walk(v, here)
         elif isinstance(node, list):

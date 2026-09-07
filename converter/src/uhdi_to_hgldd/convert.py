@@ -520,6 +520,51 @@ def _first_vector_element_sig(hdl_value, ctx):
     return ""
 
 
+def _hdl_value_to_hgldd(var, hdl_value, ctx):
+    """Render a variable's simulation-repr `value` binding; None if absent
+    or unrecognised."""
+    if not isinstance(hdl_value, dict):
+        return None
+    if "sigName" in hdl_value:
+        return {"sig_name": hdl_value["sigName"]}
+    if "exprRef" in hdl_value:
+        return _expression_to_hgldd(hdl_value, ctx) or None
+    if "constant" in hdl_value:
+        width = int((ctx.types.get(var.get("typeRef", "")) or {})
+                    .get("width", 0))
+        n = int(hdl_value["constant"])
+        return ({"bit_vector": format(n & ((1 << width) - 1), f"0{width}b")}
+                if width > 0 else {"integer_num": n})
+    if "bitVector" in hdl_value:
+        return {"bit_vector": hdl_value["bitVector"]}
+    return None
+
+
+def _member_refs_to_hgldd(var, ctx, seen=None):
+    """Render an aggregate's `memberRefs` as the HGLDD struct literal
+    `'{op0, op1, ...}`, one operand per member in memberRefs order.
+    A member that is itself an aggregate recurses; a leaf contributes
+    its own value binding (an unresolvable member renders as `{}`)."""
+    seen = set() if seen is None else seen
+    operands = []
+    for mid in var.get("memberRefs") or []:
+        if mid in seen:
+            raise HGLDDConversionError(
+                f"cycle in memberRefs at variable {mid!r}")
+        member = ctx.variables.get(mid)
+        if member is None:
+            operands.append({})
+            continue
+        if member.get("memberRefs"):
+            operands.append(_member_refs_to_hgldd(member, ctx, seen | {mid}))
+            continue
+        hdl = (member.get("representations", {}) or {}).get(
+            ctx.simulation_repr, {}) or {}
+        operands.append(_hdl_value_to_hgldd(member, hdl.get("value"), ctx)
+                        or {})
+    return {"opcode": "'{", "operands": operands}
+
+
 def _variable_to_port_var(var_id, var, ctx):
     """Convert variable to HGLDD port_var entry."""
     # Synthetic variables (per-field aggregate leaves emitted by the
@@ -541,30 +586,27 @@ def _variable_to_port_var(var_id, var, ctx):
             and hdl_value["sigName"] in ctx.aggregated_leaves):
         return None
 
+    # Aggregates dissolved by the producer carry `memberRefs` instead of
+    # a value binding; rebuild the struct literal from the members.
+    if var.get("memberRefs"):
+        value = _member_refs_to_hgldd(var, ctx)
+    else:
+        value = _hdl_value_to_hgldd(var, hdl_value, ctx)
+
     # Vec: name after `buf_0` for Tywaves VCD path-lookup.
     var_name = hgl.get("name") or var_id
     if (ctx.types.get(var.get("typeRef", "")) or {}).get("kind") == "vector":
-        if first := _first_vector_element_sig(hdl_value, ctx):
+        first = _first_vector_element_sig(hdl_value, ctx)
+        if not first and value and value.get("operands"):
+            first = value["operands"][0].get("sig_name", "")
+        if first:
             var_name = first
     out = {"var_name": var_name}
 
     out.update(_type_description(var.get("typeRef", ""), ctx))
 
-    if isinstance(hdl_value, dict):
-        if "sigName" in hdl_value:
-            out["value"] = {"sig_name": hdl_value["sigName"]}
-        elif "exprRef" in hdl_value:
-            if rendered := _expression_to_hgldd(hdl_value, ctx):
-                out["value"] = rendered
-        elif "constant" in hdl_value:
-            width = int((ctx.types.get(var.get("typeRef", "")) or {})
-                        .get("width", 0))
-            n = int(hdl_value["constant"])
-            out["value"] = ({"bit_vector": format(n & ((1 << width) - 1),
-                                                   f"0{width}b")}
-                            if width > 0 else {"integer_num": n})
-        elif "bitVector" in hdl_value:
-            out["value"] = {"bit_vector": hdl_value["bitVector"]}
+    if value:
+        out["value"] = value
 
     if loc := _loc_to_hgldd(hgl.get("location"), ctx.authoring_repr, ctx):
         out["hgl_loc"] = loc
@@ -581,7 +623,8 @@ def _variable_to_port_var(var_id, var, ctx):
 
 
 def _collect_aggregated_leaves(ctx) -> set:
-    """Collect sigNames reachable from composite (exprRef-rooted) variable value trees.
+    """Collect sigNames reachable from composite variable value trees
+    (exprRef-rooted values and memberRefs aggregates).
 
     These leaves are already represented via the parent."""
     leaves: set = set()
@@ -603,6 +646,17 @@ def _collect_aggregated_leaves(ctx) -> set:
             for item in node:
                 walk(item)
 
+    def walk_members(var):
+        for mid in var.get("memberRefs") or []:
+            if mid in seen:
+                continue
+            seen.add(mid)
+            member = ctx.variables.get(mid) or {}
+            hdl = (member.get("representations", {}) or {}).get(
+                ctx.simulation_repr, {})
+            walk(hdl.get("value") if isinstance(hdl, dict) else None)
+            walk_members(member)
+
     for var in ctx.variables.values():
         hdl = (var.get("representations", {}) or {}).get(
             ctx.simulation_repr, {})
@@ -611,6 +665,8 @@ def _collect_aggregated_leaves(ctx) -> set:
         # at the root means this var IS the leaf, not a parent.
         if isinstance(value, dict) and "exprRef" in value:
             walk(value)
+        # memberRefs aggregates: every member's binding is a leaf too.
+        walk_members(var)
 
     return leaves
 

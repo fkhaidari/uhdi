@@ -1,0 +1,44 @@
+{
+  "generator": "uhdi",
+  "table": [
+    {
+      "name": "Alu",
+      "scope": [],
+      "type": "module",
+      "variables": [
+        {
+          "name": "clock",
+          "rtl": true,
+          "value": "clock"
+        },
+        {
+          "name": "reset",
+          "rtl": true,
+          "value": "reset"
+        },
+        {
+          "name": "io.in.a",
+          "rtl": true,
+          "value": "io_in_a"
+        },
+        {
+          "name": "io.in.b",
+          "rtl": true,
+          "value": "io_in_b"
+        },
+        {
+          "name": "io.in.op",
+          "rtl": true,
+          "value": "io_in_op"
+        },
+        {
+          "name": "io.out",
+          "rtl": true,
+          "value": "io_out"
+        }
+      ]
+    }
+  ],
+  "top": "Alu",
+  "variables": []
+}

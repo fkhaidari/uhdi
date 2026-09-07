@@ -185,6 +185,13 @@
         "delay": {
           "type": "integer",
           "minimum": 0
+        },
+        "memberRefs": {
+          "description": "Ordered member variables of a dissolved aggregate (struct member order / array index order). Present instead of a simulation `value` binding.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VarRef"
+          }
         }
       },
       "allOf": [

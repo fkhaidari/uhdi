@@ -1,0 +1,133 @@
+{
+  "annotation": [
+    {
+      "name": "clock",
+      "value": "Alu.clock"
+    }
+  ],
+  "assignment": [],
+  "breakpoint": [],
+  "context_variable": [],
+  "event": [],
+  "generator_variable": [
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "a",
+      "variable_value": "io_in_a"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "b",
+      "variable_value": "io_in_b"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "clock",
+      "variable_value": "clock"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "io.in.a",
+      "variable_value": "io_in_a"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "io.in.b",
+      "variable_value": "io_in_b"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "io.in.op",
+      "variable_value": "io_in_op"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "io.out",
+      "variable_value": "io_out"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "op",
+      "variable_value": "io_in_op"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "out",
+      "variable_value": "io_out"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "res",
+      "variable_value": "res"
+    },
+    {
+      "annotation": "",
+      "instance_name": "Alu",
+      "name": "reset",
+      "variable_value": "reset"
+    }
+  ],
+  "instance": [
+    {
+      "annotation": "",
+      "name": "Alu"
+    }
+  ],
+  "scope": [],
+  "variable": [
+    {
+      "is_rtl": 1,
+      "value": "clock"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_in_a"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_in_a"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_in_b"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_in_b"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_in_op"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_in_op"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_out"
+    },
+    {
+      "is_rtl": 1,
+      "value": "io_out"
+    },
+    {
+      "is_rtl": 1,
+      "value": "res"
+    },
+    {
+      "is_rtl": 1,
+      "value": "reset"
+    }
+  ]
+}

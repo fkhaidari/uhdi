@@ -1,0 +1,406 @@
+{
+  "format": {
+    "name": "uhdi",
+    "version": "1.0"
+  },
+  "producer": {
+    "name": "circt"
+  },
+  "representations": {
+    "chisel": {
+      "files": [
+        "Alu.scala"
+      ],
+      "kind": "source",
+      "language": "Chisel"
+    },
+    "verilog": {
+      "files": [
+        "Alu.sv"
+      ],
+      "kind": "hdl",
+      "language": "SystemVerilog"
+    }
+  },
+  "scopes": {
+    "Alu": {
+      "kind": "module",
+      "name": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 7,
+            "beginLine": 17,
+            "file": 0
+          },
+          "name": "Alu",
+          "sourceLangType": {
+            "typeName": "Alu"
+          }
+        },
+        "verilog": {
+          "name": "Alu"
+        }
+      },
+      "variableRefs": [
+        "var_e9f00a7e_0000",
+        "var_299ea860_0000",
+        "var_79b4ec15_0000",
+        "var_79b4ec15_0000__in",
+        "var_79b4ec15_0000__in__a",
+        "var_79b4ec15_0000__in__b",
+        "var_79b4ec15_0000__in__op",
+        "var_79b4ec15_0000__out",
+        "var_7fc11215_0000",
+        "var_Alu_io_in_a",
+        "var_Alu_io_in_b",
+        "var_Alu_io_in_op",
+        "var_Alu_io_out"
+      ]
+    }
+  },
+  "top": [
+    "Alu"
+  ],
+  "types": {
+    "AluOp": {
+      "kind": "enum",
+      "underlyingTypeRef": "uint2",
+      "variants": {
+        "0": "ADD",
+        "1": "SUB",
+        "2": "AND",
+        "3": "OR"
+      }
+    },
+    "Alu_io": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "in",
+          "typeRef": "Alu_io_in"
+        },
+        {
+          "name": "out",
+          "typeRef": "uint8"
+        }
+      ]
+    },
+    "Alu_io_in": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "a",
+          "typeRef": "uint8"
+        },
+        {
+          "name": "b",
+          "typeRef": "uint8"
+        },
+        {
+          "name": "op",
+          "typeRef": "AluOp"
+        }
+      ]
+    },
+    "bool": {
+      "kind": "uint",
+      "width": 1
+    },
+    "uint2": {
+      "kind": "uint",
+      "width": 2
+    },
+    "uint8": {
+      "kind": "uint",
+      "width": 8
+    }
+  },
+  "variables": {
+    "var_299ea860_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 7,
+            "beginLine": 17,
+            "file": 0
+          },
+          "name": "reset",
+          "sourceLangType": {
+            "typeName": "IO[Bool]"
+          }
+        },
+        "verilog": {
+          "name": "reset",
+          "value": {
+            "sigName": "reset"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_79b4ec15_0000": {
+      "bindKind": "node",
+      "memberRefs": [
+        "var_79b4ec15_0000__in",
+        "var_79b4ec15_0000__out"
+      ],
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 18,
+            "file": 0
+          },
+          "name": "io",
+          "sourceLangType": {
+            "typeName": "IO[AnonymousBundle]"
+          }
+        },
+        "verilog": {}
+      },
+      "typeRef": "Alu_io"
+    },
+    "var_79b4ec15_0000__in": {
+      "bindKind": "synthetic",
+      "memberRefs": [
+        "var_79b4ec15_0000__in__a",
+        "var_79b4ec15_0000__in__b",
+        "var_79b4ec15_0000__in__op"
+      ],
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 18,
+            "file": 0
+          },
+          "name": "in",
+          "sourceLangType": {
+            "typeName": "IO[Operands]"
+          }
+        },
+        "verilog": {}
+      },
+      "typeRef": "Alu_io_in"
+    },
+    "var_79b4ec15_0000__in__a": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 18,
+            "file": 0
+          },
+          "name": "a",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "name": "io_in_a",
+          "value": {
+            "sigName": "io_in_a"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_79b4ec15_0000__in__b": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 18,
+            "file": 0
+          },
+          "name": "b",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "name": "io_in_b",
+          "value": {
+            "sigName": "io_in_b"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_79b4ec15_0000__in__op": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 18,
+            "file": 0
+          },
+          "name": "op",
+          "sourceLangType": {
+            "typeName": "IO[AluOp]"
+          }
+        },
+        "verilog": {
+          "name": "io_in_op",
+          "value": {
+            "sigName": "io_in_op"
+          }
+        }
+      },
+      "typeRef": "AluOp"
+    },
+    "var_79b4ec15_0000__out": {
+      "bindKind": "synthetic",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 18,
+            "file": 0
+          },
+          "name": "out",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "name": "io_out",
+          "value": {
+            "sigName": "io_out"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_7fc11215_0000": {
+      "bindKind": "node",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 24,
+            "beginLine": 23,
+            "file": 0
+          },
+          "name": "res",
+          "sourceLangType": {
+            "typeName": "Wire[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "name": "res",
+          "value": {
+            "sigName": "res"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Alu_io_in_a": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "name": "io_in_a"
+        },
+        "verilog": {
+          "name": "io_in_a",
+          "value": {
+            "sigName": "io_in_a"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Alu_io_in_b": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "name": "io_in_b"
+        },
+        "verilog": {
+          "name": "io_in_b",
+          "value": {
+            "sigName": "io_in_b"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Alu_io_in_op": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "name": "io_in_op"
+        },
+        "verilog": {
+          "name": "io_in_op",
+          "value": {
+            "sigName": "io_in_op"
+          }
+        }
+      },
+      "typeRef": "uint2"
+    },
+    "var_Alu_io_out": {
+      "bindKind": "port",
+      "direction": "output",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "name": "io_out"
+        },
+        "verilog": {
+          "name": "io_out",
+          "value": {
+            "sigName": "io_out"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_e9f00a7e_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "ownerScopeRef": "Alu",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 7,
+            "beginLine": 17,
+            "file": 0
+          },
+          "name": "clock",
+          "sourceLangType": {
+            "typeName": "IO[Clock]"
+          }
+        },
+        "verilog": {
+          "name": "clock",
+          "value": {
+            "sigName": "clock"
+          }
+        }
+      },
+      "typeRef": "bool"
+    }
+  }
+}

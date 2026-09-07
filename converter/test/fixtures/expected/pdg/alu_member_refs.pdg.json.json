@@ -1,0 +1,135 @@
+{
+  "cfg": [],
+  "edges": [],
+  "predicates": [],
+  "vertices": [
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 7,
+      "clocked": false,
+      "condition": null,
+      "file": "Alu.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 17,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "input_clock",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 7,
+      "clocked": false,
+      "condition": null,
+      "file": "Alu.scala",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 17,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "input_reset",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "io",
+      "char": 14,
+      "clocked": false,
+      "condition": null,
+      "file": "Alu.scala",
+      "isChiselStatement": true,
+      "kind": "DataDefinition",
+      "line": 18,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "io",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": "res",
+      "char": 24,
+      "clocked": false,
+      "condition": null,
+      "file": "Alu.scala",
+      "isChiselStatement": true,
+      "kind": "DataDefinition",
+      "line": 23,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "res",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 0,
+      "clocked": false,
+      "condition": null,
+      "file": "",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 0,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "input_io_in_a",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 0,
+      "clocked": false,
+      "condition": null,
+      "file": "",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 0,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "input_io_in_b",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 0,
+      "clocked": false,
+      "condition": null,
+      "file": "",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 0,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "input_io_in_op",
+      "relatedSignal": null
+    },
+    {
+      "assignDelay": 0,
+      "assignsTo": null,
+      "char": 0,
+      "clocked": false,
+      "condition": null,
+      "file": "",
+      "isChiselStatement": true,
+      "kind": "IO",
+      "line": 0,
+      "modulePath": [
+        "Alu"
+      ],
+      "name": "output_io_out",
+      "relatedSignal": null
+    }
+  ]
+}

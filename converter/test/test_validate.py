@@ -540,3 +540,29 @@ def test_validate_or_exit_warns_on_dangling_refs_without_failing(capsys):
     assert rc == 0
     assert "warning" in captured.err
     assert "ghost_scope" in captured.err
+
+
+# ---- memberRefs (aggregate children, replaces the expressions pool) ----
+
+
+def _member_refs_fixture():
+    return json.loads(
+        (pathlib.Path(__file__).parent / "fixtures" / "uhdi"
+         / "alu_member_refs.uhdi.json").read_text(encoding="utf-8"))
+
+
+def test_iter_errors_accepts_member_refs_without_expressions_or_roles():
+    doc = _member_refs_fixture()
+    assert "expressions" not in doc and "roles" not in doc
+    assert list(validate.iter_errors(doc)) == []
+
+
+def test_referential_errors_empty_for_member_refs_fixture():
+    assert validate.referential_errors(_member_refs_fixture()) == []
+
+
+def test_referential_errors_flags_dangling_member_ref():
+    doc = _member_refs_fixture()
+    doc["variables"]["var_79b4ec15_0000"]["memberRefs"].append("ghost")
+    errs = validate.referential_errors(doc)
+    assert any("memberRefs[2]" in e and "ghost" in e for e in errs)

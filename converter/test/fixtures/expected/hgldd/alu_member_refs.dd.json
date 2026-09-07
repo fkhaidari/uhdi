@@ -1,0 +1,242 @@
+{
+  "HGLDD": {
+    "file_info": [
+      "Alu.scala",
+      "Alu.sv"
+    ],
+    "hdl_file_index": 2,
+    "version": "1.0"
+  },
+  "objects": [
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 18,
+        "end_column": 14,
+        "end_line": 18,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "Alu_io_in",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 18,
+            "end_column": 14,
+            "end_line": 18,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "a"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 18,
+            "end_column": 14,
+            "end_line": 18,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "b"
+        },
+        {
+          "enum_def_ref": 0,
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 18,
+            "end_column": 14,
+            "end_line": 18,
+            "file": 1
+          },
+          "packed_range": [
+            1,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[AluOp]"
+          },
+          "type_name": "logic",
+          "var_name": "op"
+        }
+      ]
+    },
+    {
+      "hgl_loc": {
+        "begin_column": 14,
+        "begin_line": 18,
+        "end_column": 14,
+        "end_line": 18,
+        "file": 1
+      },
+      "kind": "struct",
+      "obj_name": "Alu_io",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 18,
+            "end_column": 14,
+            "end_line": 18,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Operands]"
+          },
+          "type_name": "Alu_io_in",
+          "var_name": "in"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 18,
+            "end_column": 14,
+            "end_line": 18,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          },
+          "type_name": "logic",
+          "var_name": "out"
+        }
+      ]
+    },
+    {
+      "children": [],
+      "enum_defs": {
+        "0": {
+          "0": "ADD",
+          "1": "SUB",
+          "2": "AND",
+          "3": "OR"
+        }
+      },
+      "hgl_loc": {
+        "begin_column": 7,
+        "begin_line": 17,
+        "end_column": 7,
+        "end_line": 17,
+        "file": 1
+      },
+      "kind": "module",
+      "module_name": "Alu",
+      "obj_name": "Alu",
+      "port_vars": [
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 17,
+            "end_column": 7,
+            "end_line": 17,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "var_name": "clock"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 7,
+            "begin_line": 17,
+            "end_column": 7,
+            "end_line": 17,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "var_name": "reset"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 14,
+            "begin_line": 18,
+            "end_column": 14,
+            "end_line": 18,
+            "file": 1
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[AnonymousBundle]"
+          },
+          "type_name": "Alu_io",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "io_in_a"
+                  },
+                  {
+                    "sig_name": "io_in_b"
+                  },
+                  {
+                    "sig_name": "io_in_op"
+                  }
+                ]
+              },
+              {
+                "sig_name": "io_out"
+              }
+            ]
+          },
+          "var_name": "io"
+        },
+        {
+          "hgl_loc": {
+            "begin_column": 24,
+            "begin_line": 23,
+            "end_column": 24,
+            "end_line": 23,
+            "file": 1
+          },
+          "packed_range": [
+            7,
+            0
+          ],
+          "source_lang_type_info": {
+            "type_name": "Wire[UInt<8>]"
+          },
+          "type_name": "logic",
+          "value": {
+            "sig_name": "res"
+          },
+          "var_name": "res"
+        }
+      ],
+      "source_lang_type_info": {
+        "type_name": "Alu"
+      }
+    }
+  ]
+}

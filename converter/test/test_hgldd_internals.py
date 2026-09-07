@@ -1766,3 +1766,169 @@ def test_source_lang_type_params_tolerate_partial_and_skip_malformed():
 def test_source_lang_type_omits_empty_params_list():
     assert _source_lang_type({"sourceLangType": {
         "typeName": "T", "params": []}}) == {"type_name": "T"}
+
+
+# ---- memberRefs aggregates (no expressions pool) -----------------------
+# Producer-side change: an aggregate carries an ordered `memberRefs`
+# list of child variable ids instead of an `exprRef` into a now-absent
+# `expressions` pool. The HGLDD `value` is rebuilt from the children.
+
+
+def _member_refs_doc():
+    """Bundle `io = {in: {a, b}, out}` in the memberRefs shape, plus the
+    flat Verilog ports that the aggregate's leaves alias."""
+    doc = _doc_skeleton()
+    del doc["roles"]
+    del doc["expressions"]
+    doc["types"] = {
+        "u8": {"kind": "uint", "width": 8},
+        "In": {"kind": "struct", "members": [
+            {"name": "a", "typeRef": "u8"}, {"name": "b", "typeRef": "u8"}]},
+        "Io": {"kind": "struct", "members": [
+            {"name": "in", "typeRef": "In"}, {"name": "out", "typeRef": "u8"}]},
+    }
+    doc["variables"] = {
+        "v_io": {
+            "typeRef": "Io", "bindKind": "node", "ownerScopeRef": "Top",
+            "memberRefs": ["v_io__in", "v_io__out"],
+            "representations": {"chisel": {"name": "io"}, "verilog": {}},
+        },
+        "v_io__in": {
+            "typeRef": "In", "bindKind": "synthetic", "ownerScopeRef": "Top",
+            "memberRefs": ["v_io__in__a", "v_io__in__b"],
+            "representations": {"chisel": {"name": "in"}, "verilog": {}},
+        },
+        "v_io__in__a": {
+            "typeRef": "u8", "bindKind": "synthetic", "ownerScopeRef": "Top",
+            "representations": {
+                "chisel": {"name": "a"},
+                "verilog": {"name": "io_in_a", "value": {"sigName": "io_in_a"}}},
+        },
+        "v_io__in__b": {
+            "typeRef": "u8", "bindKind": "synthetic", "ownerScopeRef": "Top",
+            "representations": {
+                "chisel": {"name": "b"},
+                "verilog": {"value": {"constant": 3}}},
+        },
+        "v_io__out": {
+            "typeRef": "u8", "bindKind": "synthetic", "ownerScopeRef": "Top",
+            "representations": {
+                "chisel": {"name": "out"},
+                "verilog": {"name": "io_out", "value": {"sigName": "io_out"}}},
+        },
+        "v_port_io_in_a": {
+            "typeRef": "u8", "bindKind": "port", "direction": "input",
+            "ownerScopeRef": "Top",
+            "representations": {
+                "chisel": {"name": "io_in_a"},
+                "verilog": {"name": "io_in_a", "value": {"sigName": "io_in_a"}}},
+        },
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": list(doc["variables"]),
+    }
+    return doc
+
+
+def _top_port_vars(doc):
+    out = hgldd_convert(doc)
+    top = next(o for o in out["objects"] if o.get("obj_name") == "Top")
+    return {pv["var_name"]: pv for pv in top["port_vars"]}
+
+
+def test_convert_member_refs_builds_nested_struct_literal():
+    pvs = _top_port_vars(_member_refs_doc())
+    assert pvs["io"]["value"] == {"opcode": "'{", "operands": [
+        {"opcode": "'{", "operands": [
+            {"sig_name": "io_in_a"}, {"bit_vector": "00000011"}]},
+        {"sig_name": "io_out"},
+    ]}
+
+
+def test_convert_member_refs_skips_flat_port_aliased_by_leaf():
+    """The flat `io_in_a` port is already a leaf of `io`'s value tree;
+    native HGLDD emits only the aggregate."""
+    pvs = _top_port_vars(_member_refs_doc())
+    assert "io_in_a" not in pvs
+
+
+def test_convert_member_refs_preserves_order():
+    doc = _member_refs_doc()
+    doc["variables"]["v_io"]["memberRefs"] = ["v_io__out", "v_io__in"]
+    pvs = _top_port_vars(doc)
+    assert pvs["io"]["value"]["operands"][0] == {"sig_name": "io_out"}
+
+
+def test_convert_member_refs_unknown_member_renders_empty_operand():
+    doc = _member_refs_doc()
+    doc["variables"]["v_io"]["memberRefs"] = ["v_io__in", "ghost"]
+    pvs = _top_port_vars(doc)
+    assert pvs["io"]["value"]["operands"][1] == {}
+
+
+def test_convert_member_refs_breaks_on_cycle():
+    doc = _member_refs_doc()
+    doc["variables"]["v_io__in"]["memberRefs"] = ["v_io"]
+    with pytest.raises(HGLDDConversionError, match="cycle in memberRefs"):
+        hgldd_convert(doc)
+
+
+def test_convert_member_refs_names_vector_after_first_element():
+    doc = _doc_skeleton()
+    doc["types"] = {
+        "u8": {"kind": "uint", "width": 8},
+        "v": {"kind": "vector", "elementRef": "u8", "size": 2},
+    }
+    doc["variables"] = {
+        "v_arr": {
+            "typeRef": "v", "bindKind": "wire", "ownerScopeRef": "Top",
+            "memberRefs": ["v_arr__0", "v_arr__1"],
+            "representations": {"chisel": {"name": "arr"}, "verilog": {}},
+        },
+        "v_arr__0": {
+            "typeRef": "u8", "bindKind": "synthetic", "ownerScopeRef": "Top",
+            "representations": {
+                "chisel": {"name": "0"},
+                "verilog": {"value": {"sigName": "arr_0"}}},
+        },
+        "v_arr__1": {
+            "typeRef": "u8", "bindKind": "synthetic", "ownerScopeRef": "Top",
+            "representations": {
+                "chisel": {"name": "1"},
+                "verilog": {"value": {"sigName": "arr_1"}}},
+        },
+    }
+    doc["scopes"]["Top"] = {
+        "name": "Top", "kind": "module",
+        "representations": {"chisel": {"name": "Top"},
+                            "verilog": {"name": "Top"}},
+        "variableRefs": list(doc["variables"]),
+    }
+    pvs = _top_port_vars(doc)
+    assert "arr_0" in pvs
+    assert pvs["arr_0"]["value"] == {"opcode": "'{", "operands": [
+        {"sig_name": "arr_0"}, {"sig_name": "arr_1"}]}
+
+
+def test_convert_alu_member_refs_fixture_matches_expression_shape():
+    """firtool's memberRefs document for Alu yields the same `io` tree
+    the old exprRef-based document produced."""
+    import json
+    import pathlib
+    fixture = (pathlib.Path(__file__).parent / "fixtures" / "uhdi"
+               / "alu_member_refs.uhdi.json")
+    doc = json.loads(fixture.read_text(encoding="utf-8"))
+    assert "expressions" not in doc and "roles" not in doc
+    out = hgldd_convert(doc)
+    alu = next(o for o in out["objects"] if o.get("obj_name") == "Alu")
+    pvs = {pv["var_name"]: pv for pv in alu["port_vars"]}
+    assert pvs["io"]["value"] == {"opcode": "'{", "operands": [
+        {"opcode": "'{", "operands": [
+            {"sig_name": "io_in_a"}, {"sig_name": "io_in_b"},
+            {"sig_name": "io_in_op"}]},
+        {"sig_name": "io_out"},
+    ]}
+    assert set(pvs) == {"clock", "reset", "io", "res"}
