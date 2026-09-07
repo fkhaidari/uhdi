@@ -26,7 +26,9 @@ from uhdi_common.refs import (
     loc_column,
     loc_file_path,
     loc_line,
+    owner_scope,
     resolve_authoring_name,
+    resolve_sig_name,
     resolve_var_by_ref,
     root_scopes,
 )
@@ -124,8 +126,7 @@ def _module_path(scope_id: str, ctx: _Ctx) -> List[str]:
         seen.add(cur)
         parents = ctx.parents.get(cur) or []
         if not parents:
-            scope = ctx.scopes.get(cur) or {}
-            path.insert(0, scope.get("name") or cur)
+            path.insert(0, cur)
             break
         parent_id, inst_name = parents[0]
         path.insert(0, inst_name)
@@ -175,9 +176,8 @@ def _related_signal(var: Dict[str, Any], ctx: _Ctx) -> Optional[Dict[str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def _io_name(var: Dict[str, Any]) -> str:
-    name = ((var.get("representations") or {}).get("chisel", {}) or {}).get("name") \
-           or var.get("representations", {}).get("verilog", {}).get("name", "") or ""
+def _io_name(var_id: str, var: Dict[str, Any], ctx: _Ctx) -> str:
+    name = resolve_authoring_name(var_id, ctx) or resolve_sig_name(var_id, ctx) or ""
     direction = var.get("direction") or "port"
     return f"{direction}_{name}" if name else f"{direction}_unnamed"
 
@@ -195,7 +195,7 @@ def _var_vertex(scope_id: str, var_id: str, var: Dict[str, Any], ctx: _Ctx
 
     authoring = resolve_authoring_name(var_id, ctx) or var_id
     if kind == "IO":
-        name = _io_name(var)
+        name = _io_name(var_id, var, ctx)
         assigns_to: Optional[str] = None
     elif kind == "Definition":
         prefix = "Reg" if bind == "reg" else "Mem"
@@ -429,7 +429,7 @@ def _resolve_predicate_index(ref: Optional[str], ctx: _Ctx) -> Optional[int]:
     var = ctx.variables.get(canonical) or {}
     if var.get("bindKind") not in _PROBE_BINDKINDS:
         return None
-    scope_id = var.get("ownerScopeRef")
+    scope_id = owner_scope(canonical, ctx)
     if scope_id is None:
         return None
     return ctx.var_to_predicate.get((scope_id, canonical))
@@ -631,8 +631,7 @@ def _vertex_for_varref(ref: str, ctx: _Ctx) -> Optional[int]:
     canonical = _resolve_var_id(ref, ctx)
     if canonical is None:
         return None
-    var = ctx.variables.get(canonical) or {}
-    owner = var.get("ownerScopeRef")
+    owner = owner_scope(canonical, ctx)
     if owner is None:
         return None
     return ctx.var_to_vertex.get((owner, canonical))

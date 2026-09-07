@@ -73,3 +73,13 @@ class BaseContext:
             if name and name not in index:
                 index[name] = vid
         return index
+
+    @cached_property
+    def _scope_by_var_id(self) -> Dict[str, str]:
+        """Variable id -> owning scope id, from each scope's `variableRefs`.
+        Format dropped the per-variable `ownerScopeRef`; this backfills it."""
+        index: Dict[str, str] = {}
+        for sid, scope in self.scopes.items():
+            for vid in (scope or {}).get("variableRefs") or []:
+                index.setdefault(vid, sid)
+        return index

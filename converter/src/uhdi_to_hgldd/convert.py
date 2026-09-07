@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
 from uhdi_common.expressions import walk as walk_expression
-from uhdi_common.refs import loc_file_path, root_scopes
+from uhdi_common.refs import loc_file_path, owner_scope, resolve_sig_name, root_scopes
 
 
 class HGLDDConversionError(ConversionError):
@@ -195,7 +195,7 @@ def _resolve_hdl_file_path(ctx) -> Optional[str]:
     top_scope = ctx.scopes.get(top_ids[0], {}) or {}
     sim = (top_scope.get("representations", {}) or {}).get(
         ctx.simulation_repr, {}) or {}
-    hdl_name = sim.get("name") or top_scope.get("name") or top_ids[0]
+    hdl_name = sim.get("name") or top_ids[0]
     lang = sim_repr.get("language", "")
     if lang and lang not in _HDL_LANGUAGE_EXTENSIONS:
         raise HGLDDConversionError(
@@ -285,9 +285,7 @@ def _terminal_to_hgldd(operand, ctx):
     if "bitVector" in operand:
         return {"bit_vector": operand["bitVector"]}
     if "varRef" in operand:
-        target = ctx.variables.get(operand["varRef"], {})
-        name = (target.get("representations", {})
-                .get(ctx.simulation_repr, {}).get("name"))
+        name = resolve_sig_name(operand["varRef"], ctx)
         return {"sig_name": name} if name else {}
     return {}
 
@@ -356,7 +354,7 @@ def _struct_objects(ctx):
     # earliest line) so multi-scope structs get a stable hgl_loc.
     struct_candidates: Dict[str, List[Tuple[Any, str]]] = {}
     scope_var_loc: Dict[Any, Dict[str, Any]] = {}
-    for var in ctx.variables.values():
+    for var_id, var in ctx.variables.items():
         type_ref = var.get("typeRef")
         hgl = (var.get("representations", {}).get(ctx.authoring_repr, {})
                or {})
@@ -364,8 +362,8 @@ def _struct_objects(ctx):
         if (type_ref and loc and
                 (ctx.types.get(type_ref) or {}).get("kind") == "struct"):
             struct_candidates.setdefault(type_ref, []).append(
-                (loc, var.get("ownerScopeRef", "")))
-        if (scope := var.get("ownerScopeRef", "")) and (n := hgl.get("name")) and loc:
+                (loc, owner_scope(var_id, ctx) or ""))
+        if (scope := owner_scope(var_id, ctx) or "") and (n := hgl.get("name")) and loc:
             scope_var_loc.setdefault((scope, n), loc)
 
     def _struct_loc_key(item):
@@ -679,7 +677,7 @@ def _ordered_scope_vars(scope, scope_id, ctx):
             seen.add(vid)
             yield vid, v
     for vid, v in ctx.variables.items():
-        if vid not in seen and v.get("ownerScopeRef") == scope_id:
+        if vid not in seen and owner_scope(vid, ctx) == scope_id:
             yield vid, v
 
 
@@ -689,8 +687,7 @@ def _instance_child(inst, ctx):
     target = ctx.scopes.get(scope_ref, {})
     target_hdl = target.get("representations", {}).get(ctx.simulation_repr, {})
     child = {"name": inst.get("as") or scope_ref, "obj_name": scope_ref,
-             "module_name": (target_hdl.get("name")
-                             or target.get("name") or scope_ref)}
+             "module_name": target_hdl.get("name") or scope_ref}
     inst_reprs = inst.get("representations", {}) or {}
     for repr_key, out_key in ((ctx.authoring_repr, "hgl_loc"),
                               (ctx.simulation_repr, "hdl_loc")):
@@ -707,8 +704,8 @@ def _scope_object(scope_id, scope, ctx):
     hdl = reprs.get(ctx.simulation_repr, {}) or {}
     out = {
         "kind": "module",
-        "obj_name": hgl.get("name") or scope.get("name") or scope_id,
-        "module_name": hdl.get("name") or scope.get("name") or scope_id,
+        "obj_name": hgl.get("name") or scope_id,
+        "module_name": hdl.get("name") or scope_id,
     }
     if scope.get("kind") == "extmodule":
         out["isExtModule"] = 1

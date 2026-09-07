@@ -574,3 +574,49 @@ def test_referential_errors_flags_dangling_member_ref():
     doc["variables"]["var_79b4ec15_0000"]["memberRefs"].append("ghost")
     errs = validate.referential_errors(doc)
     assert any("memberRefs[2]" in e and "ghost" in e for e in errs)
+
+
+# ---- format drop (ownerScopeRef, verilog.name, scope name) ---------------
+
+
+def _stripped_member_refs_fixture():
+    """`_member_refs_fixture()` with the three keys the format dropped
+    removed, in place: variables.*.ownerScopeRef,
+    variables.*.representations.verilog.name, scopes.*.name."""
+    doc = _member_refs_fixture()
+    for var in doc["variables"].values():
+        var.pop("ownerScopeRef", None)
+        verilog = (var.get("representations") or {}).get("verilog")
+        if isinstance(verilog, dict):
+            verilog.pop("name", None)
+    for scope in doc["scopes"].values():
+        scope.pop("name", None)
+    return doc
+
+
+def test_iter_errors_accepts_stripped_document():
+    doc = _stripped_member_refs_fixture()
+    assert list(validate.iter_errors(doc)) == []
+
+
+def test_variable_ownership_errors_empty_for_stripped_document():
+    assert validate.variable_ownership_errors(_stripped_member_refs_fixture()) == []
+
+
+def test_variable_ownership_errors_flags_variable_in_no_scope():
+    doc = _stripped_member_refs_fixture()
+    for scope in doc["scopes"].values():
+        scope["variableRefs"] = [
+            v for v in scope["variableRefs"] if v != "var_e9f00a7e_0000"]
+    errs = validate.variable_ownership_errors(doc)
+    assert any("var_e9f00a7e_0000" in e and "no ownerScopeRef" in e
+               for e in errs)
+
+
+def test_variable_ownership_errors_flags_variable_in_multiple_scopes():
+    doc = _stripped_member_refs_fixture()
+    doc["scopes"]["Other"] = {"kind": "module",
+                              "variableRefs": ["var_e9f00a7e_0000"]}
+    errs = validate.variable_ownership_errors(doc)
+    assert any("var_e9f00a7e_0000" in e and "multiple scopes" in e
+               for e in errs)

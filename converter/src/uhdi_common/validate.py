@@ -91,6 +91,10 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
         print(f"{source}: warning: duplicate authoring name: {dup_err}",
               file=sys.stderr)
 
+    for own_err in variable_ownership_errors(uhdi):
+        print(f"{source}: warning: variable ownership: {own_err}",
+              file=sys.stderr)
+
     collisions = cross_pool_collision_errors(uhdi)
     for col_err in collisions:
         print(f"{source}: error: cross-pool id collision: {col_err}",
@@ -231,6 +235,38 @@ def duplicate_authoring_name_errors(uhdi: Dict[str, Any]) -> List[str]:
             errs.append(
                 f"representations[{repr_key!r}].name={name!r} on "
                 f"variables {{{joined}}}")
+    return sorted(errs)
+
+
+def variable_ownership_errors(uhdi: Dict[str, Any]) -> List[str]:
+    """Diagnostics for variables with no resolvable owning scope.
+
+    Format dropped `ownerScopeRef`; ownership now comes from exactly one
+    scope's `variableRefs`. Flags a variable in more than one scope's
+    `variableRefs`, and one in none that also has no legacy
+    `ownerScopeRef` to fall back on."""
+    variables = uhdi.get("variables") or {}
+    scopes = uhdi.get("scopes") or {}
+    owners: Dict[str, List[str]] = {}
+    for scope_id, scope in scopes.items():
+        if not isinstance(scope, dict):
+            continue
+        for var_id in scope.get("variableRefs") or []:
+            owners.setdefault(var_id, []).append(scope_id)
+
+    errs: List[str] = []
+    for var_id, var in variables.items():
+        if not isinstance(var, dict):
+            continue
+        found = owners.get(var_id, [])
+        if len(found) > 1:
+            errs.append(
+                f"variables.{var_id} in variableRefs of multiple scopes: "
+                f"{sorted(found)}")
+        elif not found and not var.get("ownerScopeRef"):
+            errs.append(
+                f"variables.{var_id} not in any scope's variableRefs "
+                f"and has no ownerScopeRef")
     return sorted(errs)
 
 

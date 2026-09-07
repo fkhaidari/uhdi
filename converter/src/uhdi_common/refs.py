@@ -5,7 +5,8 @@ Pure functions over `BaseContext` (requires pool accessors). Categories:
   * `resolve_*`: lookup stable_id/ref -> resolved value (no raise, None/"" on miss)
   * `loc_*`: read Location dict fields with defaulting strategy (HGLDD packs into hgl_loc,
              hgdb stores as separate columns)
-  * `root_scopes`: ordered root scope ids, from `top` or derived"""
+  * `root_scopes`: ordered root scope ids, from `top` or derived
+  * `owner_scope`: scope id owning a variable, from `ownerScopeRef` or derived"""
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, cast
@@ -93,6 +94,16 @@ def resolve_var_by_ref(ref: str, ctx: BaseContext) -> Dict[str, Any]:
     if (vid := ctx._var_id_by_authoring_name.get(ref)) is not None:
         return cast(Dict[str, Any], ctx.variables[vid])
     return {}
+
+
+def owner_scope(var_id: str, ctx: BaseContext) -> Optional[str]:
+    """Scope id that owns a variable.
+
+    `ownerScopeRef` when present (legacy format); otherwise the scope
+    whose `variableRefs` lists the id. Format dropped the field --
+    every variable appears in exactly one scope's `variableRefs`."""
+    var = ctx.variables.get(var_id) or {}
+    return var.get("ownerScopeRef") or ctx._scope_by_var_id.get(var_id)
 
 
 def root_scopes(ctx: BaseContext) -> List[str]:

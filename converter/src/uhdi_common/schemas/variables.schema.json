@@ -159,8 +159,7 @@
       "type": "object",
       "required": [
         "typeRef",
-        "bindKind",
-        "ownerScopeRef"
+        "bindKind"
       ],
       "additionalProperties": false,
       "properties": {

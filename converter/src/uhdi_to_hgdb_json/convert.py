@@ -132,7 +132,7 @@ def _module_entry(scope_id: str, scope: Dict[str, Any], ctx: _Ctx,
 
     out: Dict[str, Any] = {
         "type": "module",
-        "name": scope.get("name") or scope_id,
+        "name": scope_id,
         "variables": var_list,
         "scope": scope_list,
     }
@@ -142,10 +142,9 @@ def _module_entry(scope_id: str, scope: Dict[str, Any], ctx: _Ctx,
         if not isinstance(inst, dict):
             continue
         target = inst.get("scopeRef")
-        target_scope = ctx.scopes.get(target, {}) if target else {}
         instances.append({
             "name": inst.get("as") or target or "",
-            "module": target_scope.get("name") or target or "",
+            "module": target or "",
         })
     if instances:
         out["instances"] = instances
