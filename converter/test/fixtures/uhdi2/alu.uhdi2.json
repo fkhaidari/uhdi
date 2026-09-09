@@ -1,0 +1,154 @@
+{
+  "format": {
+    "layers": [
+      "core"
+    ],
+    "name": "uhdi",
+    "version": "2.0"
+  },
+  "modules": {
+    "Alu": {
+      "source": {
+        "column": 7,
+        "file": 0,
+        "line": 17,
+        "name": "Alu",
+        "typeName": "Alu"
+      },
+      "target": {
+        "name": "Alu"
+      },
+      "variables": {
+        "clock": {
+          "bind": {
+            "verilog": "clock"
+          },
+          "direction": "input",
+          "role": "port",
+          "source": {
+            "column": 7,
+            "file": 0,
+            "line": 17,
+            "name": "clock",
+            "typeName": "IO[Clock]"
+          },
+          "typeRef": "bool"
+        },
+        "io": {
+          "bind": {
+            "verilog": {
+              "in.a": "io_in_a",
+              "in.b": "io_in_b",
+              "in.op": "io_in_op",
+              "out": "io_out"
+            }
+          },
+          "role": "node",
+          "source": {
+            "column": 14,
+            "file": 0,
+            "line": 18,
+            "name": "io",
+            "typeName": "IO[AnonymousBundle]"
+          },
+          "typeRef": "Alu_io"
+        },
+        "res": {
+          "bind": {
+            "verilog": "res"
+          },
+          "role": "node",
+          "source": {
+            "column": 24,
+            "file": 0,
+            "line": 23,
+            "name": "res",
+            "typeName": "Wire[UInt<8>]"
+          },
+          "typeRef": "uint8"
+        },
+        "reset": {
+          "bind": {
+            "verilog": "reset"
+          },
+          "direction": "input",
+          "role": "port",
+          "source": {
+            "column": 7,
+            "file": 0,
+            "line": 17,
+            "name": "reset",
+            "typeName": "IO[Bool]"
+          },
+          "typeRef": "bool"
+        }
+      }
+    }
+  },
+  "source": {
+    "files": [
+      "Alu.scala"
+    ],
+    "language": "Chisel"
+  },
+  "target": {
+    "files": [
+      "Alu.sv"
+    ],
+    "language": "SystemVerilog"
+  },
+  "types": {
+    "AluOp": {
+      "kind": "enum",
+      "underlyingTypeRef": "uint2",
+      "variants": {
+        "0": "ADD",
+        "1": "SUB",
+        "2": "AND",
+        "3": "OR"
+      }
+    },
+    "Alu_io": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "in",
+          "typeRef": "Alu_io_in"
+        },
+        {
+          "name": "out",
+          "typeRef": "uint8"
+        }
+      ]
+    },
+    "Alu_io_in": {
+      "kind": "struct",
+      "members": [
+        {
+          "name": "a",
+          "typeRef": "uint8"
+        },
+        {
+          "name": "b",
+          "typeRef": "uint8"
+        },
+        {
+          "name": "op",
+          "typeRef": "AluOp"
+        }
+      ]
+    },
+    "bool": {
+      "kind": "uint",
+      "width": 1
+    },
+    "uint2": {
+      "kind": "uint",
+      "width": 2
+    },
+    "uint8": {
+      "kind": "uint",
+      "width": 8
+    }
+  }
+}

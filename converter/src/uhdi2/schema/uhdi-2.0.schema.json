@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/uhdi-2.0.schema.json",
+  "$defs": {
+    "Ref": {
+      "description": "Opaque reference (typeRef / moduleRef). Unique within its pool, no structure a consumer may rely on.",
+      "type": "string"
+    },
+    "Format": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "name": {"const": "uhdi"},
+        "version": {"const": "2.0"},
+        "layers": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "LanguageFiles": {
+      "type": "object",
+      "required": ["language", "files"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "language": {"type": "string"},
+        "files": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "Direction": {"enum": ["input", "output", "inout"]},
+    "Role": {"enum": ["port", "node"]},
+    "ScopeKind": {"enum": ["module", "extmodule", "inline"]},
+    "ModuleSource": {
+      "description": "Authoring-side (chisel) identity of a module/scope, from its `representations.chisel`.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "name": {"type": "string"},
+        "typeName": {"type": "string"},
+        "file": {"type": "integer", "minimum": 0},
+        "line": {"type": "integer", "minimum": 1},
+        "column": {"type": "integer", "minimum": 1}
+      }
+    },
+    "ModuleTarget": {
+      "description": "Simulation-side (verilog) identity of a module/scope, from its `representations.verilog`.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "name": {"type": "string"}
+      }
+    },
+    "VariableSource": {
+      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "name": {"type": "string"},
+        "typeName": {"type": "string"},
+        "file": {"type": "integer", "minimum": 0},
+        "line": {"type": "integer", "minimum": 1},
+        "column": {"type": "integer", "minimum": 1}
+      }
+    },
+    "Binding": {
+      "description": "Opaque simulation-side value binding. A scalar leaf is a sigName string, or a {constant}/{bitVector} object. An aggregate variable's binding is instead an object mapping a dotted member path (struct-member / array-index names joined with '.') to a scalar binding, one entry per leaf that has a value. Deliberately open: a consumer must not assume more structure than 'string or object'.",
+      "anyOf": [
+        {"type": "string"},
+        {"type": "object"}
+      ]
+    },
+    "VariableBind": {
+      "type": "object",
+      "required": ["verilog"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "verilog": {"$ref": "#/$defs/Binding"}
+      }
+    },
+    "Variable": {
+      "type": "object",
+      "required": ["typeRef", "role", "source"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "typeRef": {"$ref": "#/$defs/Ref"},
+        "role": {"$ref": "#/$defs/Role"},
+        "direction": {"$ref": "#/$defs/Direction"},
+        "source": {"$ref": "#/$defs/VariableSource"},
+        "bind": {"$ref": "#/$defs/VariableBind"}
+      }
+    },
+    "InstanceBind": {
+      "type": "object",
+      "required": ["verilog"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "verilog": {
+          "description": "portPath -> Binding, one entry per bound instance port.",
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/Binding"}
+        }
+      }
+    },
+    "Instance": {
+      "type": "object",
+      "required": ["moduleRef"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "moduleRef": {"$ref": "#/$defs/Ref"},
+        "target": {"$ref": "#/$defs/ModuleTarget"},
+        "bind": {"$ref": "#/$defs/InstanceBind"}
+      }
+    },
+    "Module": {
+      "description": "A module/extmodule (top-level `modules` entry) or an inline scope (nested under a parent's `scopes`).",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "kind": {"$ref": "#/$defs/ScopeKind"},
+        "source": {"$ref": "#/$defs/ModuleSource"},
+        "target": {"$ref": "#/$defs/ModuleTarget"},
+        "variables": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/Variable"}
+        },
+        "instances": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/Instance"}
+        },
+        "scopes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/Module"}
+        }
+      }
+    },
+    "TypeRef": {
+      "description": "Key into the types pool. Opaque: unique within the pool, no structure a consumer may rely on.",
+      "type": "string"
+    },
+    "GroundInt": {
+      "type": "object",
+      "required": ["kind", "width"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "kind": {"enum": ["uint", "sint"]},
+        "width": {"type": "integer", "minimum": 0}
+      }
+    },
+    "GroundClock": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "kind": {"enum": ["clock", "reset", "asyncreset", "analog"]},
+        "width": {"type": "integer", "minimum": 0}
+      }
+    },
+    "StructMember": {
+      "type": "object",
+      "required": ["name", "typeRef"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "name": {"type": "string"},
+        "typeRef": {"$ref": "#/$defs/TypeRef"},
+        "flipped": {"type": "boolean", "default": false}
+      }
+    },
+    "Struct": {
+      "type": "object",
+      "required": ["kind", "members"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "kind": {"const": "struct"},
+        "members": {"type": "array", "items": {"$ref": "#/$defs/StructMember"}}
+      }
+    },
+    "Vector": {
+      "type": "object",
+      "required": ["kind", "elementRef", "size"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "kind": {"const": "vector"},
+        "elementRef": {"$ref": "#/$defs/TypeRef"},
+        "size": {"type": "integer", "minimum": 0}
+      }
+    },
+    "Enum": {
+      "type": "object",
+      "required": ["kind", "underlyingTypeRef", "variants"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "kind": {"const": "enum"},
+        "underlyingTypeRef": {"$ref": "#/$defs/TypeRef"},
+        "variants": {
+          "type": "object",
+          "patternProperties": {"^-?[0-9]+$": {"type": "string"}},
+          "additionalProperties": false
+        }
+      }
+    },
+    "Type": {
+      "description": "Tag-discriminated union over the five Type variants, copied from UHDI 1.0's types pool unchanged. Dispatch on `kind` first via if/then/else so a typo produces one focused error instead of jsonschema's all-branches-tried report.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["uint", "sint", "clock", "reset", "asyncreset",
+                   "analog", "struct", "vector", "enum"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"enum": ["uint", "sint"]}}},
+          "then": {"$ref": "#/$defs/GroundInt"}
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {"enum": ["clock", "reset", "asyncreset", "analog"]}
+            }
+          },
+          "then": {"$ref": "#/$defs/GroundClock"}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "struct"}}},
+          "then": {"$ref": "#/$defs/Struct"}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "vector"}}},
+          "then": {"$ref": "#/$defs/Vector"}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "enum"}}},
+          "then": {"$ref": "#/$defs/Enum"}
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "required": ["format", "source", "target", "types", "modules"],
+  "additionalProperties": false,
+  "patternProperties": {"^x-": true},
+  "properties": {
+    "format": {"$ref": "#/$defs/Format"},
+    "source": {"$ref": "#/$defs/LanguageFiles"},
+    "target": {"$ref": "#/$defs/LanguageFiles"},
+    "types": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/Type"}
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/Module"}
+    }
+  }
+}

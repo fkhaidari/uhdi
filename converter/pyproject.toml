@@ -18,6 +18,7 @@ dev = ["pytest>=7"]
 uhdi-to-hgldd = "uhdi_to_hgldd.__main__:main"
 uhdi-to-hgdb = "uhdi_to_hgdb.__main__:main"
 uhdi-to-pdg = "uhdi_to_pdg.__main__:main"
+uhdi2 = "uhdi2.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -27,6 +28,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 uhdi_common = ["schemas/*.schema.json"]
+uhdi2 = ["schema/*.schema.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
