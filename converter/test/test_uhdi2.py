@@ -1,14 +1,12 @@
 """Tests for the UHDI 2.0 prototype (`uhdi2`): upgrade, schema validation,
 and v2 -> HGLDD conversion vs. the v1 path's goldens.
 
-Every fixture's v2 -> HGLDD output is expected to diverge from the v1
-golden (marked `xfail(strict=True)`): v2's `Variable`/`Module.target`
-carry no simulation-side location field at all, so `hdl_loc` is lost for
-every fixture that has one, and structs additionally lose per-field
-`source_lang_type_info` (sourced in v1 from `bindKind: synthetic`
-Variables that v2 never materializes as records). See `uhdi2/to_hgldd.py`
-for the full accounting. A fixture that unexpectedly matches (XPASS) means
-that accounting is wrong and must be revisited.
+Every fixture's v2 -> HGLDD output is required to match the v1 golden
+byte-for-byte. See `uhdi2/upgrade.py` and `uhdi2/to_hgldd.py` for how the
+v2 shape (amended per the upgrade report to add `types[X].source`,
+unflattened `Location`, and a `loc` on scalar/aggregate bindings) recovers
+every field v1's HGLDD path emits, including `hdl_loc` and per-field
+struct `source_lang_type_info`.
 """
 from __future__ import annotations
 
@@ -25,25 +23,6 @@ from uhdi_to_hgldd.convert import convert as to_hgldd_v1
 
 _REPO = pathlib.Path(__file__).resolve().parent.parent
 _FIXTURES = _REPO / "test" / "fixtures" / "uhdi"
-
-# fixture stem -> reason v2's HGLDD output diverges from the v1 golden.
-_XFAIL_REASONS = {
-    "alu_member_refs": ("hdl_loc lost everywhere; struct hgl_loc/source_lang_type_info "
-                        "lost (both sourced from bindKind:synthetic subfield Variables, "
-                        "which v2 never materializes as records)"),
-    "bundle_io": "hdl_loc lost (v2 Variable/Module.target carry no simulation-side location)",
-    "counter": "hdl_loc lost (v2 Variable/Module.target carry no simulation-side location)",
-    "counter_with_otherwise": "hdl_loc lost (v2 Variable/Module.target carry no simulation-side location)",
-    "leaf_and_top": "hdl_loc lost, plus instance hgl_loc/hdl_loc (v2 Instance has no location field)",
-    "nested_bundle": ("hdl_loc lost everywhere; struct hgl_loc/source_lang_type_info "
-                      "lost (both sourced from bindKind:synthetic subfield Variables, "
-                      "which v2 never materializes as records)"),
-    "vec_of_struct": ("hdl_loc lost everywhere; struct hgl_loc/source_lang_type_info/params "
-                      "lost (all sourced from bindKind:synthetic subfield Variables, "
-                      "which v2 never materializes as records)"),
-    "with_assert": "hdl_loc lost (v2 Variable/Module.target carry no simulation-side location)",
-    "with_expression": "hdl_loc lost (v2 Variable/Module.target carry no simulation-side location)",
-}
 
 
 def _fixture_paths() -> List[pathlib.Path]:
@@ -82,8 +61,8 @@ def test_upgrade_idempotent_validation(fixture: pathlib.Path) -> None:
 @pytest.mark.parametrize("fixture", _fixture_paths(), ids=_stem)
 def test_upgrade_deterministic(fixture: pathlib.Path) -> None:
     doc_v1 = _load(fixture)
-    first = json.dumps(upgrade(doc_v1), sort_keys=True)
-    second = json.dumps(upgrade(doc_v1), sort_keys=True)
+    first = json.dumps(upgrade(doc_v1))
+    second = json.dumps(upgrade(doc_v1))
     assert first == second
 
 
@@ -100,18 +79,7 @@ def test_alu_variables() -> None:
     }
 
 
-def _hgldd_params() -> List[Any]:
-    params = []
-    for fixture in _fixture_paths():
-        stem = _stem(fixture)
-        reason = _XFAIL_REASONS[stem]
-        params.append(pytest.param(
-            fixture, id=stem,
-            marks=pytest.mark.xfail(reason=reason, strict=True)))
-    return params
-
-
-@pytest.mark.parametrize("fixture", _hgldd_params())
+@pytest.mark.parametrize("fixture", _fixture_paths(), ids=_stem)
 def test_v2_to_hgldd_matches_v1(fixture: pathlib.Path) -> None:
     doc_v1 = _load(fixture)
     expected = to_hgldd_v1(doc_v1)

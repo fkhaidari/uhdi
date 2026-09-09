@@ -30,6 +30,20 @@
     "Direction": {"enum": ["input", "output", "inout"]},
     "Role": {"enum": ["port", "node"]},
     "ScopeKind": {"enum": ["module", "extmodule", "inline"]},
+    "Location": {
+      "description": "Unflattened v1 Location, carried through as-is. `file` is an index into whichever files list this location's context belongs to: `source.files` for a `source.loc`, `target.files` for a `target.loc` or a scalar Binding's `loc`.",
+      "type": "object",
+      "required": ["file"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "file": {"type": "integer", "minimum": 0},
+        "beginLine": {"type": "integer", "minimum": 1},
+        "beginColumn": {"type": "integer", "minimum": 1},
+        "endLine": {"type": "integer", "minimum": 1},
+        "endColumn": {"type": "integer", "minimum": 1}
+      }
+    },
     "ModuleSource": {
       "description": "Authoring-side (chisel) identity of a module/scope, from its `representations.chisel`.",
       "type": "object",
@@ -38,39 +52,63 @@
       "properties": {
         "name": {"type": "string"},
         "typeName": {"type": "string"},
-        "file": {"type": "integer", "minimum": 0},
-        "line": {"type": "integer", "minimum": 1},
-        "column": {"type": "integer", "minimum": 1}
+        "loc": {"$ref": "#/$defs/Location"}
       }
     },
     "ModuleTarget": {
       "description": "Simulation-side (verilog) identity of a module/scope, from its `representations.verilog`.",
       "type": "object",
-      "required": ["name"],
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
-        "name": {"type": "string"}
+        "name": {"type": "string"},
+        "loc": {"$ref": "#/$defs/Location"}
       }
     },
     "VariableSource": {
-      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`.",
+      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`. `binding` is the declaration kind (IO/Wire/Reg/...) parsed off the leading `Binding[...]` of the v1 typeName; the bracketed part becomes `types[typeRef].source.name` instead (see the Type defs) so it isn't repeated per variable. `typeName` is kept here, raw, only as a fallback for the rare typeRef whose variables/leaves disagree on that bracketed name (see upgrade.py) -- otherwise omitted.",
       "type": "object",
       "required": ["name"],
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
         "name": {"type": "string"},
+        "binding": {"type": "string"},
         "typeName": {"type": "string"},
-        "file": {"type": "integer", "minimum": 0},
-        "line": {"type": "integer", "minimum": 1},
-        "column": {"type": "integer", "minimum": 1}
+        "loc": {"$ref": "#/$defs/Location"}
       }
     },
-    "Binding": {
-      "description": "Opaque simulation-side value binding. A scalar leaf is a sigName string, or a {constant}/{bitVector} object. An aggregate variable's binding is instead an object mapping a dotted member path (struct-member / array-index names joined with '.') to a scalar binding, one entry per leaf that has a value. Deliberately open: a consumer must not assume more structure than 'string or object'.",
+    "ScalarBinding": {
+      "description": "A leaf simulation-side value binding. A plain sigName is a bare string; `{signal, loc}` is used instead when the leaf also carries its own verilog-side location; `{constant}`/`{bitVector}` carry a literal value (no combined loc form observed in the corpus).",
       "anyOf": [
         {"type": "string"},
+        {
+          "type": "object",
+          "required": ["signal"],
+          "additionalProperties": false,
+          "properties": {
+            "signal": {"type": "string"},
+            "loc": {"$ref": "#/$defs/Location"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["constant"],
+          "additionalProperties": false,
+          "properties": {"constant": {}}
+        },
+        {
+          "type": "object",
+          "required": ["bitVector"],
+          "additionalProperties": false,
+          "properties": {"bitVector": {"type": "string"}}
+        }
+      ]
+    },
+    "Binding": {
+      "description": "Opaque simulation-side value binding. A scalar leaf is a `ScalarBinding`. An aggregate variable's binding is instead an object mapping a dotted member path (struct-member / array-index names joined with '.') to a `ScalarBinding`, one entry per leaf that has a value. Deliberately open beyond that: a consumer must not assume more structure.",
+      "anyOf": [
+        {"$ref": "#/$defs/ScalarBinding"},
         {"type": "object"}
       ]
     },
@@ -80,7 +118,11 @@
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
-        "verilog": {"$ref": "#/$defs/Binding"}
+        "verilog": {"$ref": "#/$defs/Binding"},
+        "loc": {
+          "description": "An aggregate variable's own verilog-side location, when it has one (a ScalarBinding embeds its own `loc` instead; this sibling is unused when `verilog` is a ScalarBinding).",
+          "$ref": "#/$defs/Location"
+        }
       }
     },
     "Variable": {
@@ -94,6 +136,14 @@
         "direction": {"$ref": "#/$defs/Direction"},
         "source": {"$ref": "#/$defs/VariableSource"},
         "bind": {"$ref": "#/$defs/VariableBind"}
+      }
+    },
+    "InstanceSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "loc": {"$ref": "#/$defs/Location"}
       }
     },
     "InstanceBind": {
@@ -116,6 +166,7 @@
       "patternProperties": {"^x-": true},
       "properties": {
         "moduleRef": {"$ref": "#/$defs/Ref"},
+        "source": {"$ref": "#/$defs/InstanceSource"},
         "target": {"$ref": "#/$defs/ModuleTarget"},
         "bind": {"$ref": "#/$defs/InstanceBind"}
       }
@@ -147,6 +198,27 @@
       "description": "Key into the types pool. Opaque: unique within the pool, no structure a consumer may rely on.",
       "type": "string"
     },
+    "TypeSourceParam": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "name": {"type": "string"},
+        "type": {"type": "string"},
+        "value": {}
+      }
+    },
+    "TypeSource": {
+      "description": "Recovers what v1 sourced from synthetic subfield Variables' `sourceLangType`: the bracketed part of every variable/leaf typeName sharing this typeRef (e.g. types['uint8'].source.name == 'UInt<8>' from 'IO[UInt<8>]'/'Wire[UInt<8>]'), and any UHDI Sec.6.9 constructor params (e.g. Chisel Vec's `gen`/`length`). When variables/leaves sharing this typeRef disagree, `name` is the struct-member-priority majority value (see upgrade.py; the one observed case is the 'bool' ground type shared by Chisel Clock and plain Bool ports) and any disagreeing root variable keeps its own raw typeName on `Variable.source.typeName` instead.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {"^x-": true},
+      "properties": {
+        "name": {"type": "string"},
+        "params": {"type": "array", "items": {"$ref": "#/$defs/TypeSourceParam"}}
+      }
+    },
     "GroundInt": {
       "type": "object",
       "required": ["kind", "width"],
@@ -154,7 +226,8 @@
       "patternProperties": {"^x-": true},
       "properties": {
         "kind": {"enum": ["uint", "sint"]},
-        "width": {"type": "integer", "minimum": 0}
+        "width": {"type": "integer", "minimum": 0},
+        "source": {"$ref": "#/$defs/TypeSource"}
       }
     },
     "GroundClock": {
@@ -164,7 +237,8 @@
       "patternProperties": {"^x-": true},
       "properties": {
         "kind": {"enum": ["clock", "reset", "asyncreset", "analog"]},
-        "width": {"type": "integer", "minimum": 0}
+        "width": {"type": "integer", "minimum": 0},
+        "source": {"$ref": "#/$defs/TypeSource"}
       }
     },
     "StructMember": {
@@ -185,7 +259,8 @@
       "patternProperties": {"^x-": true},
       "properties": {
         "kind": {"const": "struct"},
-        "members": {"type": "array", "items": {"$ref": "#/$defs/StructMember"}}
+        "members": {"type": "array", "items": {"$ref": "#/$defs/StructMember"}},
+        "source": {"$ref": "#/$defs/TypeSource"}
       }
     },
     "Vector": {
@@ -196,7 +271,8 @@
       "properties": {
         "kind": {"const": "vector"},
         "elementRef": {"$ref": "#/$defs/TypeRef"},
-        "size": {"type": "integer", "minimum": 0}
+        "size": {"type": "integer", "minimum": 0},
+        "source": {"$ref": "#/$defs/TypeSource"}
       }
     },
     "Enum": {
@@ -211,11 +287,12 @@
           "type": "object",
           "patternProperties": {"^-?[0-9]+$": {"type": "string"}},
           "additionalProperties": false
-        }
+        },
+        "source": {"$ref": "#/$defs/TypeSource"}
       }
     },
     "Type": {
-      "description": "Tag-discriminated union over the five Type variants, copied from UHDI 1.0's types pool unchanged. Dispatch on `kind` first via if/then/else so a typo produces one focused error instead of jsonschema's all-branches-tried report.",
+      "description": "Tag-discriminated union over the five Type variants, copied from UHDI 1.0's types pool with one addition: an optional `source` (see TypeSource). Dispatch on `kind` first via if/then/else so a typo produces one focused error instead of jsonschema's all-branches-tried report.",
       "type": "object",
       "required": ["kind"],
       "properties": {
