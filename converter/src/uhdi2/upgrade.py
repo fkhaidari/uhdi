@@ -95,7 +95,7 @@ def upgrade(doc_v1: Dict[str, Any]) -> Dict[str, Any]:
         types_out[tid] = tdef
 
     doc_v2: Dict[str, Any] = {
-        "format": {"name": "uhdi", "version": "2.0", "layers": ["core"]},
+        "format": {"version": "2.0"},
         "source": {
             "language": (reprs.get(ctx.authoring_repr, {}) or {}).get("language", ""),
             "files": list((reprs.get(ctx.authoring_repr, {}) or {}).get("files", [])),
@@ -219,7 +219,7 @@ def _derive_type_sources(
 
 
 def _build_module(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
-                  type_source: Dict[str, Any]) -> Dict[str, Any]:
+                  type_source: Dict[str, Any], top_level: bool = True) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     kind = scope.get("kind", "module")
     if kind != "module":
@@ -227,7 +227,7 @@ def _build_module(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
 
     if src := _module_source(scope, ctx):
         out["source"] = src
-    if tgt := _module_target(scope, ctx):
+    if tgt := _module_target(scope, ctx, top_level):
         out["target"] = tgt
 
     out["variables"] = _build_variables(scope_id, scope, ctx, type_source)
@@ -243,7 +243,8 @@ def _build_module(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
     ]
     if inline:
         out["scopes"] = [
-            {**_build_module(sid, ctx.scopes[sid], ctx, type_source), "kind": "inline"}
+            {**_build_module(sid, ctx.scopes[sid], ctx, type_source, top_level=False),
+             "kind": "inline"}
             for sid in inline
         ]
 
@@ -277,10 +278,14 @@ def _module_source(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
     return out
 
 
-def _module_target(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
+def _module_target(scope: Dict[str, Any], ctx: BaseContext, top_level: bool) -> Dict[str, Any]:
+    """`name` is dropped for a top-level module: it always equals the
+    module's own `modules` key there, so the key already carries it. A
+    nested inline scope has no key of its own, so it keeps `name` if the
+    v1 data has one (not observed in the corpus)."""
     verilog = (scope.get("representations", {}) or {}).get(ctx.simulation_repr, {}) or {}
     out: Dict[str, Any] = {}
-    if name := verilog.get("name"):
+    if not top_level and (name := verilog.get("name")):
         out["name"] = name
     if loc := _loc_dict(verilog.get("location")):
         out["loc"] = loc
@@ -484,7 +489,9 @@ def _build_variables(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
         key = name if name and name_counts.get(name) == 1 else var_id
 
         source: Dict[str, Any] = {}
-        if name:
+        if name and key != name:
+            # key is the var_id, not name -- a name collision forced the
+            # disambiguation (see `key` above); record the dropped name.
             source["name"] = name
         slt = chisel.get("sourceLangType") or {}
         type_name = slt.get("typeName")
@@ -503,10 +510,7 @@ def _build_variables(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
         if loc := _loc_dict(chisel.get("location")):
             source["loc"] = loc
 
-        entry: Dict[str, Any] = {
-            "typeRef": type_ref,
-            "role": "port" if var.get("bindKind") == "port" else "node",
-        }
+        entry: Dict[str, Any] = {"typeRef": type_ref}
         if direction := var.get("direction"):
             entry["direction"] = direction
         entry["source"] = source

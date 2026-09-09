@@ -79,6 +79,37 @@ def test_alu_variables() -> None:
     }
 
 
+def _iter_modules(modules: Dict[str, Any]):
+    """Yield (key_or_None, module) for every top-level and nested-inline
+    module/scope. Nested scopes (under `scopes`) have no key of their own."""
+    for key, mod in modules.items():
+        yield key, mod
+        for nested in mod.get("scopes") or []:
+            yield None, nested
+
+
+@pytest.mark.parametrize("fixture", _fixture_paths(), ids=_stem)
+def test_upgrade_drops_redundant_fields(fixture: pathlib.Path) -> None:
+    """Audited-away fields never reappear: constant `format.layers`/
+    `format.name`, `variables.*.role` (redundant with `"direction" in
+    var`), top-level `modules.<key>.target.name` (redundant with the
+    key), and a variable `source.name` equal to its own key (redundant
+    with the key; only a name collision should ever populate it)."""
+    doc_v1 = _load(fixture)
+    doc_v2 = upgrade(doc_v1)
+
+    assert "layers" not in doc_v2["format"]
+    assert "name" not in doc_v2["format"]
+
+    for key, mod in _iter_modules(doc_v2["modules"]):
+        if key is not None:
+            assert "name" not in (mod.get("target") or {})
+        for var_key, var in (mod.get("variables") or {}).items():
+            assert "role" not in var
+            source_name = (var.get("source") or {}).get("name")
+            assert source_name != var_key
+
+
 @pytest.mark.parametrize("fixture", _fixture_paths(), ids=_stem)
 def test_v2_to_hgldd_matches_v1(fixture: pathlib.Path) -> None:
     doc_v1 = _load(fixture)

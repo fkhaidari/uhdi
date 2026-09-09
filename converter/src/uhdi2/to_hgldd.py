@@ -437,7 +437,7 @@ def _module_object(mid: str, mod: Dict[str, Any], ctx: "_TypesCtx",
     out: Dict[str, Any] = {
         "kind": "module",
         "obj_name": source.get("name") or mid,
-        "module_name": target.get("name") or mid,
+        "module_name": mid,
     }
     if mod.get("kind") == "extmodule":
         out["isExtModule"] = 1
@@ -460,10 +460,9 @@ def _module_object(mid: str, mod: Dict[str, Any], ctx: "_TypesCtx",
     for as_name, inst in (mod.get("instances") or {}).items():
         inst_source = inst.get("source") or {}
         inst_target = inst.get("target") or {}
-        target_mod = doc_v2["modules"].get(inst.get("moduleRef"), {})
-        target_name = (inst_target.get("name")
-                       or (target_mod.get("target") or {}).get("name")
-                       or inst.get("moduleRef"))
+        # The referenced module's own target.name is gone (it always
+        # equalled the module key); moduleRef already is that key.
+        target_name = inst_target.get("name") or inst.get("moduleRef")
         child: Dict[str, Any] = {"name": as_name, "obj_name": inst.get("moduleRef"),
                                  "module_name": target_name}
         if loc := _loc_to_hgldd2(inst_source.get("loc"), src_files, False, None, files):
@@ -494,8 +493,7 @@ def convert(doc_v2: Dict[str, Any]) -> Dict[str, Any]:
                      for inst in (mod.get("instances") or {}).values()}
         roots = [mid for mid in doc_v2["modules"] if mid not in referenced]
         if roots:
-            root = doc_v2["modules"][roots[0]]
-            hdl_name = (root.get("target") or {}).get("name") or roots[0]
+            hdl_name = roots[0]
             lang = target.get("language", "")
             if lang and lang not in _HDL_LANGUAGE_EXTENSIONS:
                 raise HGLDD2ConversionError(f"unknown HDL language '{lang}'")

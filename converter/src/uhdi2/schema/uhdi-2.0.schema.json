@@ -8,13 +8,11 @@
     },
     "Format": {
       "type": "object",
-      "required": ["name", "version"],
+      "required": ["version"],
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
-        "name": {"const": "uhdi"},
-        "version": {"const": "2.0"},
-        "layers": {"type": "array", "items": {"type": "string"}}
+        "version": {"const": "2.0"}
       }
     },
     "LanguageFiles": {
@@ -28,7 +26,6 @@
       }
     },
     "Direction": {"enum": ["input", "output", "inout"]},
-    "Role": {"enum": ["port", "node"]},
     "ScopeKind": {"enum": ["module", "extmodule", "inline"]},
     "Location": {
       "description": "Unflattened v1 Location, carried through as-is. `file` is an index into whichever files list this location's context belongs to: `source.files` for a `source.loc`, `target.files` for a `target.loc` or a scalar Binding's `loc`.",
@@ -56,7 +53,7 @@
       }
     },
     "ModuleTarget": {
-      "description": "Simulation-side (verilog) identity of a module/scope, from its `representations.verilog`.",
+      "description": "Simulation-side (verilog) identity of a module/scope, from its `representations.verilog`. `name` is omitted for a top-level `modules` entry (it always equals that entry's own key); it may still appear on a nested inline scope under `scopes`, which has no key of its own.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
@@ -66,9 +63,8 @@
       }
     },
     "VariableSource": {
-      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`. `binding` is the declaration kind (IO/Wire/Reg/...) parsed off the leading `Binding[...]` of the v1 typeName; the bracketed part becomes `types[typeRef].source.name` instead (see the Type defs) so it isn't repeated per variable. `typeName` is kept here, raw, only as a fallback for the rare typeRef whose variables/leaves disagree on that bracketed name (see upgrade.py) -- otherwise omitted.",
+      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`. `binding` is the declaration kind (IO/Wire/Reg/...) parsed off the leading `Binding[...]` of the v1 typeName; the bracketed part becomes `types[typeRef].source.name` instead (see the Type defs) so it isn't repeated per variable. `typeName` is kept here, raw, only as a fallback for the rare typeRef whose variables/leaves disagree on that bracketed name (see upgrade.py) -- otherwise omitted. `name` itself is omitted unless it differs from the variable's own key in `Module.variables` (i.e. a name collision forced the key to fall back to the v1 variable id) -- absent, the key IS the name.",
       "type": "object",
-      "required": ["name"],
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
@@ -126,13 +122,13 @@
       }
     },
     "Variable": {
+      "description": "Whether a variable is a port is not stored explicitly: it has a `direction` iff it is one.",
       "type": "object",
-      "required": ["typeRef", "role", "source"],
+      "required": ["typeRef", "source"],
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
         "typeRef": {"$ref": "#/$defs/Ref"},
-        "role": {"$ref": "#/$defs/Role"},
         "direction": {"$ref": "#/$defs/Direction"},
         "source": {"$ref": "#/$defs/VariableSource"},
         "bind": {"$ref": "#/$defs/VariableBind"}

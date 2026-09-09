@@ -1,10 +1,6 @@
 {
   "format": {
-    "name": "uhdi",
-    "version": "2.0",
-    "layers": [
-      "core"
-    ]
+    "version": "2.0"
   },
   "source": {
     "language": "Chisel",
@@ -98,16 +94,11 @@
           "beginColumn": 7
         }
       },
-      "target": {
-        "name": "Alu"
-      },
       "variables": {
         "clock": {
           "typeRef": "bool",
-          "role": "port",
           "direction": "input",
           "source": {
-            "name": "clock",
             "binding": "IO",
             "typeName": "IO[Clock]",
             "loc": {
@@ -122,10 +113,8 @@
         },
         "reset": {
           "typeRef": "bool",
-          "role": "port",
           "direction": "input",
           "source": {
-            "name": "reset",
             "binding": "IO",
             "loc": {
               "file": 0,
@@ -139,9 +128,7 @@
         },
         "io": {
           "typeRef": "Alu_io",
-          "role": "node",
           "source": {
-            "name": "io",
             "binding": "IO",
             "loc": {
               "file": 0,
@@ -160,9 +147,7 @@
         },
         "res": {
           "typeRef": "uint8",
-          "role": "node",
           "source": {
-            "name": "res",
             "binding": "Wire",
             "loc": {
               "file": 0,
