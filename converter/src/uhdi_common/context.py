@@ -28,7 +28,15 @@ class BaseContext:
     @classmethod
     def from_uhdi(cls: type[T], uhdi: Dict[str, Any], **extra: Any) -> T:
         """Validate format tag, extract role reprs. `extra` forwards to
-        subclass fields. Raises `ConversionError` if not a uhdi document."""
+        subclass fields. Raises `ConversionError` if not a uhdi document.
+
+        A v2 document (`format.version == "2.0"`) is downgraded to v1
+        shape first -- every backend built on `BaseContext` accepts a v2
+        document transparently this way, with no per-backend forking.
+        See `uhdi2.downgrade` for what does and doesn't survive."""
+        if (uhdi.get("format") or {}).get("version") == "2.0":
+            from uhdi2.downgrade import downgrade
+            uhdi = downgrade(uhdi)
         if uhdi.get("format", {}).get("name") != "uhdi":
             raise ConversionError("input is not a uhdi document")
         roles = uhdi.get("roles", {}) or {}

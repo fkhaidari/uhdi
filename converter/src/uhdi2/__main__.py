@@ -1,4 +1,4 @@
-"""`uhdi2` CLI: upgrade / validate / to-hgldd subcommands."""
+"""`uhdi2` CLI: upgrade / downgrade / validate / to-hgldd subcommands."""
 from __future__ import annotations
 
 import argparse
@@ -9,6 +9,7 @@ from typing import Optional
 
 from uhdi_common.context import ConversionError
 
+from .downgrade import downgrade as downgrade_doc
 from .to_hgldd import convert as to_hgldd_convert
 from .upgrade import upgrade as upgrade_doc
 from .validate import iter_errors
@@ -36,6 +37,13 @@ def _cmd_upgrade(args: argparse.Namespace) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 1
     _write(doc_v2, args.output)
+    return 0
+
+
+def _cmd_downgrade(args: argparse.Namespace) -> int:
+    doc_v2 = _read_json(args.input)
+    doc_v1 = downgrade_doc(doc_v2)
+    _write(doc_v1, args.output)
     return 0
 
 
@@ -70,6 +78,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     p_up.add_argument("input", type=pathlib.Path)
     p_up.add_argument("-o", "--output", type=pathlib.Path)
     p_up.set_defaults(func=_cmd_upgrade)
+
+    p_down = sub.add_parser("downgrade", help="Downgrade a UHDI 2.0 document to UHDI 1.0.")
+    p_down.add_argument("input", type=pathlib.Path)
+    p_down.add_argument("-o", "--output", type=pathlib.Path)
+    p_down.set_defaults(func=_cmd_downgrade)
 
     p_val = sub.add_parser("validate", help="Schema-validate a UHDI 2.0 document.")
     p_val.add_argument("input", type=pathlib.Path)
