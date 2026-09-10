@@ -28,7 +28,7 @@
     "Direction": {"enum": ["input", "output", "inout"]},
     "ScopeKind": {"enum": ["module", "extmodule", "inline"]},
     "Location": {
-      "description": "Unflattened v1 Location, carried through as-is. `file` is an index into whichever files list this location's context belongs to: `source.files` for a `source.loc`, `target.files` for a `target.loc` or a scalar Binding's `loc`.",
+      "description": "`file` indexes the files list of the side the location belongs to: `source.files` for a `source.loc`, `target.files` for a `target.loc` or for the `loc` of a scalar binding.",
       "type": "object",
       "required": ["file"],
       "additionalProperties": false,
@@ -42,7 +42,7 @@
       }
     },
     "ModuleSource": {
-      "description": "Authoring-side (chisel) identity of a module/scope, from its `representations.chisel`.",
+      "description": "The module or scope as the frontend wrote it.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
@@ -54,7 +54,7 @@
       }
     },
     "ModuleTarget": {
-      "description": "Simulation-side (verilog) identity of a module/scope, from its `representations.verilog`. `name` is omitted for a top-level `modules` entry (it always equals that entry's own key); it may still appear on a nested inline scope under `scopes`, which has no key of its own.",
+      "description": "The module or scope after lowering. `name` is omitted on a top-level `modules` entry, whose key is its target name; an inline scope under `scopes` has no key and may carry one.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
@@ -64,7 +64,7 @@
       }
     },
     "VariableSource": {
-      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`. `binding` is the declaration kind (IO/Wire/Reg/...) parsed off the leading `Binding[...]` of the v1 typeName; the bracketed part becomes `types[typeRef].source.name` instead (see the Type defs) so it isn't repeated per variable -- a typeRef whose variables/leaves disagree on that bracketed name is split into one types-pool entry per name instead (see upgrade.py), so every variable's own `typeRef` already resolves to the entry with the right name. `params` is kept here only for a variable whose own constructor params aren't already captured by `types[typeRef].source.params`. `name` itself is omitted unless it differs from the variable's own key in `Module.variables` (i.e. a name collision forced the key to fall back to the v1 variable id) -- absent, the key IS the name.",
+      "description": "The variable as the frontend wrote it. `name` is omitted when it equals the record's key, which is the usual case; it is present only when two declarations in one scope wanted the same name and the emitter keyed one of them by something else. `binding` is the declaration kind (IO, Wire, Reg). The source type name is on the type entry, `types[typeRef].source.name`, so `binding[types[typeRef].source.name]` spells what the frontend wrote and the name is stored once per type. `params` holds constructor parameters of the variable itself when the type entry does not already carry them.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
@@ -76,7 +76,7 @@
       }
     },
     "ScalarBinding": {
-      "description": "A leaf simulation-side value binding. A plain sigName is a bare string; `{signal, loc}` is used instead when the leaf also carries its own verilog-side location; `{constant}`/`{bitVector}` carry a literal value (no combined loc form observed in the corpus).",
+      "description": "A leaf's value after lowering: a signal name, `{signal, loc}` when the leaf also has a target-side location, or a literal as `{constant}` or `{bitVector}`.",
       "anyOf": [
         {"type": "string"},
         {
@@ -103,7 +103,7 @@
       ]
     },
     "Binding": {
-      "description": "Opaque simulation-side value binding. A scalar leaf is a `ScalarBinding`. An aggregate variable's binding is instead an object mapping a dotted member path (struct-member / array-index names joined with '.') to a `ScalarBinding`, one entry per leaf that has a value. Deliberately open beyond that: a consumer must not assume more structure.",
+      "description": "A scalar variable binds to one ScalarBinding. An aggregate binds through an object mapping a dotted member path (struct members and vector indices joined with '.') to a ScalarBinding, one entry per leaf that has a value; a path missing from the map is a leaf with no signal. Open beyond that: a consumer must not assume more structure.",
       "anyOf": [
         {"$ref": "#/$defs/ScalarBinding"},
         {"type": "object"}
@@ -123,7 +123,7 @@
       }
     },
     "Variable": {
-      "description": "Whether a variable is a port is not stored explicitly: it has a `direction` iff it is one.",
+      "description": "A variable is a port iff it has a `direction`.",
       "type": "object",
       "required": ["typeRef", "source"],
       "additionalProperties": false,
@@ -207,7 +207,7 @@
       }
     },
     "TypeSource": {
-      "description": "Recovers what v1 sourced from synthetic subfield Variables' `sourceLangType`: the bracketed part of every variable/leaf typeName sharing this typeRef (e.g. types['uint8'].source.name == 'UInt<8>' from 'IO[UInt<8>]'/'Wire[UInt<8>]'), and any UHDI Sec.6.9 constructor params (e.g. Chisel Vec's `gen`/`length`). When variables/leaves sharing a v1 typeRef disagree on that bracketed name (the one observed case is the 'bool' ground type shared by Chisel Clock and plain Bool ports), the pool entry is split into one types-pool key per distinct name (`<v1TypeRef>_<Name>`, e.g. 'bool_Clock'/'bool_Bool') instead of picking one -- see upgrade.py.",
+      "description": "The type's name as the frontend spelled it (`UInt<8>`, `Operands`, `Clock`) and its constructor parameters. Types are interned by structure and source name together, so two frontend types that lower to the same structure stay two entries.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
@@ -289,7 +289,7 @@
       }
     },
     "Type": {
-      "description": "Tag-discriminated union over the five Type variants, copied from UHDI 1.0's types pool with one addition: an optional `source` (see TypeSource). Dispatch on `kind` first via if/then/else so a typo produces one focused error instead of jsonschema's all-branches-tried report.",
+      "description": "Tag-discriminated union over the type kinds. Dispatch on `kind` first via if/then/else so a typo produces one focused error instead of an all-branches-tried report.",
       "type": "object",
       "required": ["kind"],
       "properties": {
