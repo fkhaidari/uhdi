@@ -93,25 +93,31 @@ def _module_source_lang_type_info(source: Optional[Dict[str, Any]]) -> Optional[
     source-name amendment (that only concerns Variable.source)."""
     source = source or {}
     type_name = source.get("typeName")
-    return {"type_name": type_name} if type_name else None
+    if not type_name:
+        return None
+    out: Dict[str, Any] = {"type_name": type_name}
+    if params := source.get("params"):
+        out["params"] = params
+    return out
 
 
 def _variable_source_lang_type_info(var_source: Dict[str, Any], type_ref: str,
                                     ctx: "_TypesCtx") -> Optional[Dict[str, Any]]:
-    """Reconstructs a root variable's `source_lang_type_info`. Two paths:
-    the variable kept its own raw `typeName` (the type source-name
-    conflict fallback -- see upgrade.py), or it's rebuilt from
+    """Reconstructs a root variable's `source_lang_type_info` from
     `binding[types[typeRef].source.name]` (or just the bare name, with no
-    binding)."""
-    if type_name := var_source.get("typeName"):
-        return {"type_name": type_name}
+    binding) -- `typeRef` already names the types-pool entry with the
+    right source name (upgrade.py splits a shared typeRef into one entry
+    per disagreeing name, see its module docstring), so no per-variable
+    fallback is needed any more. `Variable.source.params`, when present,
+    overrides `types[typeRef].source.params` (the rare case where a root
+    variable's own params aren't already recoverable from the type)."""
     tsrc = (ctx.types.get(type_ref) or {}).get("source") or {}
     name = tsrc.get("name")
     if not name:
         return None
     binding = var_source.get("binding")
     out: Dict[str, Any] = {"type_name": f"{binding}[{name}]" if binding else name}
-    if params := tsrc.get("params"):
+    if params := var_source.get("params") or tsrc.get("params"):
         out["params"] = params
     return out
 
@@ -123,16 +129,16 @@ def _root_variable_source_lang_type_info(var_source: Dict[str, Any], type_ref: s
     had no `sourceLangType` at all in the first place (e.g. an
     emitter-added duplicate port that wasn't deduplicated because its
     sigName happens not to be reachable through any aggregate's own value
-    tree -- see `nested_bundle`'s "io_out"). `binding`/`typeName` are only
-    ever set on `Variable.source` when a typeName existed (see
-    upgrade.py); their absence is the signal to suppress reconstruction
-    here. This gate does not apply to struct-member reconstruction
-    (`_struct_objects`), where a `source_lang_type_info` is attempted
-    only for a struct that itself has a resolvable location/binding to
-    begin with (an already-scoped case, per `_pick_struct_winner`) --
-    NOTE this still can't distinguish "had a bare, unbracketed typeName"
-    from "had none" (not observed in the corpus; see upgrade report)."""
-    if not (var_source.get("binding") or var_source.get("typeName")):
+    tree -- see `nested_bundle`'s "io_out"). `binding` is only ever set on
+    `Variable.source` when a typeName existed (see upgrade.py); its
+    absence is the signal to suppress reconstruction here. This gate does
+    not apply to struct-member reconstruction (`_struct_objects`), where a
+    `source_lang_type_info` is attempted only for a struct that itself has
+    a resolvable location/binding to begin with (an already-scoped case,
+    per `_pick_struct_winner`) -- NOTE this still can't distinguish "had a
+    bare, unbracketed typeName" from "had none" (not observed in the
+    corpus; see upgrade report)."""
+    if not var_source.get("binding"):
         return None
     return _variable_source_lang_type_info(var_source, type_ref, ctx)
 

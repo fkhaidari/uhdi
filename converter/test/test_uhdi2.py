@@ -15,6 +15,7 @@ import pathlib
 from typing import Any, Dict, List
 
 import pytest
+from uhdi2.downgrade import downgrade
 from uhdi2.to_hgldd import convert as to_hgldd_v2
 from uhdi2.upgrade import upgrade
 from uhdi2.validate import iter_errors
@@ -23,6 +24,7 @@ from uhdi_to_hgldd.convert import convert as to_hgldd_v1
 
 _REPO = pathlib.Path(__file__).resolve().parent.parent
 _FIXTURES = _REPO / "test" / "fixtures" / "uhdi"
+_FIXTURES_UHDI2 = _REPO / "test" / "fixtures" / "uhdi2"
 
 
 def _fixture_paths() -> List[pathlib.Path]:
@@ -118,3 +120,105 @@ def test_v2_to_hgldd_matches_v1(fixture: pathlib.Path) -> None:
 
     deltas = diff_dicts(actual, expected)
     assert not deltas, format_deltas(deltas)
+
+
+def test_type_pool_split_by_source_name() -> None:
+    """A v1 ground type shared by two disagreeing source names (Chisel
+    `Clock`/`Bool` reusing the "bool" ground type) splits into one
+    types-pool entry per name -- matching the native emitter's own
+    type-pool identity rule -- rather than picking one and dropping the
+    other (see upgrade.py's module docstring)."""
+    doc_v1 = _load(_FIXTURES / "alu_member_refs.uhdi.json")
+    doc_v2 = upgrade(doc_v1)
+
+    assert "bool" not in doc_v2["types"]
+    assert doc_v2["types"]["bool_Clock"] == {"kind": "uint", "width": 1,
+                                             "source": {"name": "Clock"}}
+    assert doc_v2["types"]["bool_Bool"] == {"kind": "uint", "width": 1,
+                                            "source": {"name": "Bool"}}
+
+    alu = doc_v2["modules"]["Alu"]
+    assert alu["variables"]["clock"]["typeRef"] == "bool_Clock"
+    assert alu["variables"]["reset"]["typeRef"] == "bool_Bool"
+    # No variable needs the old typeName escape hatch any more -- its own
+    # typeRef already names the entry with the right source name.
+    assert "typeName" not in alu["variables"]["clock"]["source"]
+    assert "typeName" not in alu["variables"]["reset"]["source"]
+
+
+def test_type_pool_split_rewrites_struct_members() -> None:
+    """A struct member declared with a split typeRef is rewritten to the
+    split entry matching that member's own occurrences (here: `ready`/
+    `valid` are always plain `Bool`, never `Clock`, even though the
+    "bool" ground type they share also has a `Clock`-derived root port
+    elsewhere in the same module)."""
+    doc_v1 = _load(_FIXTURES / "nested_bundle.uhdi.json")
+    doc_v2 = upgrade(doc_v1)
+
+    assert "bool" not in doc_v2["types"]
+    cmd = doc_v2["types"]["NestedBundle_io_cmd"]
+    members = {m["name"]: m["typeRef"] for m in cmd["members"]}
+    assert members["ready"] == "bool_Bool"
+    assert members["valid"] == "bool_Bool"
+
+
+def test_module_source_params() -> None:
+    """`Module.source.params` carries a parameterized module's own
+    constructor params (e.g. Chisel's `width` on `Alu`/`Cpu`) the same
+    way `types[X].source.params` does for a type -- there is no type
+    pool for a module's own identity to share params through."""
+    doc_v1 = _load(_FIXTURES_UHDI2 / "cpu_alu_instance.uhdi.json")
+    doc_v2 = upgrade(doc_v1)
+
+    assert doc_v2["modules"]["Cpu"]["source"]["params"] == [
+        {"name": "width", "type": "Int", "value": "8"}]
+    assert doc_v2["modules"]["Alu"]["source"]["params"] == [
+        {"name": "width", "type": "Int", "value": "8"}]
+
+
+def test_instance_bind() -> None:
+    """A `bindKind: instance` variable (v1's "alu" port on "Cpu", typed
+    by the instantiated module's own port-list struct "Cpu_alu") is
+    folded into `instances["alu"].bind.verilog` instead of becoming a
+    `Module.variables` entry -- one entry per top-level port, the
+    aggregate "io" port itself flattened one level down (see
+    upgrade.py's `_instance_bind`)."""
+    doc_v1 = _load(_FIXTURES_UHDI2 / "cpu_alu_instance.uhdi.json")
+    doc_v2 = upgrade(doc_v1)
+
+    cpu = doc_v2["modules"]["Cpu"]
+    assert "alu" not in cpu["variables"]
+    assert cpu["instances"]["alu"]["bind"]["verilog"] == {
+        "clock": "clock",
+        "reset": "reset",
+        "io": {"a": "io_a", "b": "io_b", "op": "io_op", "out": "_alu_io_out"},
+    }
+
+
+def test_module_key_differs_from_source_name() -> None:
+    """downgrade() and to_hgldd's module object both key off `source.name`
+    (falling back to the `modules` key only when absent), independent of
+    the `modules` key itself -- exercised because the native emitter's
+    key is the Verilog module name while `source.name` is the authoring
+    (Chisel) identity, and the two need not match."""
+    doc_v2: Dict[str, Any] = {
+        "format": {"version": "2.0"},
+        "source": {"language": "Chisel", "files": ["Mod.scala"]},
+        "target": {"language": "SystemVerilog", "files": ["ModKey.sv"]},
+        "types": {},
+        "modules": {
+            "ModKey": {
+                "source": {"name": "OtherName"},
+                "variables": {},
+            },
+        },
+    }
+    assert not list(iter_errors(doc_v2))
+
+    doc_v1 = downgrade(doc_v2)
+    assert doc_v1["scopes"]["ModKey"]["representations"]["chisel"]["name"] == "OtherName"
+
+    hgldd = to_hgldd_v2(doc_v2)
+    mod_obj = next(o for o in hgldd["objects"] if o["kind"] == "module")
+    assert mod_obj["obj_name"] == "OtherName"
+    assert mod_obj["module_name"] == "ModKey"

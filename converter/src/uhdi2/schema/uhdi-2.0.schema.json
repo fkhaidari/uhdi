@@ -49,6 +49,7 @@
       "properties": {
         "name": {"type": "string"},
         "typeName": {"type": "string"},
+        "params": {"type": "array", "items": {"$ref": "#/$defs/TypeSourceParam"}},
         "loc": {"$ref": "#/$defs/Location"}
       }
     },
@@ -63,14 +64,14 @@
       }
     },
     "VariableSource": {
-      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`. `binding` is the declaration kind (IO/Wire/Reg/...) parsed off the leading `Binding[...]` of the v1 typeName; the bracketed part becomes `types[typeRef].source.name` instead (see the Type defs) so it isn't repeated per variable. `typeName` is kept here, raw, only as a fallback for the rare typeRef whose variables/leaves disagree on that bracketed name (see upgrade.py) -- otherwise omitted. `name` itself is omitted unless it differs from the variable's own key in `Module.variables` (i.e. a name collision forced the key to fall back to the v1 variable id) -- absent, the key IS the name.",
+      "description": "Authoring-side (chisel) identity of a variable, from its `representations.chisel`. `binding` is the declaration kind (IO/Wire/Reg/...) parsed off the leading `Binding[...]` of the v1 typeName; the bracketed part becomes `types[typeRef].source.name` instead (see the Type defs) so it isn't repeated per variable -- a typeRef whose variables/leaves disagree on that bracketed name is split into one types-pool entry per name instead (see upgrade.py), so every variable's own `typeRef` already resolves to the entry with the right name. `params` is kept here only for a variable whose own constructor params aren't already captured by `types[typeRef].source.params`. `name` itself is omitted unless it differs from the variable's own key in `Module.variables` (i.e. a name collision forced the key to fall back to the v1 variable id) -- absent, the key IS the name.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
         "name": {"type": "string"},
         "binding": {"type": "string"},
-        "typeName": {"type": "string"},
+        "params": {"type": "array", "items": {"$ref": "#/$defs/TypeSourceParam"}},
         "loc": {"$ref": "#/$defs/Location"}
       }
     },
@@ -206,7 +207,7 @@
       }
     },
     "TypeSource": {
-      "description": "Recovers what v1 sourced from synthetic subfield Variables' `sourceLangType`: the bracketed part of every variable/leaf typeName sharing this typeRef (e.g. types['uint8'].source.name == 'UInt<8>' from 'IO[UInt<8>]'/'Wire[UInt<8>]'), and any UHDI Sec.6.9 constructor params (e.g. Chisel Vec's `gen`/`length`). When variables/leaves sharing this typeRef disagree, `name` is the struct-member-priority majority value (see upgrade.py; the one observed case is the 'bool' ground type shared by Chisel Clock and plain Bool ports) and any disagreeing root variable keeps its own raw typeName on `Variable.source.typeName` instead.",
+      "description": "Recovers what v1 sourced from synthetic subfield Variables' `sourceLangType`: the bracketed part of every variable/leaf typeName sharing this typeRef (e.g. types['uint8'].source.name == 'UInt<8>' from 'IO[UInt<8>]'/'Wire[UInt<8>]'), and any UHDI Sec.6.9 constructor params (e.g. Chisel Vec's `gen`/`length`). When variables/leaves sharing a v1 typeRef disagree on that bracketed name (the one observed case is the 'bool' ground type shared by Chisel Clock and plain Bool ports), the pool entry is split into one types-pool key per distinct name (`<v1TypeRef>_<Name>`, e.g. 'bool_Clock'/'bool_Bool') instead of picking one -- see upgrade.py.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},

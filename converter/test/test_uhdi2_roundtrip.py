@@ -148,38 +148,15 @@ def test_downgraded_v2_matches_golden(backend_name: str,
         f"or a documented gap\n{format_deltas(residual)}")
 
 
-# upgrade.py's `_derive_type_sources` picks the canonical `types[X].source.name`
-# for a ground type with more than one root-level occurrence and no member
-# occurrence to disambiguate (here: Chisel `Clock`/`Bool` sharing the "bool"
-# ground type) by first-occurrence order in the v1 `variables` pool's own
-# key order. v2 doesn't preserve that order -- only the order induced by
-# each scope's `variableRefs` survives (see `upgrade.py._build_variables`,
-# which is what `variables_out`'s order here is built from) -- and real v1
-# fixtures are free to (and here, do) order the two differently. Which
-# occurrence downgrade.py's own reconstruction happens to see first is
-# therefore not the same fact as which one v1 originally saw first; nothing
-# about a v1b built from v2 can recover it. No backend output depends on
-# `types[X].source.name` (only each variable's own escape-hatch
-# `source.typeName` does, which stays correct either way), so this is inert
-# in practice.
-_TYPE_SOURCE_TIEBREAK_GAP = {"alu_member_refs"}
-
-
 @pytest.mark.parametrize("fixture", _fixture_paths(),
                          ids=lambda p: p.name.replace(".uhdi.json", ""))
 def test_downgrade_upgrade_fixed_point(fixture: pathlib.Path) -> None:
     """upgrade(downgrade(upgrade(v1))) == upgrade(v1): downgrade() must not
     lose anything upgrade() itself would have kept."""
-    stem = fixture.name.replace(".uhdi.json", "")
     v1 = json.loads(fixture.read_text(encoding="utf-8"))
     v2 = upgrade(v1)
     v2_roundtripped = upgrade(downgrade(v2))
     deltas = diff_dicts(v2_roundtripped, v2)
-    if deltas and stem in _TYPE_SOURCE_TIEBREAK_GAP:
-        pytest.xfail(
-            f"{fixture.name}: types[X].source.name tie-break depends on the "
-            f"v1 variables pool's own key order, which v2 doesn't preserve "
-            f"-- see comment above _TYPE_SOURCE_TIEBREAK_GAP")
     assert not deltas, (
         f"{fixture.name}: upgrade(downgrade(upgrade(v1))) != upgrade(v1)\n"
         f"{format_deltas(deltas)}")

@@ -126,7 +126,10 @@ def _emit_module(scope_id: str, mod: Dict[str, Any], container: Optional[str],
     if loc := source.get("loc"):
         chisel["location"] = dict(loc)
     if type_name := source.get("typeName"):
-        chisel["sourceLangType"] = {"typeName": type_name}
+        st: Dict[str, Any] = {"typeName": type_name}
+        if params := _v1_params(source.get("params")):
+            st["params"] = params
+        chisel["sourceLangType"] = st
     if chisel:
         reprs["chisel"] = chisel
     verilog: Dict[str, Any] = {}
@@ -204,12 +207,13 @@ def _type_name_for(binding: Optional[str], type_ref: str,
     return f"{binding}[{name}]" if name else None
 
 
-def _params_for(type_ref: str, types_v2: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-    params = ((types_v2.get(type_ref) or {}).get("source") or {}).get("params")
-    if not params:
+def _v1_params(params_v2: Optional[List[Dict[str, Any]]]) -> Optional[List[Dict[str, Any]]]:
+    """v2 `TypeSourceParam` (`name`/`type`/`value`) -> v1 constructor-param
+    shape (`name`/`typeName`/`value`)."""
+    if not params_v2:
         return None
     out = []
-    for p in params:
+    for p in params_v2:
         entry: Dict[str, Any] = {"name": p["name"]}
         if (t := p.get("type")) is not None:
             entry["typeName"] = t
@@ -217,6 +221,10 @@ def _params_for(type_ref: str, types_v2: Dict[str, Any]) -> Optional[List[Dict[s
             entry["value"] = v
         out.append(entry)
     return out
+
+
+def _params_for(type_ref: str, types_v2: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+    return _v1_params(((types_v2.get(type_ref) or {}).get("source") or {}).get("params"))
 
 
 def _binding_sig(binding: Binding) -> Optional[str]:
@@ -250,7 +258,7 @@ def _emit_variable_tree(scope_id: str, name: str, var: Dict[str, Any],
     source = var.get("source") or {}
     bind = var.get("bind") or {}
     binding = source.get("binding")
-    own_type_name = source.get("typeName")
+    own_params = source.get("params")
     loc = source.get("loc")
     bind_kind = "port" if direction else _infer_bind_kind(binding)
 
@@ -268,14 +276,14 @@ def _emit_variable_tree(scope_id: str, name: str, var: Dict[str, Any],
 
     root_id = f"{scope_id}::{name}"
     _walk_var_tree(root_id, name, type_ref, bind_kind, direction, loc,
-                  binding, own_type_name, bind_value, own_bind_loc,
+                  binding, own_params, bind_value, own_bind_loc,
                   leaf_map, "", types_v2, variables_out)
     return root_id
 
 
 def _walk_var_tree(var_id: str, chisel_name: str, type_ref: str, bind_kind: str,
                    direction: Optional[str], loc: Optional[Dict[str, Any]],
-                   binding: Optional[str], own_type_name: Optional[str],
+                   binding: Optional[str], own_params: Optional[List[Dict[str, Any]]],
                    bind_value: Optional[Binding],
                    own_bind_loc: Optional[Dict[str, Any]],
                    leaf_map: Optional[Dict[str, Any]], dotted_path: str,
@@ -306,10 +314,10 @@ def _walk_var_tree(var_id: str, chisel_name: str, type_ref: str, bind_kind: str,
     chisel: Dict[str, Any] = {"name": chisel_name}
     if loc:
         chisel["location"] = dict(loc)
-    type_name = own_type_name or _type_name_for(binding, type_ref, types_v2)
+    type_name = _type_name_for(binding, type_ref, types_v2)
     if type_name:
         st: Dict[str, Any] = {"typeName": type_name}
-        if (params := _params_for(type_ref, types_v2)) is not None:
+        if (params := _v1_params(own_params) or _params_for(type_ref, types_v2)) is not None:
             st["params"] = params
         chisel["sourceLangType"] = st
 

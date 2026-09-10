@@ -22,10 +22,17 @@ type (struct/vector), never of ids:
 
 `bindKind: synthetic` variables never become v2 records (their data is
 folded into the parent aggregate's `bind`, or into `types[X].source`, see
-below). `bindKind: instance` variables are also dropped: none of the
-fixtures exercise them, so nothing here maps them into
-`instances[<as>].bind.verilog` (the target slot for a bound instance port,
-per the v2 shape) -- see the upgrade report for that as an open TODO.
+below). `bindKind: instance` variables are also dropped from `Module.
+variables`, but not lost: a v1 instance variable's own `typeRef` is a
+struct describing that instance's ports (see the "Cpu_alu" style type in
+the fixtures), so its `memberRefs` walk the same way a regular aggregate
+variable's does, landing in `instances[<as>].bind.verilog` instead --
+linked to its `instantiates` entry by matching chisel name to `as` (see
+`_find_instance_var`/`_instance_bind`). Unlike a plain aggregate
+variable's flat dotted-path bind, an instance's own top level is never
+flattened (each port name is its own key; only an aggregate port's own
+subtree flattens below that) -- ports without a bound leaf are omitted
+the same way `_walk_bind` omits them elsewhere.
 
 Type source-name derivation (recovers what v1 sourced from synthetic
 subfield Variables' `sourceLangType.typeName`, e.g. "IO[UInt<8>]"):
@@ -34,18 +41,20 @@ subfield Variables' `sourceLangType.typeName`, e.g. "IO[UInt<8>]"):
     variable's/leaf's own TYPE) or, without a `[...]` wrapper, is itself X
     with no binding.
   * X is recorded as `types[typeRef].source.name` (plus `.source.params`,
-    an extension beyond the spec text -- see module docstring note below)
-    -- but only when every v1 variable/leaf sharing that typeRef derives
-    the *same* X. When it doesn't (observed: the "bool" ground type is
-    reused for both Chisel `Clock` and plain `Bool` ports, giving X =
-    "Clock" for one variable and "Bool" for another), `types[typeRef]`
-    gets NO `source` at all -- picking one would silently lose the other,
-    which the spec explicitly rules out. Instead, the *variables* whose
-    typeRef landed in this conflict keep their own raw `typeName` on
-    `Variable.source.typeName` as a fallback (a form the spec otherwise
-    drops), so `to_hgldd.py` can still reconstruct their
-    `source_lang_type_info` byte-for-byte. `_type_source_conflicts()`
-    exposes the detected conflicts for reporting.
+    an extension beyond the spec text -- see module docstring note below).
+    When every v1 variable/leaf sharing a typeRef derives the *same* X,
+    the pool entry keeps its v1 key. When they don't (observed: the
+    "bool" ground type is reused for both Chisel `Clock` and plain `Bool`
+    ports, giving X = "Clock" for one variable and "Bool" for another),
+    the entry is split into one pool key per distinct X --
+    `<v1TypeRef>_<X>` (e.g. "bool_Clock"/"bool_Bool") -- and every
+    variable's own `typeRef`, plus every struct-member/vector-elementRef
+    pointer that used the original key, is rewritten to the split key
+    matching its own X. This mirrors the native emitter's own type-pool
+    identity rule (structure + source name). `_type_source_conflicts()`
+    exposes the cases where a split target can't be determined from
+    local data (unobserved in the corpus; see `_derive_type_layout`) for
+    reporting.
 
 `params` (UHDI Sec.6.9 constructor params, e.g. Chisel's `Vec(length,
 gen)`) is not mentioned by the v2 amendments at all, but one fixture
@@ -54,7 +63,14 @@ gen)`) is not mentioned by the v2 amendments at all, but one fixture
 in v1, sourced from the same synthetic-Variable `sourceLangType.params`
 that supplies `typeName`. This module extends `types[X].source` with an
 analogous, equally-optional `params` field, using the same
-"omit-if-inconsistent" rule as `name`.
+"omit-if-inconsistent" rule as `name`. `Module.source.params` and
+`Variable.source.params` are the same escape hatch one level up: a
+module's own `sourceLangType.params` (e.g. rfc-alu's `Cpu`, parameterized
+by `width`) always lands on `Module.source.params` (there is no type
+pool for modules to share params through); a root variable's own params
+land on `Variable.source.params` only when they aren't already
+recoverable from `types[typeRef].source.params` (not observed in the
+corpus).
 
 Aggregate-variable HDL-side location (v1's `hdl_loc`, e.g. `bundle_io`'s
 "io.in" aggregate port) is likewise unaddressed by the amendments: a
@@ -85,14 +101,7 @@ def upgrade(doc_v1: Dict[str, Any]) -> Dict[str, Any]:
     ctx = BaseContext.from_uhdi(doc_v1)
     reprs = ctx.representations
 
-    type_source, conflicts = _derive_type_sources(ctx)
-
-    types_out: Dict[str, Any] = {}
-    for tid, tdef in ctx.types.items():
-        tdef = dict(tdef or {})
-        if src := type_source.get(tid):
-            tdef["source"] = src
-        types_out[tid] = tdef
+    types_out, resolve_root, _conflicts = _derive_type_layout(ctx)
 
     doc_v2: Dict[str, Any] = {
         "format": {"version": "2.0"},
@@ -106,7 +115,7 @@ def upgrade(doc_v1: Dict[str, Any]) -> Dict[str, Any]:
         },
         "types": types_out,
         "modules": {
-            sid: _build_module(sid, scope, ctx, type_source)
+            sid: _build_module(sid, scope, ctx, resolve_root, types_out)
             for sid, scope in ctx.scopes.items()
             if (scope or {}).get("kind", "module") in ("module", "extmodule")
         },
@@ -115,12 +124,16 @@ def upgrade(doc_v1: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _type_source_conflicts(doc_v1: Dict[str, Any]) -> Dict[str, List[Tuple[str, str, str]]]:
-    """Public diagnostic: `typeRef -> [(X_a, var_id_a, typeName_a), (X_b, ...)]`
-    for every type where variables/leaves disagree on the derived X. Not
-    used by `upgrade()` itself (which already resolves the conflict per
-    the module docstring); exposed for the upgrade report / tooling."""
+    """Public diagnostic: `typeRef -> [(X, site, typeName), ...]` for every
+    type where a split target couldn't be determined from local data --
+    a root variable whose own typeName didn't survive to name an X
+    (`site == "<root>"`), or struct-member/vector-element occurrences of
+    a split typeRef that themselves disagree (`site == "<member>"`). Not
+    used by `upgrade()` itself (which still picks a deterministic
+    fallback, see `_derive_type_layout`); exposed for the upgrade report
+    / tooling. Unobserved in the current corpus."""
     ctx = BaseContext.from_uhdi(doc_v1)
-    _, conflicts = _derive_type_sources(ctx)
+    _, _, conflicts = _derive_type_layout(ctx)
     return conflicts
 
 
@@ -143,27 +156,35 @@ def _render_params(params: Any) -> Optional[List[Dict[str, Any]]]:
     return rendered or None
 
 
-def _derive_type_sources(
+def _majority(names: List[str]) -> str:
+    """Deterministic fallback pick among disagreeing occurrences: most
+    frequent first, ties broken by first-seen order."""
+    return max(dict.fromkeys(names), key=lambda n: (names.count(n), -names.index(n)))
+
+
+def _derive_type_layout(
     ctx: BaseContext,
-) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, List[Tuple[str, str, str]]]]:
-    """`types[type_ref].source.name` needs one canonical X per type, but a
-    struct-member (`bindKind: synthetic`) occurrence has no escape hatch --
-    unlike a root variable, it can never fall back to its own raw
-    `typeName` (there is no v2 record for it any more, its data lives only
-    in the flattened `bind`). So the canonical X is picked to satisfy
-    every *member* occurrence first (the one observed conflict, the
-    "bool" ground type shared by Chisel Clock and Bool, only ever
-    disagrees between a *root* Clock port and everything else -- struct
-    members needing a bool are always plain Bool, never Clock). Every
-    occurrence -- root or member -- that disagrees with the canonical X is
-    recorded in `conflicts` for the upgrade report; only root occurrences
-    can actually act on it (via `Variable.source.typeName`, see
-    `_build_variables`). If members themselves disagree (not observed:
-    would mean two struct fields of the same typeRef derive different
-    source names with neither able to override), there is truly no
-    canonical X to pick -- `type_ref` gets no `type_source` entry at all,
-    every occurrence goes to `conflicts`, and every root variable of that
-    type falls back to its own typeName (members stay unrecoverable)."""
+) -> Tuple[Dict[str, Any], Any, Dict[str, List[Tuple[str, str, str]]]]:
+    """Builds the v2 `types` pool and a `resolve_root(type_ref, own_x)`
+    helper `_build_variables` uses to pick a variable's own `typeRef`.
+
+    A v1 typeRef whose variables/leaves all derive the same source-name X
+    (see module docstring) keeps its v1 key, with `source.name` (and
+    `.params`, see below) attached. When they disagree (observed: the
+    "bool" ground type shared by Chisel `Clock` and plain `Bool` ports),
+    the entry is split into one pool key per distinct X --
+    `<v1TypeRef>_<X>` -- mirroring the native emitter's own type-pool
+    identity rule (structure + source name); every struct
+    member/vector element/enum underlying-type pointer that used the
+    original key is rewritten to the split key matching its own
+    occurrences (`_majority` picks a deterministic fallback when a
+    member position's occurrences disagree or say nothing at all -- not
+    observed in the corpus; recorded in `conflicts`). A *root* variable's
+    own `typeRef` is resolved the same way by `resolve_root`, using its
+    own derived X first and the same fallback otherwise (see
+    `_build_variables`) -- unlike the pre-split design, this never needs
+    a `Variable.source.typeName` escape hatch: the variable's `typeRef`
+    itself always names the entry with the right source name."""
     # type_ref -> [(X, params_or_None, var_id, raw_typeName, is_member), ...]
     occurrences: Dict[str, List[Tuple[str, Any, str, str, bool]]] = {}
     for var_id, var in ctx.variables.items():
@@ -181,45 +202,91 @@ def _derive_type_sources(
         occurrences.setdefault(type_ref, []).append(
             (x, _render_params(slt.get("params")), var_id, type_name, is_member))
 
-    type_source: Dict[str, Dict[str, Any]] = {}
+    names_by_type: Dict[str, List[str]] = {
+        tref: [x for x, _, _, _, _ in occs] for tref, occs in occurrences.items()}
+    member_names_by_type: Dict[str, List[str]] = {
+        tref: [x for x, _, _, _, is_member in occs if is_member]
+        for tref, occs in occurrences.items()}
     conflicts: Dict[str, List[Tuple[str, str, str]]] = {}
-    for type_ref, occs in occurrences.items():
-        member_names = {x for x, _, _, _, is_member in occs if is_member}
-        canonical: Optional[str] = None
-        if len(member_names) == 1:
-            canonical = next(iter(member_names))
-        elif not member_names:
-            # No member occurrence constrains this type -- every occurrence
-            # is a root variable, each with its own escape hatch, so any
-            # deterministic pick is safe. Break ties by occurrence count,
-            # then by first-seen order.
-            order = [x for x, _, _, _, _ in occs]
-            canonical = max(dict.fromkeys(order), key=lambda n: (order.count(n), -order.index(n)))
-        # else: member_names has >1 distinct value -- no canonical, every
-        # occurrence (member and root alike) is a "conflict".
 
-        disagreeing = [(x, vid, tn) for x, _, vid, tn, _ in occs if x != canonical]
-        if disagreeing:
-            conflicts[type_ref] = disagreeing
+    def is_split(type_ref: str) -> bool:
+        return len(set(names_by_type.get(type_ref, ()))) > 1
 
-        if canonical is None:
-            continue
-        entry: Dict[str, Any] = {"name": canonical}
-        params_variants: Dict[str, List[Dict[str, Any]]] = {}
-        for x, params, _, _, _ in occs:
-            if x == canonical and params is not None:
-                params_variants.setdefault(json.dumps(params, sort_keys=True), params)
-        if len(params_variants) == 1:
-            entry["params"] = next(iter(params_variants.values()))
-        type_source[type_ref] = entry
-    return type_source, conflicts
+    def split_key(type_ref: str, name: str) -> str:
+        return f"{type_ref}_{name}"
+
+    def params_for(type_ref: str, name: str) -> Optional[List[Dict[str, Any]]]:
+        variants: Dict[str, List[Dict[str, Any]]] = {}
+        for x, params, _, _, _ in occurrences.get(type_ref, []):
+            if x == name and params is not None:
+                variants.setdefault(json.dumps(params, sort_keys=True), params)
+        return next(iter(variants.values())) if len(variants) == 1 else None
+
+    def member_target(type_ref: str) -> str:
+        if not is_split(type_ref):
+            return type_ref
+        member_distinct = list(dict.fromkeys(member_names_by_type.get(type_ref, [])))
+        if len(member_distinct) == 1:
+            return split_key(type_ref, member_distinct[0])
+        name = _majority(names_by_type[type_ref])
+        for n in member_distinct:
+            if n != name:
+                conflicts.setdefault(type_ref, []).append((n, "<member>", ""))
+        return split_key(type_ref, name)
+
+    def resolve_root(type_ref: str, own_x: Optional[str]) -> str:
+        if not is_split(type_ref):
+            return type_ref
+        if own_x is not None and own_x in names_by_type[type_ref]:
+            return split_key(type_ref, own_x)
+        conflicts.setdefault(type_ref, []).append((own_x or "", "<root>", ""))
+        return split_key(type_ref, _majority(names_by_type[type_ref]))
+
+    def rewrite_refs(tdef: Dict[str, Any]) -> Dict[str, Any]:
+        kind = tdef.get("kind")
+        if kind == "struct":
+            tdef = dict(tdef)
+            tdef["members"] = [
+                {**m, "typeRef": member_target(m["typeRef"])}
+                for m in tdef.get("members") or []
+            ]
+        elif kind == "vector":
+            tdef = dict(tdef)
+            tdef["elementRef"] = member_target(tdef.get("elementRef", ""))
+        elif kind == "enum":
+            tdef = dict(tdef)
+            tdef["underlyingTypeRef"] = member_target(tdef.get("underlyingTypeRef", ""))
+        return tdef
+
+    types_out: Dict[str, Any] = {}
+    for tid, tdef in ctx.types.items():
+        tdef = dict(tdef or {})
+        distinct = list(dict.fromkeys(names_by_type.get(tid, [])))
+        if len(distinct) <= 1:
+            if distinct:
+                entry: Dict[str, Any] = {"name": distinct[0]}
+                if params := params_for(tid, distinct[0]):
+                    entry["params"] = params
+                tdef["source"] = entry
+            types_out[tid] = rewrite_refs(tdef)
+        else:
+            for name in distinct:
+                entry = {"name": name}
+                if params := params_for(tid, name):
+                    entry["params"] = params
+                split_tdef = dict(tdef)
+                split_tdef["source"] = entry
+                types_out[split_key(tid, name)] = rewrite_refs(split_tdef)
+
+    return types_out, resolve_root, conflicts
 
 
 # ---- module / scope -------------------------------------------------------
 
 
 def _build_module(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
-                  type_source: Dict[str, Any], top_level: bool = True) -> Dict[str, Any]:
+                  resolve_root: Any, types_out: Dict[str, Any],
+                  top_level: bool = True) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     kind = scope.get("kind", "module")
     if kind != "module":
@@ -230,7 +297,7 @@ def _build_module(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
     if tgt := _module_target(scope, ctx, top_level):
         out["target"] = tgt
 
-    out["variables"] = _build_variables(scope_id, scope, ctx, type_source)
+    out["variables"] = _build_variables(scope_id, scope, ctx, resolve_root, types_out)
 
     instances = _build_instances(scope, ctx)
     if instances:
@@ -243,7 +310,7 @@ def _build_module(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
     ]
     if inline:
         out["scopes"] = [
-            {**_build_module(sid, ctx.scopes[sid], ctx, type_source, top_level=False),
+            {**_build_module(sid, ctx.scopes[sid], ctx, resolve_root, types_out, top_level=False),
              "kind": "inline"}
             for sid in inline
         ]
@@ -273,6 +340,8 @@ def _module_source(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
     slt = chisel.get("sourceLangType") or {}
     if type_name := slt.get("typeName"):
         out["typeName"] = type_name
+    if params := _render_params(slt.get("params")):
+        out["params"] = params
     if loc := _loc_dict(chisel.get("location")):
         out["loc"] = loc
     return out
@@ -290,6 +359,48 @@ def _module_target(scope: Dict[str, Any], ctx: BaseContext, top_level: bool) -> 
     if loc := _loc_dict(verilog.get("location")):
         out["loc"] = loc
     return out
+
+
+def _find_instance_var(scope: Dict[str, Any], ctx: BaseContext,
+                       as_key: str) -> Optional[str]:
+    """The `bindKind: instance` variable (root, listed on `scope.
+    variableRefs`) whose own chisel name matches an `instantiates` entry's
+    `as` -- the link v1 carries between the two (see `_build_instances`)."""
+    for var_id in scope.get("variableRefs") or []:
+        var = ctx.variables.get(var_id) or {}
+        if var.get("bindKind") != "instance":
+            continue
+        chisel = (var.get("representations", {}) or {}).get(ctx.authoring_repr, {}) or {}
+        if chisel.get("name") == as_key:
+            return var_id
+    return None
+
+
+def _instance_bind(var_id: str, ctx: BaseContext) -> Optional[Dict[str, Any]]:
+    """A bound instance's ports, one entry per top-level port name
+    (`clock`/`reset`/`io`/...), each either a scalar leaf or -- for an
+    aggregate port -- the same dotted-path flattened map a regular
+    aggregate `Variable.bind.verilog` uses (`_walk_bind` rooted one level
+    down, at the port's own type). Unlike `_variable_bind`, the top level
+    itself is never flattened: an instance's own `typeRef` names its
+    ports' *positions*, not a single value tree, so `portPath` starts
+    fresh at each port."""
+    var = ctx.variables.get(var_id) or {}
+    type_def = ctx.types.get(var.get("typeRef", "")) or {}
+    if type_def.get("kind") != "struct":
+        return None
+    out: Dict[str, Any] = {}
+    for member, child_id in zip(type_def.get("members") or [], var.get("memberRefs") or []):
+        name = member["name"]
+        member_type_ref = member.get("typeRef", "")
+        if _is_aggregate(member_type_ref, ctx):
+            sub: Dict[str, Any] = {}
+            _walk_bind(child_id, None, member_type_ref, "", sub, ctx)
+            if sub:
+                out[name] = sub
+        elif (leaf := _leaf(child_id, None, ctx)) is not None:
+            out[name] = leaf
+    return out or None
 
 
 def _build_instances(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
@@ -315,9 +426,10 @@ def _build_instances(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
         if target:
             entry["target"] = target
 
-        # TODO: no fixture provides instance-port-binding data to populate
-        # entry["bind"]["verilog"][<portPath>] (the target slot for a
-        # bound instance port, per the v2 Instance shape).
+        if (var_id := _find_instance_var(scope, ctx, as_key)) is not None:
+            if bind := _instance_bind(var_id, ctx):
+                entry["bind"] = {"verilog": bind}
+
         out[as_key] = entry
     return out
 
@@ -456,17 +568,18 @@ def _scope_aggregated_leaves(scope: Dict[str, Any], ctx: BaseContext) -> set:
 
 
 def _build_variables(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
-                     type_source: Dict[str, Any]) -> Dict[str, Any]:
+                     resolve_root: Any, types_out: Dict[str, Any]) -> Dict[str, Any]:
     aggregated_leaves = _scope_aggregated_leaves(scope, ctx)
 
     kept: List[tuple] = []  # (var_id, var)
     for var_id in scope.get("variableRefs") or []:
         var = ctx.variables.get(var_id) or {}
         bind_kind = var.get("bindKind")
-        if bind_kind in ("synthetic", "instance"):
-            # TODO: instance-bound variables are dropped here; v1 has no
-            # fixture exercising them. When one exists, resurrect as
-            # instances[<as>].bind.verilog[<portPath>] instead of dropping.
+        if bind_kind == "synthetic":
+            continue
+        if bind_kind == "instance":
+            # Folded into instances[<as>].bind.verilog instead -- see
+            # `_build_instances`/`_instance_bind`.
             continue
         if bind_kind == "port":
             hdl = (var.get("representations", {}) or {}).get(
@@ -496,21 +609,25 @@ def _build_variables(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
         slt = chisel.get("sourceLangType") or {}
         type_name = slt.get("typeName")
         type_ref = var.get("typeRef", "")
+        own_x: Optional[str] = None
         if type_name:
             m = _TYPE_NAME_PAT.match(type_name)
             own_x = m.group(2) if m else type_name
             if m and (binding := m.group(1)):
                 source["binding"] = binding
-            if (type_source.get(type_ref) or {}).get("name") != own_x:
-                # Either types[type_ref] has no canonical source name at
-                # all, or this variable's own X disagrees with it (see
-                # `_derive_type_sources`); keep the raw typeName on the
-                # variable so to_hgldd can still reconstruct it exactly.
-                source["typeName"] = type_name
+        resolved_type_ref = resolve_root(type_ref, own_x)
+        if own_x is not None:
+            own_params = _render_params(slt.get("params"))
+            type_params = (types_out.get(resolved_type_ref) or {}).get("source", {}).get("params")
+            if own_params is not None and own_params != type_params:
+                # This variable's own params aren't already recoverable
+                # from `types[resolved_type_ref].source.params` (not
+                # observed in the corpus -- see module docstring).
+                source["params"] = own_params
         if loc := _loc_dict(chisel.get("location")):
             source["loc"] = loc
 
-        entry: Dict[str, Any] = {"typeRef": type_ref}
+        entry: Dict[str, Any] = {"typeRef": resolved_type_ref}
         if direction := var.get("direction"):
             entry["direction"] = direction
         entry["source"] = source

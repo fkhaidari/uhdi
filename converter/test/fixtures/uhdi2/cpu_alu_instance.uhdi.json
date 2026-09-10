@@ -1,0 +1,774 @@
+{
+  "format": {
+    "name": "uhdi",
+    "version": "1.0"
+  },
+  "representations": {
+    "chisel": {
+      "files": [
+        "Alu.scala"
+      ],
+      "kind": "source",
+      "language": "Chisel"
+    },
+    "verilog": {
+      "files": [
+        "rfc-alu.sv"
+      ],
+      "kind": "hdl",
+      "language": "SystemVerilog"
+    }
+  },
+  "scopes": {
+    "Alu": {
+      "kind": "module",
+      "representations": {
+        "chisel": {
+          "name": "Alu",
+          "sourceLangType": {
+            "params": [
+              {
+                "name": "width",
+                "typeName": "Int",
+                "value": "8"
+              }
+            ],
+            "typeName": "Alu"
+          }
+        },
+        "verilog": {
+          "name": "Alu"
+        }
+      },
+      "variableRefs": [
+        "var_8b23cc96_0000",
+        "var_6749ad8c_0000",
+        "var_f7fe014b_0000",
+        "var_f7fe014b_0000__a",
+        "var_f7fe014b_0000__b",
+        "var_f7fe014b_0000__op",
+        "var_f7fe014b_0000__out",
+        "var_Alu_io_a",
+        "var_Alu_io_b",
+        "var_Alu_io_op",
+        "var_Alu_io_out"
+      ]
+    },
+    "Cpu": {
+      "instantiates": [
+        {
+          "as": "alu",
+          "representations": {
+            "chisel": {
+              "location": {
+                "beginColumn": 20,
+                "beginLine": 22,
+                "file": 0
+              }
+            }
+          },
+          "scopeRef": "Alu"
+        }
+      ],
+      "kind": "module",
+      "representations": {
+        "chisel": {
+          "name": "Cpu",
+          "sourceLangType": {
+            "params": [
+              {
+                "name": "width",
+                "typeName": "Int",
+                "value": "8"
+              }
+            ],
+            "typeName": "Cpu"
+          }
+        },
+        "verilog": {
+          "name": "Cpu"
+        }
+      },
+      "variableRefs": [
+        "var_50b2dc87_0000",
+        "var_29bb2c7a_0000",
+        "var_db2be808_0000",
+        "var_db2be808_0000__a",
+        "var_db2be808_0000__b",
+        "var_db2be808_0000__op",
+        "var_db2be808_0000__out",
+        "var_836e0712_0000",
+        "var_836e0712_0000__clock",
+        "var_836e0712_0000__reset",
+        "var_836e0712_0000__io",
+        "var_836e0712_0000__io__a",
+        "var_836e0712_0000__io__b",
+        "var_836e0712_0000__io__op",
+        "var_836e0712_0000__io__out",
+        "var_94e903e5_0000",
+        "var_Cpu_io_a",
+        "var_Cpu_io_b",
+        "var_Cpu_io_op",
+        "var_Cpu_io_out"
+      ]
+    }
+  },
+  "types": {
+    "Alu_io": {
+      "kind": "struct",
+      "members": [
+        {
+          "flipped": true,
+          "name": "a",
+          "typeRef": "uint8"
+        },
+        {
+          "flipped": true,
+          "name": "b",
+          "typeRef": "uint8"
+        },
+        {
+          "flipped": true,
+          "name": "op",
+          "typeRef": "Op$"
+        },
+        {
+          "name": "out",
+          "typeRef": "uint8"
+        }
+      ]
+    },
+    "Cpu_alu": {
+      "kind": "struct",
+      "members": [
+        {
+          "flipped": true,
+          "name": "clock",
+          "typeRef": "bool"
+        },
+        {
+          "flipped": true,
+          "name": "reset",
+          "typeRef": "bool"
+        },
+        {
+          "name": "io",
+          "typeRef": "Cpu_io"
+        }
+      ]
+    },
+    "Cpu_io": {
+      "kind": "struct",
+      "members": [
+        {
+          "flipped": true,
+          "name": "a",
+          "typeRef": "uint8"
+        },
+        {
+          "flipped": true,
+          "name": "b",
+          "typeRef": "uint8"
+        },
+        {
+          "flipped": true,
+          "name": "op",
+          "typeRef": "uint3"
+        },
+        {
+          "name": "out",
+          "typeRef": "uint8"
+        }
+      ]
+    },
+    "Op$": {
+      "kind": "enum",
+      "underlyingTypeRef": "uint3",
+      "variants": {
+        "0": "Add",
+        "1": "Sub",
+        "2": "And"
+      }
+    },
+    "bool": {
+      "kind": "uint",
+      "width": 1
+    },
+    "uint3": {
+      "kind": "uint",
+      "width": 3
+    },
+    "uint8": {
+      "kind": "uint",
+      "width": 8
+    }
+  },
+  "variables": {
+    "var_29bb2c7a_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "reset"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "reset"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_50b2dc87_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "clock"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "clock"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_6749ad8c_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "reset"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "reset"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_836e0712_0000": {
+      "bindKind": "instance",
+      "memberRefs": [
+        "var_836e0712_0000__clock",
+        "var_836e0712_0000__reset",
+        "var_836e0712_0000__io"
+      ],
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "alu"
+        },
+        "verilog": {}
+      },
+      "typeRef": "Cpu_alu"
+    },
+    "var_836e0712_0000__clock": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "clock"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "clock"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_836e0712_0000__io": {
+      "bindKind": "synthetic",
+      "memberRefs": [
+        "var_836e0712_0000__io__a",
+        "var_836e0712_0000__io__b",
+        "var_836e0712_0000__io__op",
+        "var_836e0712_0000__io__out"
+      ],
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "io"
+        },
+        "verilog": {}
+      },
+      "typeRef": "Cpu_io"
+    },
+    "var_836e0712_0000__io__a": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "a"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_a"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_836e0712_0000__io__b": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "b"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_b"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_836e0712_0000__io__op": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "op"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_op"
+          }
+        }
+      },
+      "typeRef": "uint3"
+    },
+    "var_836e0712_0000__io__out": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "out"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "_alu_io_out"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_836e0712_0000__reset": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 20,
+            "beginLine": 22,
+            "file": 0
+          },
+          "name": "reset"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "reset"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_8b23cc96_0000": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "clock"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "clock"
+          }
+        }
+      },
+      "typeRef": "bool"
+    },
+    "var_94e903e5_0000": {
+      "bindKind": "node",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 22,
+            "beginLine": 25,
+            "file": 0
+          },
+          "name": "acc",
+          "sourceLangType": {
+            "typeName": "Reg[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "value": {
+            "sigName": "acc"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Alu_io_a": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "io_a"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_a"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Alu_io_b": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "io_b"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_b"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Alu_io_op": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "io_op"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_op"
+          }
+        }
+      },
+      "typeRef": "uint3"
+    },
+    "var_Alu_io_out": {
+      "bindKind": "port",
+      "direction": "output",
+      "representations": {
+        "chisel": {
+          "name": "io_out"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_out"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Cpu_io_a": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "io_a"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_a"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Cpu_io_b": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "io_b"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_b"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_Cpu_io_op": {
+      "bindKind": "port",
+      "direction": "input",
+      "representations": {
+        "chisel": {
+          "name": "io_op"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_op"
+          }
+        }
+      },
+      "typeRef": "uint3"
+    },
+    "var_Cpu_io_out": {
+      "bindKind": "port",
+      "direction": "output",
+      "representations": {
+        "chisel": {
+          "name": "io_out"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_out"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_db2be808_0000": {
+      "bindKind": "node",
+      "memberRefs": [
+        "var_db2be808_0000__a",
+        "var_db2be808_0000__b",
+        "var_db2be808_0000__op",
+        "var_db2be808_0000__out"
+      ],
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 15,
+            "beginLine": 21,
+            "file": 0
+          },
+          "name": "io"
+        },
+        "verilog": {}
+      },
+      "typeRef": "Cpu_io"
+    },
+    "var_db2be808_0000__a": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 15,
+            "beginLine": 21,
+            "file": 0
+          },
+          "name": "a"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_a"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_db2be808_0000__b": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 15,
+            "beginLine": 21,
+            "file": 0
+          },
+          "name": "b"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_b"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_db2be808_0000__op": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 15,
+            "beginLine": 21,
+            "file": 0
+          },
+          "name": "op"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_op"
+          }
+        }
+      },
+      "typeRef": "uint3"
+    },
+    "var_db2be808_0000__out": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 15,
+            "beginLine": 21,
+            "file": 0
+          },
+          "name": "out"
+        },
+        "verilog": {
+          "value": {
+            "sigName": "acc"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_f7fe014b_0000": {
+      "bindKind": "node",
+      "memberRefs": [
+        "var_f7fe014b_0000__a",
+        "var_f7fe014b_0000__b",
+        "var_f7fe014b_0000__op",
+        "var_f7fe014b_0000__out"
+      ],
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 13,
+            "file": 0
+          },
+          "name": "io",
+          "sourceLangType": {
+            "typeName": "IO[AluIO]"
+          }
+        },
+        "verilog": {}
+      },
+      "typeRef": "Alu_io"
+    },
+    "var_f7fe014b_0000__a": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 13,
+            "file": 0
+          },
+          "name": "a",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_a"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_f7fe014b_0000__b": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 13,
+            "file": 0
+          },
+          "name": "b",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_b"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    },
+    "var_f7fe014b_0000__op": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 13,
+            "file": 0
+          },
+          "name": "op",
+          "sourceLangType": {
+            "typeName": "IO[Op]"
+          }
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_op"
+          }
+        }
+      },
+      "typeRef": "Op$"
+    },
+    "var_f7fe014b_0000__out": {
+      "bindKind": "synthetic",
+      "representations": {
+        "chisel": {
+          "location": {
+            "beginColumn": 14,
+            "beginLine": 13,
+            "file": 0
+          },
+          "name": "out",
+          "sourceLangType": {
+            "typeName": "IO[UInt<8>]"
+          }
+        },
+        "verilog": {
+          "value": {
+            "sigName": "io_out"
+          }
+        }
+      },
+      "typeRef": "uint8"
+    }
+  }
+}
