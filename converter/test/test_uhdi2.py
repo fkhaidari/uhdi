@@ -195,6 +195,29 @@ def test_instance_bind() -> None:
     }
 
 
+def test_instance_bind_downgrade_roundtrip() -> None:
+    """downgrade() reconstructs the `bindKind: instance` variable
+    `instances[as].bind.verilog` came from (see downgrade.py's
+    `_emit_instance_bind`), so hgdb/hgdb_json/pdg -- which only ever see
+    a v2 document through `downgrade()` -- no longer silently lose a
+    bound instance's ports. `upgrade(downgrade(upgrade(v1)))["modules"]`
+    (bind included) is an exact fixed point; the one documented gap is
+    that the reconstruction mints a fresh, unreferenced-elsewhere struct
+    typeRef for the instance itself (v2 keeps no record of v1's own key
+    for it), so the round-tripped `types` pool gains that one extra entry
+    relative to `upgrade(v1)` -- asserted here rather than left
+    undetected (see downgrade.py's module docstring)."""
+    doc_v1 = _load(_FIXTURES_UHDI2 / "cpu_alu_instance.uhdi.json")
+    doc_v2 = upgrade(doc_v1)
+    roundtripped = upgrade(downgrade(doc_v2))
+
+    deltas = diff_dicts(roundtripped["modules"], doc_v2["modules"])
+    assert not deltas, format_deltas(deltas)
+
+    assert set(roundtripped["types"]) - set(doc_v2["types"]) == {"Alu#instance"}
+    assert set(doc_v2["types"]) - set(roundtripped["types"]) == set()
+
+
 def test_module_key_differs_from_source_name() -> None:
     """downgrade() and to_hgldd's module object both key off `source.name`
     (falling back to the `modules` key only when absent), independent of
