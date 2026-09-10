@@ -1,4 +1,4 @@
-"""UHDI 2.0 -> UHDI 1.0 downgrader (inverse of `upgrade.py`).
+"""Tree-shaped UHDI -> pool-shaped (June) UHDI downgrader (inverse of `upgrade.py`).
 
 Lets the three backends that still only understand v1 shape (hgdb,
 hgdb_json, pdg) accept a v2 document transparently: `uhdi_common.context.

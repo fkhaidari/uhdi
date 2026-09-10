@@ -77,11 +77,11 @@ def validate_or_exit(uhdi: Dict[str, Any], source: pathlib.Path) -> int:
     Dangling refs surface as warnings only -- partial pools are common in
     emitter intermediates, and converters cope via fallback resolution.
 
-    A v2 document (`format.version == "2.0"`) is schema-checked against
+    A tree-shaped document (top-level `modules`) is schema-checked against
     its own schema instead -- the v1 semantic diagnostics below all
     assume v1's pool shape (`scopes`/`variables`/...), which a v2
     document doesn't have."""
-    if (uhdi.get("format") or {}).get("version") == "2.0":
+    if "modules" in uhdi:
         from uhdi2.validate import iter_errors as iter_errors_v2
         errs_v2 = list(iter_errors_v2(uhdi))
         if errs_v2:

@@ -1,4 +1,4 @@
-"""Tests for the UHDI 2.0 prototype (`uhdi2`): upgrade, schema validation,
+"""Tests for the tree-shaped UHDI prototype (`uhdi2`): upgrade, schema validation,
 and v2 -> HGLDD conversion vs. the v1 path's goldens.
 
 Every fixture's v2 -> HGLDD output is required to match the v1 golden
@@ -225,7 +225,7 @@ def test_module_key_differs_from_source_name() -> None:
     key is the Verilog module name while `source.name` is the authoring
     (Chisel) identity, and the two need not match."""
     doc_v2: Dict[str, Any] = {
-        "format": {"version": "2.0"},
+        "format": {"version": "1.0"},
         "source": {"language": "Chisel", "files": ["Mod.scala"]},
         "target": {"language": "SystemVerilog", "files": ["ModKey.sv"]},
         "types": {},

@@ -74,21 +74,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="uhdi2", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_up = sub.add_parser("upgrade", help="Upgrade a UHDI 1.0 document to UHDI 2.0.")
+    p_up = sub.add_parser("upgrade", help="Upgrade a pool-shaped (June) UHDI document to the tree shape.")
     p_up.add_argument("input", type=pathlib.Path)
     p_up.add_argument("-o", "--output", type=pathlib.Path)
     p_up.set_defaults(func=_cmd_upgrade)
 
-    p_down = sub.add_parser("downgrade", help="Downgrade a UHDI 2.0 document to UHDI 1.0.")
+    p_down = sub.add_parser("downgrade", help="Downgrade a tree-shaped UHDI document to the pool shape.")
     p_down.add_argument("input", type=pathlib.Path)
     p_down.add_argument("-o", "--output", type=pathlib.Path)
     p_down.set_defaults(func=_cmd_downgrade)
 
-    p_val = sub.add_parser("validate", help="Schema-validate a UHDI 2.0 document.")
+    p_val = sub.add_parser("validate", help="Schema-validate a tree-shaped UHDI document.")
     p_val.add_argument("input", type=pathlib.Path)
     p_val.set_defaults(func=_cmd_validate)
 
-    p_hg = sub.add_parser("to-hgldd", help="Convert a UHDI 2.0 document to HGLDD.")
+    p_hg = sub.add_parser("to-hgldd", help="Convert a tree-shaped UHDI document to HGLDD.")
     p_hg.add_argument("input", type=pathlib.Path)
     p_hg.add_argument("-o", "--output", type=pathlib.Path)
     p_hg.set_defaults(func=_cmd_to_hgldd)

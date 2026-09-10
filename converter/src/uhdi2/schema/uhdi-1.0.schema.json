@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://uhdi/uhdi-2.0.schema.json",
+  "$id": "https://uhdi/uhdi-1.0.schema.json",
   "$defs": {
     "Ref": {
       "description": "Opaque reference (typeRef / moduleRef). Unique within its pool, no structure a consumer may rely on.",
@@ -12,7 +12,7 @@
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
-        "version": {"const": "2.0"}
+        "version": {"const": "1.0"}
       }
     },
     "LanguageFiles": {

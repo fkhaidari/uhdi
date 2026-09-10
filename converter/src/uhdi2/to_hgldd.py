@@ -1,4 +1,4 @@
-"""UHDI 2.0 -> HGLDD 1.0. One pass over modules -> variables, no id parsing,
+"""Tree-shaped UHDI -> HGLDD 1.0. One pass over modules -> variables, no id parsing,
 no intermediate parent maps -- the v2 shape is already module-nested.
 
 Reuses v1's pure, ctx.types-only helpers (`_type_description`,

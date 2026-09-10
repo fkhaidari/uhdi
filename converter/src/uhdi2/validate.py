@@ -1,4 +1,4 @@
-"""JSON Schema validation for UHDI 2.0 documents."""
+"""JSON Schema validation for tree-shaped UHDI documents."""
 from __future__ import annotations
 
 import pathlib
@@ -6,7 +6,7 @@ from typing import Iterator
 
 import jsonschema
 
-_SCHEMA_PATH = pathlib.Path(__file__).parent / "schema" / "uhdi-2.0.schema.json"
+_SCHEMA_PATH = pathlib.Path(__file__).parent / "schema" / "uhdi-1.0.schema.json"
 
 
 def _load_validator() -> jsonschema.protocols.Validator:

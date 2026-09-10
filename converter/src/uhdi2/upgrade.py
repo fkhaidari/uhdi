@@ -1,4 +1,4 @@
-"""UHDI 1.0 -> UHDI 2.0 ("variant B") upgrader.
+"""Pool-shaped (June) UHDI -> tree-shaped UHDI ("variant B") upgrader.
 
 Reshapes the pool-based v1 document (flat `types`/`variables`/`scopes`
 pools + cross-pool refs) into v2's nested per-module shape: `modules` keyed
@@ -104,7 +104,7 @@ def upgrade(doc_v1: Dict[str, Any]) -> Dict[str, Any]:
     types_out, resolve_root, _conflicts = _derive_type_layout(ctx)
 
     doc_v2: Dict[str, Any] = {
-        "format": {"version": "2.0"},
+        "format": {"version": "1.0"},
         "source": {
             "language": (reprs.get(ctx.authoring_repr, {}) or {}).get("language", ""),
             "files": list((reprs.get(ctx.authoring_repr, {}) or {}).get("files", [])),
