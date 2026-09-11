@@ -3,7 +3,7 @@
   "$id": "https://uhdi/uhdi-1.0.schema.json",
   "$defs": {
     "Ref": {
-      "description": "Opaque reference (typeRef / moduleRef). Unique within its pool, no structure a consumer may rely on.",
+      "description": "Opaque reference (typeRef / moduleRef): a key into `types` or `modules`, with no structure a consumer may rely on.",
       "type": "string"
     },
     "Format": {
@@ -191,7 +191,7 @@
       }
     },
     "TypeRef": {
-      "description": "Key into the types pool. Opaque: unique within the pool, no structure a consumer may rely on.",
+      "description": "Key into `types`. Opaque, with no structure a consumer may rely on.",
       "type": "string"
     },
     "TypeSourceParam": {
