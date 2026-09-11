@@ -284,3 +284,30 @@ def test_modules_keyed_by_source_name() -> None:
 
     doc_v1 = downgrade(doc_v2)
     assert doc_v1["scopes"]["Stage_1"]["representations"]["verilog"]["name"] == "Stage"
+
+
+def test_hgldd_params_values_are_strings() -> None:
+    """tywaves-rs reads a constructor parameter's `value` as a string, and
+    Chisel writes a Boolean parameter as JSON `true`; UHDI leaves `value`
+    untyped, so the converter renders it."""
+    doc_v2: Dict[str, Any] = {
+        "format": {"version": "1.0"},
+        "source": {"language": "Chisel", "files": ["M.scala"]},
+        "target": {"language": "SystemVerilog", "files": ["M.sv"]},
+        "types": {},
+        "modules": {
+            "M": {
+                "source": {"typeName": "M", "params": [
+                    {"name": "width", "type": "Int", "value": "5"},
+                    {"name": "hasReset", "type": "Boolean", "value": True},
+                    {"name": "depth", "type": "Int", "value": 8},
+                ]},
+                "variables": {},
+            },
+        },
+    }
+    assert not list(iter_errors(doc_v2))
+    hgldd = to_hgldd_v2(doc_v2)
+    mod = next(o for o in hgldd["objects"] if o["kind"] == "module")
+    values = [p["value"] for p in mod["source_lang_type_info"]["params"]]
+    assert values == ["5", "true", "8"]

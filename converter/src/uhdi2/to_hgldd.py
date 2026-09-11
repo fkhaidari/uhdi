@@ -29,6 +29,7 @@ on.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
@@ -88,6 +89,20 @@ def _loc_to_hgldd2(loc: Optional[Dict[str, Any]], files_pool: List[str],
     return out
 
 
+def _hgldd_params(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """HGLDD's `value` is a string (tywaves-rs: `value: Option<String>`),
+    while UHDI leaves it untyped and Chisel writes a Boolean parameter as
+    JSON `true`. Render non-string values the way JSON spells them."""
+    out = []
+    for p in params:
+        q = dict(p)
+        v = q.get("value")
+        if v is not None and not isinstance(v, str):
+            q["value"] = json.dumps(v)
+        out.append(q)
+    return out
+
+
 def _module_source_lang_type_info(source: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """Module.source keeps its own `typeName` untouched by the type
     source-name amendment (that only concerns Variable.source)."""
@@ -97,7 +112,7 @@ def _module_source_lang_type_info(source: Optional[Dict[str, Any]]) -> Optional[
         return None
     out: Dict[str, Any] = {"type_name": type_name}
     if params := source.get("params"):
-        out["params"] = params
+        out["params"] = _hgldd_params(params)
     return out
 
 
@@ -118,7 +133,7 @@ def _variable_source_lang_type_info(var_source: Dict[str, Any], type_ref: str,
     binding = var_source.get("binding")
     out: Dict[str, Any] = {"type_name": f"{binding}[{name}]" if binding else name}
     if params := var_source.get("params") or tsrc.get("params"):
-        out["params"] = params
+        out["params"] = _hgldd_params(params)
     return out
 
 
