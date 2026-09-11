@@ -107,7 +107,7 @@
               "beginColumn": 7
             }
           },
-          "bind": {
+          "target": {
             "verilog": "clock"
           }
         },
@@ -122,7 +122,7 @@
               "beginColumn": 7
             }
           },
-          "bind": {
+          "target": {
             "verilog": "reset"
           }
         },
@@ -136,7 +136,7 @@
               "beginColumn": 14
             }
           },
-          "bind": {
+          "target": {
             "verilog": {
               "in.a": "io_in_a",
               "in.b": "io_in_b",
@@ -155,7 +155,7 @@
               "beginColumn": 24
             }
           },
-          "bind": {
+          "target": {
             "verilog": "res"
           }
         }

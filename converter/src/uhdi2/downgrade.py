@@ -15,7 +15,7 @@ that uses them loses exactly that on a v2 round trip for hgdb/hgdb_json/pdg
 accounting.
 
 This module fully recovers the struct/vector member tree a variable's
-flattened `bind.verilog` dotted-path map came from -- one
+flattened `target.verilog` dotted-path map came from -- one
 `bindKind: synthetic` Variable per member/index, walking `types[X].kind`
 the same way `upgrade.py._walk_bind` walked it forward, with each scalar
 leaf's own `representations.verilog.value.sigName` reconstructed from the
@@ -26,11 +26,11 @@ ever added to its scope's `variableRefs` -- every v1 backend here reads
 variables exclusively through `scope.variableRefs` (never by walking
 `memberRefs` on its own), so a member's reconstructed `verilog` is only
 ever seen by `upgrade()`'s own pool-wide `memberRefs` walk (needed to
-rebuild `bind.verilog` for the `upgrade(downgrade(upgrade(v1))) ==
+rebuild `target.verilog` for the `upgrade(downgrade(upgrade(v1))) ==
 upgrade(v1)` fixed point), never by hgdb/hgdb_json/pdg directly.
 
 This module also reconstructs the `bindKind: instance` variable an
-`instances[<as>].bind.verilog` came from (inverse of `upgrade.py`'s
+`instances[<as>].target.verilog` came from (inverse of `upgrade.py`'s
 `_instance_bind`/`_find_instance_var`): one member per bound port key,
 typed by the instantiated module's own `variables[<port>].typeRef` (v1's
 type pool is flat/shared, so reusing it here is safe), an aggregate
@@ -49,7 +49,7 @@ was, so this module mints a fresh one (`<moduleRef>#instance`). That key
 is new relative to the original v1 document, so
 `upgrade(downgrade(upgrade(v1)))`'s `types` pool gains one extra,
 unreferenced-elsewhere entry per bound instance that `upgrade(v1)` never
-had -- `modules` (including `instances[*].bind`) itself is an exact
+had -- `modules` (including `instances[*].target`) itself is an exact
 fixed point; only this one extra type-pool entry is not. See
 `test_uhdi2.py::test_instance_bind_downgrade_roundtrip`, the only test
 that exercises `bindKind: instance` through `downgrade()` (no fixture in
@@ -63,7 +63,7 @@ Not recoverable, and not attempted:
     fixtures (`alu_member_refs`, `nested_bundle`) v1 gives each aggregate
     leaf such a record; in others (`bundle_io`, `vec_of_struct`) the whole
     aggregate binds through one `'{`-expression chain and no such record
-    exists at all. Both shapes flatten to the *same* `bind.verilog`
+    exists at all. Both shapes flatten to the *same* `target.verilog`
     dotted-path map in v2 (confirmed: `ModuleTarget` has no port list and
     `StructMember` has no direction/port flag), so v2 cannot tell which
     one v1 used. Guessing "always recreate" was tried and produces
@@ -206,8 +206,6 @@ def _emit_module(scope_id: str, mod: Dict[str, Any], container: Optional[str],
             inst_reprs["chisel"] = {"location": dict(loc)}
         inst_target = inst.get("target") or {}
         inst_verilog: Dict[str, Any] = {}
-        if name := inst_target.get("name"):
-            inst_verilog["name"] = name
         if loc := inst_target.get("loc"):
             inst_verilog["location"] = dict(loc)
         if inst_verilog:
@@ -307,7 +305,7 @@ def _emit_variable_tree(scope_id: str, name: str, var: Dict[str, Any],
     type_ref = var.get("typeRef", "")
     direction = var.get("direction")
     source = var.get("source") or {}
-    bind = var.get("bind") or {}
+    bind = var.get("target") or {}
     binding = source.get("binding")
     own_params = source.get("params")
     loc = source.get("loc")
@@ -351,7 +349,7 @@ def _walk_var_tree(var_id: str, chisel_name: str, type_ref: str, bind_kind: str,
     so no backend that walks `variableRefs` ever sees it directly; only
     `upgrade()`'s `memberRefs`-walk can reach it. This is what makes the
     per-leaf verilog reconstruction here safe to do unconditionally: it
-    restores exactly what `upgrade()` needs to rebuild `bind.verilog`,
+    restores exactly what `upgrade()` needs to rebuild `target.verilog`,
     without resurrecting the emitter-added duplicate-port rows a v1
     backend would otherwise see -- see module docstring for why those
     stay unreconstructed."""
@@ -417,7 +415,7 @@ def _emit_instance_bind(scope_id: str, as_name: str, inst: Dict[str, Any],
                         variables_out: Dict[str, Any]) -> Optional[str]:
     """Inverse of `upgrade.py`'s `_instance_bind`/`_find_instance_var`:
     rebuild the `bindKind: instance` variable an `instances[as_name].
-    bind.verilog` came from, one member per bound port, typed by the
+    target.verilog` came from, one member per bound port, typed by the
     instantiated module's own `variables[<port>].typeRef` -- looked up via
     `module_vars`, since `instances[as_name]` itself carries no typeRef of
     its own. An aggregate port's value is the same dotted-path leaf map
@@ -425,7 +423,7 @@ def _emit_instance_bind(scope_id: str, as_name: str, inst: Dict[str, Any],
     rooted at the port instead of at the whole instance: an instance's own
     top level is never flattened (see `upgrade.py`'s `_instance_bind`
     docstring), so each port starts its own fresh walk."""
-    bind_verilog = (inst.get("bind") or {}).get("verilog")
+    bind_verilog = (inst.get("target") or {}).get("verilog")
     ports = module_vars.get(inst.get("moduleRef") or "")
     if not bind_verilog or not ports:
         return None

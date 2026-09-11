@@ -73,7 +73,7 @@ def test_alu_variables() -> None:
     doc_v2 = upgrade(doc_v1)
     alu = doc_v2["modules"]["Alu"]
     assert set(alu["variables"].keys()) == {"clock", "reset", "io", "res"}
-    assert alu["variables"]["io"]["bind"]["verilog"] == {
+    assert alu["variables"]["io"]["target"]["verilog"] == {
         "in.a": "io_in_a",
         "in.b": "io_in_b",
         "in.op": "io_in_op",
@@ -179,7 +179,7 @@ def test_module_source_params() -> None:
 def test_instance_bind() -> None:
     """A `bindKind: instance` variable (v1's "alu" port on "Cpu", typed
     by the instantiated module's own port-list struct "Cpu_alu") is
-    folded into `instances["alu"].bind.verilog` instead of becoming a
+    folded into `instances["alu"].target.verilog` instead of becoming a
     `Module.variables` entry -- one entry per top-level port, the
     aggregate "io" port itself flattened one level down (see
     upgrade.py's `_instance_bind`)."""
@@ -188,7 +188,7 @@ def test_instance_bind() -> None:
 
     cpu = doc_v2["modules"]["Cpu"]
     assert "alu" not in cpu["variables"]
-    assert cpu["instances"]["alu"]["bind"]["verilog"] == {
+    assert cpu["instances"]["alu"]["target"]["verilog"] == {
         "clock": "clock",
         "reset": "reset",
         "io": {"a": "io_a", "b": "io_b", "op": "io_op", "out": "_alu_io_out"},
@@ -197,11 +197,11 @@ def test_instance_bind() -> None:
 
 def test_instance_bind_downgrade_roundtrip() -> None:
     """downgrade() reconstructs the `bindKind: instance` variable
-    `instances[as].bind.verilog` came from (see downgrade.py's
+    `instances[as].target.verilog` came from (see downgrade.py's
     `_emit_instance_bind`), so hgdb/hgdb_json/pdg -- which only ever see
     a v2 document through `downgrade()` -- no longer silently lose a
     bound instance's ports. `upgrade(downgrade(upgrade(v1)))["modules"]`
-    (bind included) is an exact fixed point; the one documented gap is
+    (target included) is an exact fixed point; the one documented gap is
     that the reconstruction mints a fresh, unreferenced-elsewhere struct
     typeRef for the instance itself (v2 keeps no record of v1's own key
     for it), so the round-tripped `types` pool gains that one extra entry

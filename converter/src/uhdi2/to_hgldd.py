@@ -185,7 +185,7 @@ def _aggregate_value(bind_map: Dict[str, Any], type_ref: str, prefix: str,
 
 
 def _variable_value(var: Dict[str, Any], ctx: "_TypesCtx") -> Optional[Dict[str, Any]]:
-    bind = (var.get("bind") or {}).get("verilog")
+    bind = (var.get("target") or {}).get("verilog")
     if bind is None:
         return None
     type_ref = var.get("typeRef", "")
@@ -197,9 +197,9 @@ def _variable_value(var: Dict[str, Any], ctx: "_TypesCtx") -> Optional[Dict[str,
 def _variable_hdl_loc(var: Dict[str, Any], target_files: List[str], hdl_fallback: Optional[str],
                       files: _FileInfo) -> Optional[Dict[str, Any]]:
     """A variable's own verilog-side location: either the sibling `loc`
-    the upgrader attaches to an aggregate's `bind` container, or the
+    the upgrader attaches to an aggregate's `target` container, or the
     `loc` embedded in a scalar binding's `{"signal", "loc"}` form."""
-    bind_container = var.get("bind") or {}
+    bind_container = var.get("target") or {}
     loc = bind_container.get("loc")
     if loc is None:
         verilog_bind = bind_container.get("verilog")
@@ -466,11 +466,11 @@ def _module_object(mid: str, mod: Dict[str, Any], ctx: "_TypesCtx",
     for as_name, inst in (mod.get("instances") or {}).items():
         inst_source = inst.get("source") or {}
         inst_target = inst.get("target") or {}
-        # The referenced module's own target.name is gone (it always
-        # equalled the module key); moduleRef already is that key.
-        target_name = inst_target.get("name") or inst.get("moduleRef")
+        # InstanceTarget carries no `name` (the referenced module's own
+        # target.name is gone -- it always equalled the module key);
+        # moduleRef already is that key.
         child: Dict[str, Any] = {"name": as_name, "obj_name": inst.get("moduleRef"),
-                                 "module_name": target_name}
+                                 "module_name": inst.get("moduleRef")}
         if loc := _loc_to_hgldd2(inst_source.get("loc"), src_files, False, None, files):
             child["hgl_loc"] = loc
         if loc := _loc_to_hgldd2(inst_target.get("loc"), target_files, True, hdl_fallback, files):

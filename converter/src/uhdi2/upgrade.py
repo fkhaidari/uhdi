@@ -11,7 +11,7 @@ and v2 must reproduce it exactly.
 
 Two rules drive the variable reshape, both stated in terms of the *target*
 type (struct/vector), never of ids:
-  * a variable's `bind.verilog` is a flat scalar binding for a scalar
+  * a variable's `target.verilog` is a flat scalar binding for a scalar
     variable, or a `dottedPath -> scalar` map for an aggregate one, walked
     from `memberRefs` (preferred) or, absent those, from a `'{`
     struct-literal `exprRef` chain -- both encodings occur in the
@@ -21,15 +21,15 @@ type (struct/vector), never of ids:
     scope (the producer's "emitter-added" duplicate port record).
 
 `bindKind: synthetic` variables never become v2 records (their data is
-folded into the parent aggregate's `bind`, or into `types[X].source`, see
+folded into the parent aggregate's `target`, or into `types[X].source`, see
 below). `bindKind: instance` variables are also dropped from `Module.
 variables`, but not lost: a v1 instance variable's own `typeRef` is a
 struct describing that instance's ports (see the "Cpu_alu" style type in
 the fixtures), so its `memberRefs` walk the same way a regular aggregate
-variable's does, landing in `instances[<as>].bind.verilog` instead --
+variable's does, landing in `instances[<as>].target.verilog` instead --
 linked to its `instantiates` entry by matching chisel name to `as` (see
 `_find_instance_var`/`_instance_bind`). Unlike a plain aggregate
-variable's flat dotted-path bind, an instance's own top level is never
+variable's flat dotted-path target, an instance's own top level is never
 flattened (each port name is its own key; only an aggregate port's own
 subtree flattens below that) -- ports without a bound leaf are omitted
 the same way `_walk_bind` omits them elsewhere.
@@ -76,9 +76,9 @@ Aggregate-variable HDL-side location (v1's `hdl_loc`, e.g. `bundle_io`'s
 "io.in" aggregate port) is likewise unaddressed by the amendments: a
 scalar binding's `loc` (added by the amendments) has nowhere to live when
 the binding is a dotted-path map. This module adds an optional sibling
-`Variable.bind.loc`, populated only for aggregate variables that carry
+`Variable.target.loc`, populated only for aggregate variables that carry
 their own verilog-side location (one fixture, one variable, in the
-corpus) -- scalar variables keep using the embedded `bind.verilog.loc`
+corpus) -- scalar variables keep using the embedded `target.verilog.loc`
 form the amendments specify, never both.
 """
 from __future__ import annotations
@@ -380,7 +380,7 @@ def _instance_bind(var_id: str, ctx: BaseContext) -> Optional[Dict[str, Any]]:
     """A bound instance's ports, one entry per top-level port name
     (`clock`/`reset`/`io`/...), each either a scalar leaf or -- for an
     aggregate port -- the same dotted-path flattened map a regular
-    aggregate `Variable.bind.verilog` uses (`_walk_bind` rooted one level
+    aggregate `Variable.target.verilog` uses (`_walk_bind` rooted one level
     down, at the port's own type). Unlike `_variable_bind`, the top level
     itself is never flattened: an instance's own `typeRef` names its
     ports' *positions*, not a single value tree, so `portPath` starts
@@ -419,16 +419,15 @@ def _build_instances(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
             entry["source"] = source
 
         target: Dict[str, Any] = {}
-        if name := verilog.get("name"):
-            target["name"] = name
         if loc := _loc_dict(verilog.get("location")):
             target["loc"] = loc
-        if target:
-            entry["target"] = target
 
         if (var_id := _find_instance_var(scope, ctx, as_key)) is not None:
             if bind := _instance_bind(var_id, ctx):
-                entry["bind"] = {"verilog": bind}
+                target["verilog"] = bind
+
+        if target:
+            entry["target"] = target
 
         out[as_key] = entry
     return out
@@ -578,7 +577,7 @@ def _build_variables(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
         if bind_kind == "synthetic":
             continue
         if bind_kind == "instance":
-            # Folded into instances[<as>].bind.verilog instead -- see
+            # Folded into instances[<as>].target.verilog instead -- see
             # `_build_instances`/`_instance_bind`.
             continue
         if bind_kind == "port":
@@ -642,7 +641,7 @@ def _build_variables(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
                     ctx.simulation_repr, {}) or {}
                 if loc := _loc_dict(hdl.get("location") if isinstance(hdl, dict) else None):
                     bind_entry["loc"] = loc
-            entry["bind"] = bind_entry
+            entry["target"] = bind_entry
 
         out[key] = entry
     return out

@@ -109,7 +109,7 @@
         {"type": "object"}
       ]
     },
-    "VariableBind": {
+    "VariableTarget": {
       "type": "object",
       "required": ["verilog"],
       "additionalProperties": false,
@@ -132,7 +132,7 @@
         "typeRef": {"$ref": "#/$defs/Ref"},
         "direction": {"$ref": "#/$defs/Direction"},
         "source": {"$ref": "#/$defs/VariableSource"},
-        "bind": {"$ref": "#/$defs/VariableBind"}
+        "target": {"$ref": "#/$defs/VariableTarget"}
       }
     },
     "InstanceSource": {
@@ -143,9 +143,8 @@
         "loc": {"$ref": "#/$defs/Location"}
       }
     },
-    "InstanceBind": {
+    "InstanceTarget": {
       "type": "object",
-      "required": ["verilog"],
       "additionalProperties": false,
       "patternProperties": {"^x-": true},
       "properties": {
@@ -153,7 +152,8 @@
           "description": "portPath -> Binding, one entry per bound instance port.",
           "type": "object",
           "additionalProperties": {"$ref": "#/$defs/Binding"}
-        }
+        },
+        "loc": {"$ref": "#/$defs/Location"}
       }
     },
     "Instance": {
@@ -164,8 +164,7 @@
       "properties": {
         "moduleRef": {"$ref": "#/$defs/Ref"},
         "source": {"$ref": "#/$defs/InstanceSource"},
-        "target": {"$ref": "#/$defs/ModuleTarget"},
-        "bind": {"$ref": "#/$defs/InstanceBind"}
+        "target": {"$ref": "#/$defs/InstanceTarget"}
       }
     },
     "Module": {
