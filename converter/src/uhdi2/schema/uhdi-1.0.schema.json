@@ -54,7 +54,7 @@
       }
     },
     "ModuleTarget": {
-      "description": "The module or scope after lowering. `name` is omitted on a top-level `modules` entry, whose key is its target name; an inline scope under `scopes` has no key and may carry one.",
+      "description": "The module or scope after lowering. `name` is the Verilog module name; on a top-level `modules` entry it is omitted when it equals the key. Two entries may share one `name` when lowering merged two source modules into one Verilog module. An inline scope under `scopes` has no key and may carry one.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {"^x-": true},

@@ -443,7 +443,7 @@ def _module_object(mid: str, mod: Dict[str, Any], ctx: "_TypesCtx",
     out: Dict[str, Any] = {
         "kind": "module",
         "obj_name": source.get("name") or mid,
-        "module_name": mid,
+        "module_name": target.get("name") or mid,
     }
     if mod.get("kind") == "extmodule":
         out["isExtModule"] = 1
@@ -466,11 +466,15 @@ def _module_object(mid: str, mod: Dict[str, Any], ctx: "_TypesCtx",
     for as_name, inst in (mod.get("instances") or {}).items():
         inst_source = inst.get("source") or {}
         inst_target = inst.get("target") or {}
-        # InstanceTarget carries no `name` (the referenced module's own
-        # target.name is gone -- it always equalled the module key);
-        # moduleRef already is that key.
-        child: Dict[str, Any] = {"name": as_name, "obj_name": inst.get("moduleRef"),
-                                 "module_name": inst.get("moduleRef")}
+        # The child's names are the referenced module's: `moduleRef` is a
+        # key into `modules`, and only that record knows its Verilog name.
+        ref = inst.get("moduleRef")
+        ref_mod = doc_v2["modules"].get(ref) or {}
+        child: Dict[str, Any] = {
+            "name": as_name,
+            "obj_name": (ref_mod.get("source") or {}).get("name") or ref,
+            "module_name": (ref_mod.get("target") or {}).get("name") or ref,
+        }
         if loc := _loc_to_hgldd2(inst_source.get("loc"), src_files, False, None, files):
             child["hgl_loc"] = loc
         if loc := _loc_to_hgldd2(inst_target.get("loc"), target_files, True, hdl_fallback, files):
@@ -499,7 +503,8 @@ def convert(doc_v2: Dict[str, Any]) -> Dict[str, Any]:
                      for inst in (mod.get("instances") or {}).values()}
         roots = [mid for mid in doc_v2["modules"] if mid not in referenced]
         if roots:
-            hdl_name = roots[0]
+            root = doc_v2["modules"][roots[0]]
+            hdl_name = (root.get("target") or {}).get("name") or roots[0]
             lang = target.get("language", "")
             if lang and lang not in _HDL_LANGUAGE_EXTENSIONS:
                 raise HGLDD2ConversionError(f"unknown HDL language '{lang}'")

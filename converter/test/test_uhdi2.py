@@ -245,3 +245,42 @@ def test_module_key_differs_from_source_name() -> None:
     mod_obj = next(o for o in hgldd["objects"] if o["kind"] == "module")
     assert mod_obj["obj_name"] == "OtherName"
     assert mod_obj["module_name"] == "ModKey"
+
+
+def test_modules_keyed_by_source_name() -> None:
+    """A `modules` key is the source name and `target.name` carries the
+    Verilog name. HGLDD's `module_name` (what the simulator scope is
+    matched against) comes from `target.name`, on the module object and on
+    every child that references it; `obj_name` stays the source name. Two
+    records may share one Verilog name, which is what a `Dedup` merge
+    produces once the merged-away module keeps its record."""
+    doc_v2: Dict[str, Any] = {
+        "format": {"version": "1.0"},
+        "source": {"language": "Chisel", "files": ["Top.scala"]},
+        "target": {"language": "SystemVerilog", "files": []},
+        "types": {"uint8": {"kind": "uint", "width": 8}},
+        "modules": {
+            "Top": {
+                "variables": {},
+                "instances": {
+                    "a": {"moduleRef": "Stage"},
+                    "b": {"moduleRef": "Stage_1"},
+                },
+            },
+            "Stage": {"target": {"name": "Stage"}, "variables": {}},
+            "Stage_1": {"target": {"name": "Stage"}, "variables": {}},
+        },
+    }
+    assert not list(iter_errors(doc_v2))
+
+    hgldd = to_hgldd_v2(doc_v2)
+    by_obj = {o["obj_name"]: o for o in hgldd["objects"] if o["kind"] == "module"}
+    assert by_obj["Stage"]["module_name"] == "Stage"
+    assert by_obj["Stage_1"]["module_name"] == "Stage"
+    children = {c["name"]: c for c in by_obj["Top"]["children"]}
+    assert children["a"] == {"name": "a", "obj_name": "Stage", "module_name": "Stage"}
+    assert children["b"] == {"name": "b", "obj_name": "Stage_1", "module_name": "Stage"}
+    assert hgldd["HGLDD"]["file_info"][-1] == "Top.sv"
+
+    doc_v1 = downgrade(doc_v2)
+    assert doc_v1["scopes"]["Stage_1"]["representations"]["verilog"]["name"] == "Stage"
