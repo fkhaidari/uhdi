@@ -2,18 +2,23 @@
 
 import mill._
 import mill.scalalib._
+import coursier.LocalRepositories
 
 object app extends ScalaModule {
   def scalaVersion = "2.13.18"
   def mainClass = Task { Some("Main") }
 
-  // Official Chisel from Maven Central: PR #5276 (circt_debug_* intrinsics)
-  // shipped in 7.13.0, so the demos no longer need the fkhaidari/chisel
-  // JitPack fork (and with it the scopt transitive workaround that JitPack
-  // resolution forced).
+  // ChiselEnum variants need chipsalliance/chisel#5420, which is not released
+  // yet. Until it is, this demo uses a publishLocal'd snapshot of that PR from
+  // ~/.ivy2/local (`tools/install.sh ivy2-uhdi`). The other demos have no enum
+  // and stay on Maven Central Chisel 7.13.0.
+  def repositoriesTask = Task.Anon {
+    super.repositoriesTask() ++ Seq(LocalRepositories.ivy2Local)
+  }
+
   def mvnDeps = Seq(
-    mvn"org.chipsalliance::chisel:7.13.0",
-    mvn"org.chipsalliance:::chisel-plugin:7.13.0",
+    mvn"org.chipsalliance::chisel:7.1.1+285-774bf0a9-SNAPSHOT",
+    mvn"org.chipsalliance:::chisel-plugin:7.1.1+285-774bf0a9-SNAPSHOT",
   )
 
   def scalacOptions = Task {

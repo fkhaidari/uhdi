@@ -73,7 +73,10 @@ cd demo/gcd
 ```
 The first run takes ~30 s on a warm cache (mill resolves Chisel 7.13.0
 from Maven Central, firtool runs through `--emit-uhdi`, and the two
-python converters produce HGLDD/HGDB). Output:
+python converters produce HGLDD/HGDB). `fsm/` is the exception: its
+`ChiselEnum` variants need chipsalliance/chisel#5420, which is not released
+yet, so it resolves a snapshot of that PR from `~/.ivy2/local`
+(`tools/install.sh ivy2-uhdi`, included in `all`). Output:
 
 | File | What it is |
 |------|-----------|

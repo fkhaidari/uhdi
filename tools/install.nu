@@ -30,8 +30,9 @@ def "main all" [
     # ivy2-* unpack the publishLocal'd tywaves/chiseltrace Chisel forks into
     # ~/.ivy2/local so those bench pipelines resolve without a manual `mill
     # publishLocal` (the SNAPSHOTs aren't on Maven Central/JitPack). The uhdi
-    # pipeline uses official Maven Central chisel, so it needs no ivy2-local.
-    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-circt" "hgdb-firrtl" "ivy2-tywaves" "ivy2-chiseltrace" "hgdb-cli"]
+    # pipeline uses official Maven Central chisel; only demo/fsm needs
+    # ivy2-uhdi, a snapshot of chisel#5420 (enum variants) until it ships.
+    ["firtool" "hgdb-py" "chisel" "tywaves" "chiseltrace" "scala-cli" "hgdb-circt" "hgdb-firrtl" "ivy2-tywaves" "ivy2-chiseltrace" "ivy2-uhdi" "hgdb-cli"]
     | each {|c| dispatch $c $p $release_tag $force $work_root }
     | flatten
     | uniq
@@ -85,6 +86,11 @@ def "main ivy2-chiseltrace" [--prefix: path = "" --release-tag: string = "" --fo
   run-single "ivy2-chiseltrace" $prefix $release_tag $force
 }
 
+# Unpack the Chisel snapshot with enum variants (chisel#5420) into ~/.ivy2/local.
+def "main ivy2-uhdi" [--prefix: path = "" --release-tag: string = "" --force] {
+  run-single "ivy2-uhdi" $prefix $release_tag $force
+}
+
 # Install the upstream `hgdb` console debugger (Kuree/hgdb-debugger).
 # Builds a 3.12 venv, pip-installs hgdb-debugger + deps, links the
 # uhdi-tools hgdb python bindings into it, exposes `bin/hgdb` on the
@@ -109,6 +115,7 @@ def run-single [component: string prefix: path release_tag: string force: bool] 
     "hgdb-firrtl" => { install-hgdb-firrtl $p $release_tag $force $work_root }
     "ivy2-tywaves" => { install-ivy2-local "tywaves" $release_tag $force $work_root }
     "ivy2-chiseltrace" => { install-ivy2-local "chiseltrace" $release_tag $force $work_root }
+    "ivy2-uhdi" => { install-ivy2-local "uhdi" $release_tag $force $work_root }
     "hgdb-cli" => { install-hgdb-cli $p $force }
   }
   rm -rf $work_root
@@ -199,6 +206,9 @@ def dispatch [
     }
     "ivy2-chiseltrace" => {
       try { install-ivy2-local "chiseltrace" $release_tag $force $work_root; ["ivy2-chiseltrace"] } catch { [] }
+    }
+    "ivy2-uhdi" => {
+      try { install-ivy2-local "uhdi" $release_tag $force $work_root; ["ivy2-uhdi"] } catch { [] }
     }
     "hgdb-cli" => {
       try { install-hgdb-cli $p $force; ["hgdb-cli"] } catch { [] }
