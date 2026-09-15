@@ -32,7 +32,7 @@ This repository hosts the out-of-tree pieces of the uhdi work:
   pinned via `tools/versions.env`; per-component release scripts in
   `tools/release/`.
 
-The compiler side (CIRCT passes and `EmitUHDI.cpp`) lives in the sibling `circt/` fork on branch `fk-sc/uhdi-pool`, not here.
+The compiler side (CIRCT passes and `EmitUHDI.cpp`) lives in the sibling `circt/` fork on branch `tw/uhdi2`, not here.
 
 ## Layout
 
