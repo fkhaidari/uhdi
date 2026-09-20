@@ -1,0 +1,647 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/uhdi-core-1.0.schema.json",
+  "title": "UHDI core 1.0",
+  "description": "The language-neutral core of UHDI. A document is a tree with five top-level keys (format, source, target, types, modules) and exactly two kinds of reference: `typeRef` into `types` and `moduleRef` into `modules`. Every entity that a frontend wrote and a lowering rewrote carries both a `source` side (what the frontend wrote) and a `target` side (what lowering produced), the target keyed by the name of the target language.\n\nNothing here is specific to one frontend. Anything a particular frontend knows and the core does not -- a source-language class name, reflective constructor parameters, a declaration-kind vocabulary -- rides as an `x-<vendor>` key on the `source` object of the entity it describes. The core accepts such keys opaquely (`patternProperties: {\"^x-\": true}` on every record object -- not on the arms of ScalarBinding, which are closed value shapes) and never validates their bodies; a consumer picks the companion schema that validates them by `source.language` (for Chisel: uhdi-chisel-1.0.schema.json). The core cannot tell a misplaced extension body from a well-placed one, since it looks inside neither; the companion rejects one sitting on an entity instead of on its `source`. This keeps extensions additive: an extension adds keys to entities that already exist, it never adds a third kind of reference and never needs a shadow addressing scheme over the tree.\n\n`format.version` is deliberately left at \"1.0\", so a document validates against this core once its extension keys are removed.",
+  "$defs": {
+    "Ref": {
+      "description": "Opaque reference: a key into `types` (typeRef, elementRef, underlyingTypeRef) or into `modules` (moduleRef), with no structure a consumer may rely on. A producer chooses how keys are minted -- it may distinguish entries on data the core cannot see -- so a consumer resolves a Ref by lookup and never by parsing it.",
+      "type": "string"
+    },
+    "Format": {
+      "description": "Version handshake. The only thing a consumer may read before it knows how to read the rest.",
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "version": {
+          "const": "1.0"
+        }
+      }
+    },
+    "LanguageFiles": {
+      "description": "One end of the source/target pair at document level: which language it is, and the file table that `Location.file` indexes. `language` also selects which extension namespace a consumer should expect (`source.language` \"Chisel\" -> `x-chisel` keys) and which companion schema validates it.",
+      "type": "object",
+      "required": [
+        "language",
+        "files"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Direction": {
+      "description": "Port direction, read off the lowered module's port list. `inout` is reserved: an Analog port lowers to a Verilog inout.",
+      "enum": [
+        "input",
+        "output",
+        "inout"
+      ]
+    },
+    "ScopeKind": {
+      "description": "`module` is the default and is omitted. `extmodule` has no body, so a consumer must not look for signals inside it. `inline` marks a scope that lowering inlined into its parent: the instance no longer exists in the netlist, this record is the only remaining evidence that it did.",
+      "enum": [
+        "module",
+        "extmodule",
+        "inline"
+      ]
+    },
+    "Location": {
+      "description": "`file` indexes the files list of the side the location belongs to: `source.files` for a `source.loc`, `target.files` for a `target.loc` or for the `loc` of a scalar binding.",
+      "type": "object",
+      "required": [
+        "file"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "file": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "beginLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "beginColumn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endColumn": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "ModuleSource": {
+      "description": "The module or scope as the frontend wrote it: its name in the source circuit and its declaration site. A frontend-specific class name and its constructor parameters are not core; they belong on the place of instantiation (`instances.<i>.source.x-<vendor>`), because lowering may merge two source modules into one target module, and only the instantiation site survives that merge. Two records carry such an extension on themselves instead: the root module, which has no instantiation site, and an inline scope under `scopes`, which is already one record per instantiation.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "loc": {
+          "$ref": "#/$defs/Location"
+        }
+      }
+    },
+    "ModuleTarget": {
+      "description": "The module or scope after lowering. `name` is the Verilog module name; on a top-level `modules` entry it is omitted when it equals the key. Two entries may share one `name` when lowering merged two source modules into one Verilog module. An inline scope under `scopes` has no key and may carry one.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "loc": {
+          "$ref": "#/$defs/Location"
+        }
+      }
+    },
+    "VariableSource": {
+      "description": "The variable as the frontend wrote it. `name` is omitted when it equals the record's key, which is the usual case; it is present only when two declarations in one scope wanted the same name and the emitter keyed one of them by something else. The type the frontend wrote is on the type entry, `types[typeRef].source.name`, stored once per type rather than once per variable. A declaration-kind vocabulary (IO, Wire, Reg) is frontend-specific and is not core; it rides as `x-<vendor>`.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "loc": {
+          "$ref": "#/$defs/Location"
+        }
+      }
+    },
+    "ScalarBinding": {
+      "description": "A leaf's value after lowering: a signal name, `{signal, loc}` when the leaf also has a target-side location, or a literal as `{constant}` or `{bitVector}` -- the analogue of DWARF's DW_AT_const_value, a value lowering resolved to a constant.\n\nA ScalarBinding is never an array. The arms are distinguished by which key is required, not by a `kind` tag, so the reserved arm `{expr}` -- a value lowering computed but kept in no signal, the analogue of a DWARF implicit location ending in DW_OP_stack_value -- is added later without touching the existing ones. That arm is where a Debug-dialect expression will land once the dialect has one.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "required": [
+            "signal"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "signal": {
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/Location"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "constant"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "constant": {}
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "bitVector"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bitVector": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "Binding": {
+      "description": "A scalar variable binds to one ScalarBinding. An aggregate binds through an object mapping a dotted member path (struct members and vector indices joined with '.') to a ScalarBinding, one entry per leaf that has a value; a path missing from the map is a leaf with neither a signal nor a literal.\n\nWhich of the two arms applies is decided by `types[typeRef].kind` of the variable, never by inspecting the shape of the value. That rule is what keeps the two arms unambiguous without a branch tag: a member legitimately named `signal`, `constant` or `pieces` inside an aggregate map cannot be mistaken for a scalar arm, because a consumer holding an aggregate type never tries the scalar branch in the first place.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScalarBinding"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ScalarBinding"
+          }
+        }
+      ]
+    },
+    "VariableTarget": {
+      "description": "The variable after lowering, keyed by target language. A variable with no `target` at all is one the frontend declared and lowering left nothing of -- the analogue of a DWARF variable DIE with no DW_AT_location.",
+      "type": "object",
+      "required": [
+        "verilog"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "verilog": {
+          "$ref": "#/$defs/Binding"
+        },
+        "loc": {
+          "description": "An aggregate variable's own verilog-side location, when it has one (a ScalarBinding embeds its own `loc` instead; this sibling is unused when `verilog` is a ScalarBinding).",
+          "$ref": "#/$defs/Location"
+        }
+      }
+    },
+    "Variable": {
+      "description": "A variable with a `direction` is a scalar port. An aggregate port has no `direction`.",
+      "type": "object",
+      "required": [
+        "typeRef",
+        "source"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "typeRef": {
+          "$ref": "#/$defs/Ref"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "source": {
+          "$ref": "#/$defs/VariableSource"
+        },
+        "target": {
+          "$ref": "#/$defs/VariableTarget"
+        }
+      }
+    },
+    "InstanceSource": {
+      "description": "The instantiation site as the frontend wrote it -- the analogue of DW_AT_call_file/call_line, kept separate from the module's own declaration site in `modules[moduleRef].source.loc`. This is also where a frontend-specific class name and its parameters land (`x-<vendor>`): the instantiation site is the finest granularity that survives module deduplication.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "loc": {
+          "$ref": "#/$defs/Location"
+        }
+      }
+    },
+    "InstanceTarget": {
+      "description": "The instance after lowering. `name` is the Verilog instance name and is present only when legalization renamed the instance; otherwise the record's key already spells it.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "verilog": {
+          "description": "portPath -> Binding, one entry per bound instance port.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Binding"
+          }
+        },
+        "loc": {
+          "$ref": "#/$defs/Location"
+        }
+      }
+    },
+    "Instance": {
+      "description": "One instantiation. `moduleRef` points at the module record the way DW_AT_abstract_origin points at an abstract instance root.",
+      "type": "object",
+      "required": [
+        "moduleRef"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "moduleRef": {
+          "$ref": "#/$defs/Ref"
+        },
+        "source": {
+          "$ref": "#/$defs/InstanceSource"
+        },
+        "target": {
+          "$ref": "#/$defs/InstanceTarget"
+        }
+      }
+    },
+    "Module": {
+      "description": "A module/extmodule (top-level `modules` entry) or an inline scope (nested under a parent's `scopes`). `scopes` nests recursively: inlining a module that was itself inlined leaves one scope per level.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ScopeKind"
+        },
+        "source": {
+          "$ref": "#/$defs/ModuleSource"
+        },
+        "target": {
+          "$ref": "#/$defs/ModuleTarget"
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Variable"
+          }
+        },
+        "instances": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Instance"
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Module"
+          }
+        }
+      }
+    },
+    "TypeSource": {
+      "description": "The type as the frontend spelled it (`UInt<8>`, `Operands`, `Clock`). `name` is part of type identity, not decoration: types are interned by structure and source name together, so two frontend types that lower to the same structure stay two entries -- after lowering a clock and a one-bit boolean are structurally identical, and only this name separates them. A producer may additionally distinguish entries on extension data it carries; either way the pool key stays opaque and is resolved by lookup. Frontend-specific reflective parameters are not core; they ride as `x-<vendor>` here.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "GroundInt": {
+      "type": "object",
+      "required": [
+        "kind",
+        "width"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "kind": {
+          "enum": [
+            "uint",
+            "sint"
+          ]
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source": {
+          "$ref": "#/$defs/TypeSource"
+        }
+      }
+    },
+    "GroundClock": {
+      "description": "A ground type that carries no width: clock, reset, asyncreset and analog are widthless by construction.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "kind": {
+          "enum": [
+            "clock",
+            "reset",
+            "asyncreset",
+            "analog"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/TypeSource"
+        }
+      }
+    },
+    "StructMember": {
+      "type": "object",
+      "required": [
+        "name",
+        "typeRef"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "typeRef": {
+          "$ref": "#/$defs/Ref"
+        },
+        "flipped": {
+          "description": "The member points the opposite way from the enclosing struct, like FIRRTL `flip`. This is the only place a single field of an aggregate carries a direction: the aggregate port itself has none.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "Struct": {
+      "type": "object",
+      "required": [
+        "kind",
+        "members"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "kind": {
+          "const": "struct"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StructMember"
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/TypeSource"
+        }
+      }
+    },
+    "Vector": {
+      "type": "object",
+      "required": [
+        "kind",
+        "elementRef",
+        "size"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "kind": {
+          "const": "vector"
+        },
+        "elementRef": {
+          "$ref": "#/$defs/Ref"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source": {
+          "$ref": "#/$defs/TypeSource"
+        }
+      }
+    },
+    "Enum": {
+      "type": "object",
+      "required": [
+        "kind",
+        "underlyingTypeRef",
+        "variants"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "kind": {
+          "const": "enum"
+        },
+        "underlyingTypeRef": {
+          "$ref": "#/$defs/Ref"
+        },
+        "variants": {
+          "description": "value -> variant name, the way an enumeration type carries named values natively.",
+          "type": "object",
+          "patternProperties": {
+            "^-?[0-9]+$": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "source": {
+          "$ref": "#/$defs/TypeSource"
+        }
+      }
+    },
+    "Type": {
+      "description": "Tag-discriminated union over the type kinds. Dispatch on `kind` first via if/then/else so a typo produces one focused error instead of an all-branches-tried report.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "uint",
+            "sint",
+            "clock",
+            "reset",
+            "asyncreset",
+            "analog",
+            "struct",
+            "vector",
+            "enum"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "uint",
+                  "sint"
+                ]
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/GroundInt"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "clock",
+                  "reset",
+                  "asyncreset",
+                  "analog"
+                ]
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/GroundClock"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "struct"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/Struct"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "vector"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/Vector"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "enum"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/Enum"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "required": [
+    "format",
+    "source",
+    "target",
+    "types",
+    "modules"
+  ],
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": true
+  },
+  "properties": {
+    "format": {
+      "$ref": "#/$defs/Format"
+    },
+    "source": {
+      "$ref": "#/$defs/LanguageFiles"
+    },
+    "target": {
+      "$ref": "#/$defs/LanguageFiles"
+    },
+    "types": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Type"
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Module"
+      }
+    }
+  }
+}

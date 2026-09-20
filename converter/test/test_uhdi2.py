@@ -170,9 +170,9 @@ def test_module_source_params() -> None:
     doc_v1 = _load(_FIXTURES_UHDI2 / "cpu_alu_instance.uhdi.json")
     doc_v2 = upgrade(doc_v1)
 
-    assert doc_v2["modules"]["Cpu"]["source"]["params"] == [
+    assert doc_v2["modules"]["Cpu"]["source"]["x-chisel"]["params"] == [
         {"name": "width", "type": "Int", "value": "8"}]
-    assert doc_v2["modules"]["Alu"]["source"]["params"] == [
+    assert doc_v2["modules"]["Alu"]["source"]["x-chisel"]["params"] == [
         {"name": "width", "type": "Int", "value": "8"}]
 
 
@@ -286,6 +286,64 @@ def test_modules_keyed_by_source_name() -> None:
     assert doc_v1["scopes"]["Stage_1"]["representations"]["verilog"]["name"] == "Stage"
 
 
+def _two_instance_doc(class_a: str, class_b: str) -> Dict[str, Any]:
+    """`Top` instantiating one module twice, each site naming its own class."""
+    return {
+        "format": {"version": "1.0"},
+        "source": {"language": "Chisel", "files": ["A.scala"]},
+        "target": {"language": "SystemVerilog", "files": ["A.sv"]},
+        "types": {},
+        "modules": {
+            "A": {"variables": {}},
+            "Top": {
+                "variables": {},
+                "instances": {
+                    "ia": {"moduleRef": "A",
+                           "source": {"x-chisel": {"typeName": class_a}}},
+                    "ib": {"moduleRef": "A",
+                           "source": {"x-chisel": {"typeName": class_b}}},
+                },
+            },
+        },
+    }
+
+
+def _module_object(hgldd: Dict[str, Any], name: str) -> Dict[str, Any]:
+    return next(o for o in hgldd["objects"]
+                if o["kind"] == "module" and o["obj_name"] == name)
+
+
+def test_module_borrows_the_class_its_instances_agree_on() -> None:
+    """CIRCT records the class on the instance, since dedup may merge two
+    classes into one module. HGLDD has one slot per module object, so the
+    converter puts the record back on the module -- when every site names
+    the same class."""
+    doc = _two_instance_doc("ClassA", "ClassA")
+    hgldd = to_hgldd_v2(doc)
+    assert _module_object(hgldd, "A")["source_lang_type_info"] == {
+        "type_name": "ClassA"}
+    # v1 keeps the class on the scope, and gets it back the same way.
+    chisel = downgrade(doc)["scopes"]["A"]["representations"]["chisel"]
+    assert chisel["sourceLangType"] == {"typeName": "ClassA"}
+
+
+def test_merged_module_gets_no_class() -> None:
+    """Two classes merged into one module: neither name describes the
+    definition, and HGLDD cannot hold both, so the module object gets
+    none."""
+    hgldd = to_hgldd_v2(_two_instance_doc("ClassA", "ClassB"))
+    assert "source_lang_type_info" not in _module_object(hgldd, "A")
+
+
+def test_core_rejects_a_frontend_key_left_at_the_top() -> None:
+    """The core is closed: a Chisel key written straight onto `source`,
+    rather than into `x-chisel`, is a schema error and not a silently
+    ignored one."""
+    doc = _two_instance_doc("ClassA", "ClassA")
+    doc["modules"]["A"]["source"] = {"typeName": "ClassA"}
+    assert [e for e in iter_errors(doc) if "typeName" in e.message]
+
+
 def test_hgldd_params_values_are_strings() -> None:
     """tywaves-rs reads a constructor parameter's `value` as a string, and
     Chisel writes a Boolean parameter as JSON `true`; UHDI leaves `value`
@@ -297,11 +355,11 @@ def test_hgldd_params_values_are_strings() -> None:
         "types": {},
         "modules": {
             "M": {
-                "source": {"typeName": "M", "params": [
+                "source": {"x-chisel": {"typeName": "M", "params": [
                     {"name": "width", "type": "Int", "value": "5"},
                     {"name": "hasReset", "type": "Boolean", "value": True},
                     {"name": "depth", "type": "Int", "value": 8},
-                ]},
+                ]}},
                 "variables": {},
             },
         },

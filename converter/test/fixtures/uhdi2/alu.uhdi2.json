@@ -3,37 +3,35 @@
     "version": "1.0"
   },
   "source": {
-    "language": "Chisel",
     "files": [
       "Alu.scala"
-    ]
+    ],
+    "language": "Chisel"
   },
   "target": {
-    "language": "SystemVerilog",
     "files": [
       "Alu.sv"
-    ]
+    ],
+    "language": "SystemVerilog"
   },
   "types": {
-    "AluOp": {
-      "kind": "enum",
-      "underlyingTypeRef": "uint2",
-      "variants": {
-        "0": "ADD",
-        "1": "SUB",
-        "2": "AND",
-        "3": "OR"
-      },
-      "source": {
-        "name": "AluOp"
-      }
-    },
     "Alu_io": {
       "kind": "struct",
       "members": [
         {
-          "name": "in",
-          "typeRef": "Alu_io_in"
+          "flipped": true,
+          "name": "a",
+          "typeRef": "uint8"
+        },
+        {
+          "flipped": true,
+          "name": "b",
+          "typeRef": "uint8"
+        },
+        {
+          "flipped": true,
+          "name": "op",
+          "typeRef": "Op$"
         },
         {
           "name": "out",
@@ -41,122 +39,161 @@
         }
       ],
       "source": {
-        "name": "AnonymousBundle"
+        "name": "AluIO"
       }
     },
-    "Alu_io_in": {
-      "kind": "struct",
-      "members": [
-        {
-          "name": "a",
-          "typeRef": "uint8"
-        },
-        {
-          "name": "b",
-          "typeRef": "uint8"
-        },
-        {
-          "name": "op",
-          "typeRef": "AluOp"
-        }
-      ],
+    "Op$": {
+      "kind": "enum",
       "source": {
-        "name": "Operands"
+        "name": "Op"
+      },
+      "underlyingTypeRef": "uint3",
+      "variants": {
+        "0": "Add",
+        "1": "Sub",
+        "2": "And"
       }
     },
     "bool": {
       "kind": "uint",
-      "width": 1,
-      "source": {
-        "name": "Bool"
-      }
+      "width": 1
     },
-    "uint2": {
+    "uint3": {
       "kind": "uint",
-      "width": 2
+      "width": 3
     },
     "uint8": {
       "kind": "uint",
-      "width": 8,
       "source": {
         "name": "UInt<8>"
-      }
+      },
+      "width": 8
     }
   },
   "modules": {
     "Alu": {
-      "source": {
-        "name": "Alu",
-        "typeName": "Alu",
-        "loc": {
-          "file": 0,
-          "beginLine": 17,
-          "beginColumn": 7
-        }
-      },
       "variables": {
-        "clock": {
-          "typeRef": "bool",
-          "direction": "input",
-          "source": {
-            "binding": "IO",
-            "typeName": "IO[Clock]",
-            "loc": {
-              "file": 0,
-              "beginLine": 17,
-              "beginColumn": 7
-            }
-          },
-          "target": {
-            "verilog": "clock"
-          }
-        },
-        "reset": {
-          "typeRef": "bool",
-          "direction": "input",
-          "source": {
-            "binding": "IO",
-            "loc": {
-              "file": 0,
-              "beginLine": 17,
-              "beginColumn": 7
-            }
-          },
-          "target": {
-            "verilog": "reset"
-          }
-        },
         "io": {
-          "typeRef": "Alu_io",
           "source": {
-            "binding": "IO",
             "loc": {
-              "file": 0,
-              "beginLine": 18,
-              "beginColumn": 14
+              "beginColumn": 14,
+              "beginLine": 13,
+              "file": 0
+            },
+            "x-chisel": {
+              "binding": "IO"
             }
           },
           "target": {
             "verilog": {
-              "in.a": "io_in_a",
-              "in.b": "io_in_b",
-              "in.op": "io_in_op",
+              "a": "io_a",
+              "b": "io_b",
+              "op": "io_op",
               "out": "io_out"
             }
-          }
-        },
-        "res": {
-          "typeRef": "uint8",
+          },
+          "typeRef": "Alu_io"
+        }
+      }
+    },
+    "Cpu": {
+      "source": {
+        "x-chisel": {
+          "params": [
+            {
+              "name": "width",
+              "type": "Int",
+              "value": "8"
+            }
+          ],
+          "typeName": "Cpu"
+        }
+      },
+      "variables": {
+        "acc": {
           "source": {
-            "binding": "Wire",
             "loc": {
-              "file": 0,
-              "beginLine": 23,
-              "beginColumn": 24
+              "beginColumn": 22,
+              "beginLine": 25,
+              "file": 0
+            },
+            "x-chisel": {
+              "binding": "Reg"
             }
           },
           "target": {
-            "verilog": "res"
+            "verilog": "acc"
+          },
+          "typeRef": "uint8"
+        },
+        "clock": {
+          "direction": "input",
+          "source": {},
+          "target": {
+            "verilog": "clock"
+          },
+          "typeRef": "bool"
+        },
+        "io_a": {
+          "direction": "input",
+          "source": {},
+          "target": {
+            "verilog": "io_a"
+          },
+          "typeRef": "uint8"
+        },
+        "io_b": {
+          "direction": "input",
+          "source": {},
+          "target": {
+            "verilog": "io_b"
+          },
+          "typeRef": "uint8"
+        },
+        "io_op": {
+          "direction": "input",
+          "source": {},
+          "target": {
+            "verilog": "io_op"
+          },
+          "typeRef": "uint3"
+        },
+        "io_out": {
+          "direction": "output",
+          "source": {},
+          "target": {
+            "verilog": "io_out"
+          },
+          "typeRef": "uint8"
+        },
+        "reset": {
+          "direction": "input",
+          "source": {},
+          "target": {
+            "verilog": "reset"
+          },
+          "typeRef": "bool"
+        }
+      },
+      "instances": {
+        "alu": {
+          "moduleRef": "Alu",
+          "source": {
+            "loc": {
+              "beginColumn": 20,
+              "beginLine": 22,
+              "file": 0
+            },
+            "x-chisel": {
+              "params": [
+                {
+                  "name": "width",
+                  "type": "Int",
+                  "value": "8"
+                }
+              ],
+              "typeName": "Alu"
+            }
           }
         }
       }

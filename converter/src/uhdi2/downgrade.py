@@ -84,6 +84,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from uhdi2.ext import class_ext_by_module, ext
+
 Binding = Any
 
 _BINDING_TO_BINDKIND = {
@@ -115,12 +117,13 @@ def downgrade(doc_v2: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     module_vars = _collect_module_vars(doc_v2.get("modules") or {})
+    class_ext = class_ext_by_module(doc_v2)
 
     variables_out: Dict[str, Any] = {}
     scopes_out: Dict[str, Any] = {}
     for mid, mod in (doc_v2.get("modules") or {}).items():
         _emit_module(mid, mod, None, types_v2, types_out, module_vars,
-                    variables_out, scopes_out)
+                    variables_out, scopes_out, class_ext)
 
     return {
         "format": {"name": "uhdi", "version": "1.0"},
@@ -156,7 +159,8 @@ def _emit_module(scope_id: str, mod: Dict[str, Any], container: Optional[str],
                  types_v2: Dict[str, Any], types_out: Dict[str, Any],
                  module_vars: Dict[str, Dict[str, Any]],
                  variables_out: Dict[str, Any],
-                 scopes_out: Dict[str, Any]) -> None:
+                 scopes_out: Dict[str, Any],
+                 class_ext: Dict[str, Dict[str, Any]]) -> None:
     # Always explicit, unlike upgrade.py's own default-omission: some v1
     # readers (uhdi_to_hgldd's module-object filter) check `s.get("kind")
     # in (...)` rather than `s.get("kind", "module")`, so an absent key
@@ -172,9 +176,13 @@ def _emit_module(scope_id: str, mod: Dict[str, Any], container: Optional[str],
         chisel["name"] = name
     if loc := source.get("loc"):
         chisel["location"] = dict(loc)
-    if type_name := source.get("typeName"):
+    # v1 keeps the class on the scope, v2 on the instantiation site: an
+    # inline scope and a module nobody instantiates carry their own record,
+    # the rest borrow the one their instances agree on.
+    class_record = ext(source) or class_ext.get(scope_id) or {}
+    if type_name := class_record.get("typeName"):
         st: Dict[str, Any] = {"typeName": type_name}
-        if params := _v1_params(source.get("params")):
+        if params := _v1_params(class_record.get("params")):
             st["params"] = params
         chisel["sourceLangType"] = st
     if chisel:
@@ -225,7 +233,7 @@ def _emit_module(scope_id: str, mod: Dict[str, Any], container: Optional[str],
 
     for i, nested in enumerate(mod.get("scopes") or []):
         _emit_module(f"{scope_id}#{i}", nested, scope_id, types_v2, types_out,
-                    module_vars, variables_out, scopes_out)
+                    module_vars, variables_out, scopes_out, class_ext)
 
 
 # ---- variables ----------------------------------------------------------
@@ -273,7 +281,7 @@ def _v1_params(params_v2: Optional[List[Dict[str, Any]]]) -> Optional[List[Dict[
 
 
 def _params_for(type_ref: str, types_v2: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-    return _v1_params(((types_v2.get(type_ref) or {}).get("source") or {}).get("params"))
+    return _v1_params(ext((types_v2.get(type_ref) or {}).get("source")).get("params"))
 
 
 def _binding_sig(binding: Binding) -> Optional[str]:
@@ -306,8 +314,8 @@ def _emit_variable_tree(scope_id: str, name: str, var: Dict[str, Any],
     direction = var.get("direction")
     source = var.get("source") or {}
     bind = var.get("target") or {}
-    binding = source.get("binding")
-    own_params = source.get("params")
+    binding = ext(source).get("binding")
+    own_params = ext(source).get("params")
     loc = source.get("loc")
     bind_kind = "port" if direction else _infer_bind_kind(binding)
 

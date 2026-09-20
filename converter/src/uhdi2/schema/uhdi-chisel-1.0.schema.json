@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uhdi/uhdi-chisel-1.0.schema.json",
+  "title": "UHDI Chisel extension 1.0",
+  "description": "Companion schema for the `x-chisel` keys of a UHDI document. The core (uhdi-core-1.0.schema.json) accepts any `^x-` key on any object without looking inside it; this schema gives those bodies a shape, so an extension is a specified thing rather than a blob. A consumer selects it by `source.language == \"Chisel\"`.\n\nIt is an overlay, not a replacement: validate a document against the core AND against this schema. On its own it constrains nothing but the `x-chisel` bodies -- it deliberately leaves every core object open, so that adding a core property later does not make this file reject documents.\n\nFour landing sites, all of them the `source` object of the entity the extension describes, so the JSON tree itself is the addressing and no third kind of reference is introduced:\n  - `types.<t>.source.x-chisel`                  -- reflective constructor parameters of the type\n  - `modules.<m>.variables.<v>.source.x-chisel`  -- declaration kind, per-variable parameter overrides\n  - `modules.<m>.instances.<i>.source.x-chisel`  -- the Chisel class instantiated here, and its parameters\n  - `modules.<m>.source.x-chisel`                -- the same class record for the root module, which has no instantiation site; and for an inline scope under `scopes`, which is already per-instantiation\n\nThe class record sits on the instantiation site, not on the module, because module deduplication may merge two Chisel classes that lower to identical hardware into one module record: the call site is the finest granularity that survives that merge. JSON Schema cannot express \"on the module record only when it is the root\", so that restriction is stated here and not enforced.",
+  "$defs": {
+    "ExtOnSourceOnly": {
+      "description": "An `x-chisel` body belongs on an entity's `source` object, never on the entity itself. The core cannot catch a misplaced one -- it accepts any `^x-` key anywhere opaquely -- so the companion rejects it here. Without this, a typo like `modules.<m>.x-chisel` passes both schemas and is silently ignored by every consumer.",
+      "not": {
+        "required": [
+          "x-chisel"
+        ]
+      }
+    },
+    "Param": {
+      "description": "One named parameter: a label, the spelling of its type, and its value. A parameter without a `value` is one whose value is not a literal (a type parameter, a generator).\n\nThe record lives here rather than in the core because no core object references it. A parameter list is a general hardware concept and the core will eventually need one -- an external module and its instantiations carry Verilog parameters (`hw::ParamDeclAttr`: name, type, value) -- but reserving it as an unreferenced core definition is not how that is done. When the core grows a parameter of its own, this shape is the one to lift.",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {}
+      }
+    },
+    "ClassExt": {
+      "description": "What Chisel knows about a module record or an instantiation beyond its FIRRTL name.\n\n`typeName` is `target.desiredName` passed through verbatim: the name the module author wants the Verilog module to carry, taken before uniquification. Its default is the Scala class name, but it is a plain `def` anyone may override, and parametrized generators do -- `chisel3.util.Queue` sets it to `s\"Queue${entries}_${gen.typeName}\"`. So it identifies neither a class (two classes may share one `desiredName`) nor a parameterization (one class yields several). Treat it as a display name: show it, do not match on it, and do not use it to decide that two records share an origin.\n\n`params` are constructor parameters, read by reflection over the Scala constructor.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "typeName": {
+          "type": "string"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Param"
+          }
+        }
+      }
+    },
+    "VariableExt": {
+      "description": "`binding` is the Chisel declaration kind (`IO`, `Wire`, `Reg`, `OpResult`, `MemPort`, ...), produced from Chisel's own TopBinding hierarchy; a consumer that wants the type as a Chisel programmer would read it composes `binding[types[typeRef].source.name]`, e.g. `IO[AluIO]`. `params` holds constructor parameters recorded on this variable when they differ from the ones on its type entry.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "binding": {
+          "type": "string"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Param"
+          }
+        }
+      }
+    },
+    "TypeExt": {
+      "description": "Reflective constructor parameters of the Chisel type (e.g. a Vec's `gen` and `length`). The type's name as Chisel spelled it is NOT here: it stays in the core as `types.<t>.source.name`, because type identity is structure plus source name and the core has to be able to state that rule about itself.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Param"
+          }
+        }
+      }
+    },
+    "SourceWithClassExt": {
+      "type": "object",
+      "properties": {
+        "x-chisel": {
+          "$ref": "#/$defs/ClassExt"
+        }
+      }
+    },
+    "VariableExtHolder": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ExtOnSourceOnly"
+        }
+      ],
+      "properties": {
+        "source": {
+          "type": "object",
+          "properties": {
+            "x-chisel": {
+              "$ref": "#/$defs/VariableExt"
+            }
+          }
+        }
+      }
+    },
+    "InstanceExtHolder": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ExtOnSourceOnly"
+        }
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/SourceWithClassExt"
+        }
+      }
+    },
+    "TypeExtHolder": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ExtOnSourceOnly"
+        }
+      ],
+      "properties": {
+        "source": {
+          "type": "object",
+          "properties": {
+            "x-chisel": {
+              "$ref": "#/$defs/TypeExt"
+            }
+          }
+        }
+      }
+    },
+    "ModuleExt": {
+      "description": "A module record or an inline scope; `scopes` recurses, so an inline scope carries the class record the same way a module does.",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ExtOnSourceOnly"
+        }
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/SourceWithClassExt"
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/VariableExtHolder"
+          }
+        },
+        "instances": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/InstanceExtHolder"
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ModuleExt"
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "source": {
+      "description": "This companion applies to documents whose frontend is Chisel.",
+      "type": "object",
+      "properties": {
+        "language": {
+          "const": "Chisel"
+        }
+      }
+    },
+    "types": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/TypeExtHolder"
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ModuleExt"
+      }
+    }
+  }
+}

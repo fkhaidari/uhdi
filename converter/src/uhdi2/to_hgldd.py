@@ -33,6 +33,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
+from uhdi2.ext import EXT_KEY, class_ext_by_module, ext
 from uhdi_common.context import ConversionError
 from uhdi_to_hgldd.convert import (_FileInfo, _topo_sorted_struct_ids,
                                    _type_description)
@@ -103,15 +104,22 @@ def _hgldd_params(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
-def _module_source_lang_type_info(source: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Module.source keeps its own `typeName` untouched by the type
-    source-name amendment (that only concerns Variable.source)."""
-    source = source or {}
-    type_name = source.get("typeName")
+def _module_source_lang_type_info(source: Optional[Dict[str, Any]],
+                                  borrowed: Optional[Dict[str, Any]] = None
+                                  ) -> Optional[Dict[str, Any]]:
+    """The class record of a module object, untouched by the type
+    source-name amendment (that only concerns Variable.source).
+
+    A module carries its own record only when nothing instantiates it;
+    otherwise `borrowed` is the one its instantiation sites agree on (see
+    `class_ext_by_module`). HGLDD has one slot per module object, so a
+    module whose instances name different classes gets neither."""
+    record = ext(source) or borrowed or {}
+    type_name = record.get("typeName")
     if not type_name:
         return None
     out: Dict[str, Any] = {"type_name": type_name}
-    if params := source.get("params"):
+    if params := record.get("params"):
         out["params"] = _hgldd_params(params)
     return out
 
@@ -130,9 +138,10 @@ def _variable_source_lang_type_info(var_source: Dict[str, Any], type_ref: str,
     name = tsrc.get("name")
     if not name:
         return None
-    binding = var_source.get("binding")
+    var_ext = ext(var_source)
+    binding = var_ext.get("binding")
     out: Dict[str, Any] = {"type_name": f"{binding}[{name}]" if binding else name}
-    if params := var_source.get("params") or tsrc.get("params"):
+    if params := var_ext.get("params") or ext(tsrc).get("params"):
         out["params"] = _hgldd_params(params)
     return out
 
@@ -153,7 +162,7 @@ def _root_variable_source_lang_type_info(var_source: Dict[str, Any], type_ref: s
     per `_pick_struct_winner`) -- NOTE this still can't distinguish "had a
     bare, unbracketed typeName" from "had none" (not observed in the
     corpus; see upgrade report)."""
-    if not var_source.get("binding"):
+    if not ext(var_source).get("binding"):
         return None
     return _variable_source_lang_type_info(var_source, type_ref, ctx)
 
@@ -322,7 +331,7 @@ def _collect_location_candidates(
             root_loc = (var.get("source") or {}).get("loc")
             if not root_loc:
                 continue
-            root_binding = (var.get("source") or {}).get("binding")
+            root_binding = ext(var.get("source")).get("binding")
             for tref in _location_candidate_types(var.get("typeRef", ""), ctx):
                 td = ctx.types.get(tref) or {}
                 kind = td.get("kind")
@@ -389,7 +398,7 @@ def _struct_objects(doc_v2: Dict[str, Any], ctx: "_TypesCtx",
             if (eid := enum_id_by_type.get(m.get("typeRef", ""))) is not None:
                 pv["enum_def_ref"] = eid
             if binding and (slti := _variable_source_lang_type_info(
-                    {"binding": binding}, m.get("typeRef", ""), ctx)):
+                    {EXT_KEY: {"binding": binding}}, m.get("typeRef", ""), ctx)):
                 pv["source_lang_type_info"] = slti
             port_vars.append(pv)
         obj: Dict[str, Any] = {"kind": "struct", "obj_name": tid, "port_vars": port_vars}
@@ -452,7 +461,8 @@ def _module_object(mid: str, mod: Dict[str, Any], ctx: "_TypesCtx",
                    enum_defs_by_module: Dict[str, Dict[str, Any]],
                    doc_v2: Dict[str, Any], src_files: List[str],
                    target_files: List[str], hdl_fallback: Optional[str],
-                   files: _FileInfo) -> Dict[str, Any]:
+                   files: _FileInfo,
+                   class_ext: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     source = mod.get("source") or {}
     target = mod.get("target") or {}
     out: Dict[str, Any] = {
@@ -466,7 +476,7 @@ def _module_object(mid: str, mod: Dict[str, Any], ctx: "_TypesCtx",
         out["hgl_loc"] = loc
     if loc := _loc_to_hgldd2(target.get("loc"), target_files, True, hdl_fallback, files):
         out["hdl_loc"] = loc
-    if slti := _module_source_lang_type_info(source):
+    if slti := _module_source_lang_type_info(source, class_ext.get(mid)):
         out["source_lang_type_info"] = slti
     if defs := enum_defs_by_module.get(mid):
         out["enum_defs"] = defs
@@ -528,11 +538,12 @@ def convert(doc_v2: Dict[str, Any]) -> Dict[str, Any]:
         files.add_hdl(hdl_path)
 
     enum_id_by_type, enum_defs_by_module = _populate_enum_index(doc_v2, ctx)
+    class_ext = class_ext_by_module(doc_v2)
 
     objects = _struct_objects(doc_v2, ctx, enum_id_by_type, files)
     objects.extend(
         _module_object(mid, mod, ctx, enum_id_by_type, enum_defs_by_module, doc_v2,
-                       src_files, target_files, hdl_path, files)
+                       src_files, target_files, hdl_path, files, class_ext)
         for mid, mod in doc_v2["modules"].items())
 
     hdl_start = files.hdl_start if files.hdl_start is not None else len(files.ordered)

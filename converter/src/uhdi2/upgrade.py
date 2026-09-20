@@ -87,6 +87,7 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from uhdi2.ext import ext, put_ext
 from uhdi_common.context import BaseContext
 
 Binding = Union[str, Dict[str, Any]]
@@ -266,14 +267,14 @@ def _derive_type_layout(
             if distinct:
                 entry: Dict[str, Any] = {"name": distinct[0]}
                 if params := params_for(tid, distinct[0]):
-                    entry["params"] = params
+                    put_ext(entry, "params", params)
                 tdef["source"] = entry
             types_out[tid] = rewrite_refs(tdef)
         else:
             for name in distinct:
                 entry = {"name": name}
                 if params := params_for(tid, name):
-                    entry["params"] = params
+                    put_ext(entry, "params", params)
                 split_tdef = dict(tdef)
                 split_tdef["source"] = entry
                 types_out[split_key(tid, name)] = rewrite_refs(split_tdef)
@@ -339,9 +340,9 @@ def _module_source(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
         out["name"] = name
     slt = chisel.get("sourceLangType") or {}
     if type_name := slt.get("typeName"):
-        out["typeName"] = type_name
+        put_ext(out, "typeName", type_name)
     if params := _render_params(slt.get("params")):
-        out["params"] = params
+        put_ext(out, "params", params)
     if loc := _loc_dict(chisel.get("location")):
         out["loc"] = loc
     return out
@@ -613,16 +614,16 @@ def _build_variables(scope_id: str, scope: Dict[str, Any], ctx: BaseContext,
             m = _TYPE_NAME_PAT.match(type_name)
             own_x = m.group(2) if m else type_name
             if m and (binding := m.group(1)):
-                source["binding"] = binding
+                put_ext(source, "binding", binding)
         resolved_type_ref = resolve_root(type_ref, own_x)
         if own_x is not None:
             own_params = _render_params(slt.get("params"))
-            type_params = (types_out.get(resolved_type_ref) or {}).get("source", {}).get("params")
+            type_params = ext((types_out.get(resolved_type_ref) or {}).get("source")).get("params")
             if own_params is not None and own_params != type_params:
                 # This variable's own params aren't already recoverable
                 # from `types[resolved_type_ref].source.params` (not
                 # observed in the corpus -- see module docstring).
-                source["params"] = own_params
+                put_ext(source, "params", own_params)
         if loc := _loc_dict(chisel.get("location")):
             source["loc"] = loc
 
