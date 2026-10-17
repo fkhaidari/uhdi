@@ -250,3 +250,13 @@ def test_single_class_info_and_source_on_instance() -> None:
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
     top = next(o for o in out["objects"] if o.get("module_name") == "Top")
     assert top["children"][1]["obj_name"] == "Left"  # single unscoped binding
+
+
+def test_enum_values_listed_by_value() -> None:
+    doc = _dedup_doc()
+    doc["types"]["op"] = {"kind": "enum", "width": 2,
+                          "values": {"Add": 0, "And": 2, "Sub": 1}}
+    doc["source"]["Top"]["vars"]["op"] = {"type": "op", "loc": [0, 2, 5]}
+    doc["bindings"][0]["vars"]["op"] = "op"
+    top = next(o for o in to_hgldd_v2(doc)["objects"] if o.get("module_name") == "Top")
+    assert list(top["enum_defs"]["0"].items()) == [("0", "Add"), ("1", "Sub"), ("2", "And")]

@@ -40,6 +40,28 @@ Known differences from the tree-shaped converter (`uhdi2.to_hgldd`), by
 design of the layout: no module-level or instance-level `hdl_loc` (the
 layout stores only the target file), no variables or ports for
 extern modules, no synthetic leaf ports.
+
+Known differences from the pool converter (`uhdi_to_hgldd`) run on the
+layout-1 document of the same design:
+
+* No `<Module>#instance` struct objects and no instance variables
+  (`sub0`, `alu`): the layout drops instance port maps. With them go the
+  `enum_defs` a parent got only through an instance's ports (`Cpu` in
+  rfc-alu); a module lists the enums of its own variables.
+* `clock` / `reset` stay. The pool converter drops a port whose signal
+  name is a leaf of any aggregate in the whole document, so a parent's
+  instance port map (`clock -> clock`) hides them in both modules.
+* A struct's `hgl_loc` is the declaration of the first variable of that
+  type, by source module name and line (`val io = IO(...)`). The pool
+  converter also sees the instance port maps of the parent and can pick
+  the instantiation site instead.
+* Synthetic ports that duplicate an aggregate leaf by name (`io_out`,
+  `io_count`) are gone, even when the field binds to another signal or
+  to none.
+* A layer-bound module (`*_Verification_*`) gets an object like any
+  other target; the pool converter drops the object but keeps the
+  child that points at it.
+* Enum values are listed by value, as the pool converter does.
 """
 from __future__ import annotations
 
@@ -320,7 +342,8 @@ def _enum_index(d: _Doc) -> Tuple[Dict[str, int], Dict[str, Dict[str, Any]]]:
                     if t.get("kind") != "enum":
                         continue
                     eid = ids.setdefault(tref, len(ids))
-                    defs[str(eid)] = {str(v): lab for lab, v in (t.get("values") or {}).items()}
+                    values = sorted((t.get("values") or {}).items(), key=lambda lv: int(lv[1]))
+                    defs[str(eid)] = {str(v): lab for lab, v in values}
         if defs:
             defs_by_target[tname] = defs
     return ids, defs_by_target
