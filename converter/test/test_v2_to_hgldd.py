@@ -1,0 +1,252 @@
+"""Native v2-layout -> HGLDD converter (`uhdi2.v2.to_hgldd`).
+
+Every tree-shaped / pool-shaped UHDI document available is re-laid into the
+v2 layout by the `to_new.py` oracle (non-Dedup designs only) and converted by
+the native converter. The result must equal the existing tree converter's
+output (`uhdi2.to_hgldd`) on the same design, except for these deltas, which
+the v2 layout drops by design:
+
+* synthetic leaf ports (variables with no source whose name is an aggregate
+  leaf) -- pruned from the tree before the reference run;
+* a `loc` nested inside `target.verilog` (upgrade artifact) -- the oracle
+  reads only `target.loc`, so it is dropped from the tree;
+* extern modules keep no variables, instances or source -- pruned likewise;
+* `hdl_loc` of module objects and of child instances -- the layout keeps
+  only the target file, so the reference output is stripped of them.
+"""
+from __future__ import annotations
+
+import copy
+import importlib.util
+import json
+import os
+import pathlib
+from typing import Any, Dict, List
+
+import pytest
+from uhdi2.to_hgldd import convert as to_hgldd_tree
+from uhdi2.upgrade import upgrade
+from uhdi2.v2.to_hgldd import convert as to_hgldd_v2
+from uhdi_to_hgldd import HGLDDBackend
+
+_REPO = pathlib.Path(__file__).resolve().parent.parent
+_SCRATCH = pathlib.Path(os.environ.get(
+    "UHDI_V2_SCRATCH",
+    "/tmp/claude-1000/-home-farid-thesis-practice-circt/"
+    "f530bb9d-2c21-4160-b837-09fe58cedb66/scratchpad"))
+_TO_NEW = _SCRATCH / "to_new.py"
+
+
+def _documents() -> List[pathlib.Path]:
+    paths = sorted((_REPO / "test" / "fixtures" / "uhdi").glob("*.uhdi.json"))
+    paths += sorted((_REPO / "test" / "fixtures" / "uhdi2").glob("*.json"))
+    paths += sorted((_SCRATCH / "bench").glob("*/u.json"))
+    return paths
+
+
+def _id(p: pathlib.Path) -> str:
+    return p.parent.name + "/" + p.name if p.name == "u.json" else p.name
+
+
+def _to_new():
+    if not _TO_NEW.is_file():
+        pytest.skip("to_new.py oracle not available")
+    spec = importlib.util.spec_from_file_location("to_new", _TO_NEW)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _tree(doc: Dict[str, Any]) -> Dict[str, Any]:
+    return doc if "modules" in doc else upgrade(doc)
+
+
+def _run_oracle(tree: Dict[str, Any], keep: bool) -> Dict[str, Any]:
+    mod = _to_new()
+    mod.pending.clear()
+    mod.KEEP = keep
+    return mod.convert(copy.deepcopy(tree))[0]
+
+
+def _listify(v: Any, tref: str, types: Dict[str, Any]) -> Any:
+    """to_new spells vector values as {"0": .., "1": ..}; the layout uses
+    arrays, a hole becomes {"$none": "optimized"}."""
+    t = types[tref]
+    if t["kind"] == "struct" and isinstance(v, dict):
+        return {f["name"]: _listify(v[f["name"]], f["type"], types)
+                for f in t["fields"] if f["name"] in v}
+    if t["kind"] == "vector" and isinstance(v, dict):
+        return [_listify(v[str(i)], t["elem"], types) if str(i) in v
+                else {"$none": "optimized"} for i in range(t["size"])]
+    return v
+
+
+def v2_from_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
+    """Oracle output plus `hdl_locs`, split from the oracle's keep mode."""
+    doc = _run_oracle(tree, False)
+    kept = _run_oracle(tree, True)
+    kb = {(b["source"], b["target"]): b for b in kept["bindings"]}
+    for b in doc["bindings"]:
+        src = kb[(b["source"], b["target"])]["vars"]
+        hdl = {}
+        for name, v in src.items():
+            if isinstance(v, dict) and "$v" in v and "at" in v and name in b["vars"]:
+                hdl[name] = v["at"]
+        if hdl:
+            b["hdl_locs"] = hdl
+        sv = doc["source"][b["source"]]["vars"]
+        b["vars"] = {n: _listify(v, sv[n]["type"], doc["types"])
+                     for n, v in b["vars"].items()}
+    return doc
+
+
+def _leaf_paths(types: Dict[str, Any], tref: str, prefix: str = ""):
+    t = types[tref]
+    if t["kind"] == "struct":
+        for m in t["members"]:
+            yield from _leaf_paths(types, m["typeRef"], prefix + m["name"] + "_")
+    elif t["kind"] == "vector":
+        for i in range(t["size"]):
+            yield from _leaf_paths(types, t["elementRef"], prefix + str(i) + "_")
+    else:
+        yield prefix[:-1]
+
+
+def _expected(tree: Dict[str, Any]) -> Dict[str, Any]:
+    """Tree converter output with the v2 layout's deliberate deltas applied."""
+    t = copy.deepcopy(tree)
+    for m in t["modules"].values():
+        if m.get("kind") == "extmodule":
+            m.pop("variables", None)
+            m.pop("instances", None)
+            m.pop("source", None)
+            continue
+        leaves = set()
+        for vn, v in m.get("variables", {}).items():
+            if t["types"][v["typeRef"]]["kind"] in ("struct", "vector"):
+                leaves |= {vn + "_" + p for p in _leaf_paths(t["types"], v["typeRef"])}
+        for v in m.get("variables", {}).values():
+            # the oracle reads only target.loc, not a loc nested in verilog
+            vl = v.get("target", {}).get("verilog")
+            if isinstance(vl, dict) and "loc" in vl and "loc" not in v["target"]:
+                vl.pop("loc")
+        m["variables"] = {vn: v for vn, v in m.get("variables", {}).items()
+                          if v.get("source") or vn not in leaves}
+    out = to_hgldd_tree(t)
+    for o in out["objects"]:
+        if o["kind"] != "module":
+            continue
+        o.pop("hdl_loc", None)
+        for c in o["children"]:
+            c.pop("hdl_loc", None)
+    return out
+
+
+@pytest.mark.parametrize("path", _documents(), ids=_id)
+def test_matches_tree_converter(path: pathlib.Path) -> None:
+    tree = _tree(json.loads(path.read_text(encoding="utf-8")))
+    v2 = v2_from_tree(tree)
+    assert v2["uhdi"] == "2.0"
+    got = to_hgldd_v2(v2)
+    want = _expected(tree)
+    assert got == want
+
+
+def test_backend_dispatches_on_uhdi_2() -> None:
+    doc = _dedup_doc()
+    assert HGLDDBackend().convert(doc) == to_hgldd_v2(doc)
+
+
+# ---- hand-written documents ----------------------------------------------
+
+
+def _dedup_doc() -> Dict[str, Any]:
+    """Two source modules deduplicated into one Verilog module, one of them
+    also inlined into Top as `h` (and `m.h`)."""
+    u8 = {"kind": "uint", "width": 8}
+    return {
+        "uhdi": "2.0", "producer": "firtool", "profiles": ["x-chisel"],
+        "files": [{"path": "/src/A.scala"}, {"path": "Top.sv", "target": True}],
+        "types": {"u8": u8, "b": {"kind": "uint", "width": 1},
+                  "pair": {"kind": "struct", "fields": [
+                      {"name": "x", "type": "u8"}, {"name": "y", "type": "u8"}]},
+                  "vec2": {"kind": "vector", "elem": "u8", "size": 2}},
+        "source": {
+            "Top": {"loc": [0, 1, 1], "vars": {"io": {"type": "u8", "loc": [0, 2, 3]}}},
+            "Left": {"loc": [0, 10, 1], "x-chisel": {"typeName": "Left"},
+                     "vars": {"a": {"type": "u8", "loc": [0, 11, 3]},
+                              "p": {"type": "pair", "loc": [0, 12, 3]},
+                              "v": {"type": "vec2", "loc": [0, 13, 3]},
+                              "gone": {"type": "u8", "loc": [0, 14, 3]}}},
+            "Right": {"loc": [0, 20, 1], "x-chisel": {"typeName": "Right"},
+                      "vars": {"b": {"type": "u8", "loc": [0, 21, 3]},
+                               "a": {"type": "u8", "loc": [0, 22, 3]}}},
+        },
+        "target": {
+            "Top": {"file": 1, "inst": {
+                "l0": {"module": "Shared", "source": "Left", "at": [0, 3, 5]},
+                "r0": {"module": "Shared", "name": "r", "at": [0, 4, 5]}}},
+            "Shared": {"file": 1},
+            "Ext": {"kind": "extern"},
+        },
+        "bindings": [
+            {"source": "Top", "target": "Top", "vars": {"io": "io"}},
+            {"source": "Left", "target": "Shared",
+             "vars": {"a": "a_0", "p": {"x": "p_x", "y": {"$const": 5}},
+                      "v": ["v_0", {"$none": "optimized"}],
+                      "gone": {"$none": "optimized"}},
+             "hdl_locs": {"a": [1, 7, 3]}},
+            {"source": "Right", "target": "Shared", "vars": {"b": "b_0", "a": "clash"}},
+            {"source": "Left", "target": "Top", "scope": "m.h", "at": [0, 5, 5],
+             "vars": {"a": "m_h_a"}},
+            {"source": "Right", "target": "Top", "scope": "h", "at": [0, 6, 5],
+             "vars": {"b": {"$const": "0b101"}, "a": "io"}},
+        ],
+    }
+
+
+def test_dedup_chimera_and_inline_scopes() -> None:
+    out = to_hgldd_v2(_dedup_doc())
+    mods = {o["module_name"]: o for o in out["objects"] if o["kind"] == "module"}
+
+    shared = mods["Shared"]
+    assert shared["obj_name"] == "Left"
+    assert [p["var_name"] for p in shared["port_vars"]] == ["a", "p", "v_0", "gone", "b"]
+    a = shared["port_vars"][0]
+    assert a["value"] == {"sig_name": "a_0"}  # first binding wins the clash
+    assert a["hgl_loc"] == {"file": 1, "begin_line": 11, "end_line": 11,
+                            "begin_column": 3, "end_column": 3}
+    assert a["hdl_loc"]["file"] == 2 and a["hdl_loc"]["begin_line"] == 7
+    assert shared["port_vars"][1]["value"] == {
+        "opcode": "'{", "operands": [{"sig_name": "p_x"}, {"bit_vector": "00000101"}]}
+    assert shared["port_vars"][2]["value"] == {"opcode": "'{", "operands": [{"sig_name": "v_0"}, {}]}
+    assert "value" not in shared["port_vars"][3]  # $none
+    assert "source_lang_type_info" not in shared  # Left and Right disagree
+
+    top = mods["Top"]
+    assert [c["name"] for c in top["children"][:2]] == ["l0", "r"]
+    assert [c["obj_name"] for c in top["children"][:2]] == ["Left", "Shared"]  # honest chimera
+    inline = {c["name"]: c for c in top["children"][2:]}
+    assert set(inline) == {"m", "h"}
+    assert inline["m"]["port_vars"] == []
+    leaf = inline["m"]["children"][0]
+    assert leaf["name"] == "h" and leaf["hgl_loc"]["begin_line"] == 5
+    assert leaf["port_vars"][0]["value"] == {"sig_name": "m_h_a"}
+    h = inline["h"]
+    assert h["hgl_loc"]["begin_line"] == 6
+    assert h["port_vars"][0]["value"] == {"bit_vector": "101"}
+    assert h["port_vars"][1]["value"] == {"sig_name": "io"}
+
+    assert mods["Ext"]["isExtModule"] == 1
+    assert out["HGLDD"]["file_info"] == ["src/A.scala", "Top.sv"]
+    assert out["HGLDD"]["hdl_file_index"] == 2
+
+
+def test_single_class_info_and_source_on_instance() -> None:
+    doc = _dedup_doc()
+    doc["bindings"] = [b for b in doc["bindings"] if b["source"] != "Right"]
+    out = to_hgldd_v2(doc)
+    shared = next(o for o in out["objects"] if o.get("module_name") == "Shared")
+    assert shared["source_lang_type_info"] == {"type_name": "Left"}
+    top = next(o for o in out["objects"] if o.get("module_name") == "Top")
+    assert top["children"][1]["obj_name"] == "Left"  # single unscoped binding
