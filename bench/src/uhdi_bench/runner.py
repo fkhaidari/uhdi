@@ -139,8 +139,10 @@ def _emit_uhdi(fir: pathlib.Path, workdir: pathlib.Path,
     # absolute Scala paths; setting a prefix would mangle them.
     uhdi = workdir / f"{fir.stem}.uhdi.json"
     sv = workdir / f"{fir.stem}.sv"
+    # UHDI_FORMAT=2 selects the v2 layout; the default stays v1.
+    fmt = ["--uhdi-format=2"] if os.environ.get("UHDI_FORMAT") == "2" else []
     proc = subprocess.run(
-        [str(firtool), "-g", "--emit-uhdi",
+        [str(firtool), "-g", "--emit-uhdi", *fmt,
          f"--uhdi-output-file={uhdi}",
          "-o", str(sv), str(fir)],
         capture_output=True, text=True, timeout=120)
