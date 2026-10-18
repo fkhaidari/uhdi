@@ -34,9 +34,10 @@ kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (`\"\"`); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
 
 [[fixtures.Counter.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
-kind = "missing"
-reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
+path = "/objects/Counter/q/value"
+kind = "value"
+reason = "same value, another Verilog name: output port `q` (ours) vs the register `r` it is connected to (native)"
+
 
 # hgdb_firrtl: legacy Scala-FIRRTL 1.x reference, runs on the
 # downgraded FIR.  Native operates pre-DCE, so the output port `q`
@@ -105,9 +106,16 @@ kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (\"\")); we synthesize `GCD.sv` so tywaves can find the wave via the HGLDD record"
 
 [[fixtures.GCD.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
-kind = "missing"
-reason = "uhdi_to_hgldd does not project Bundle-typed io ports into separate struct objects; native firtool emits one object entry per Bundle type (e.g. GCD_io).  Tracked as future converter enhancement"
+path_regex = "/objects/[^/]+/[^/]+/hgl_loc"
+kind = "value"
+reason = "a struct field's hgl_loc: ours is the line that declares the field, native the line that drives it"
+
+[[fixtures.GCD.expected.tywaves]]
+path = "/objects/GCD/io/value"
+kind = "value"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): a field computed by an expression has no value"
+
 
 # hgdb_circt: same generator + table + variables divergences as Counter,
 # plus GCD has no post-DCE port folding so the variables delta has
@@ -149,7 +157,7 @@ reason = "[CONV G6+G4] assignment.value uses UHDI dotted names (e.g. io.x) vs hg
 [fixtures.Fifo]
 scala = "Fifo.scala"
 
-# tywaves: same file_info/1 and Bundle struct objects divergences as GCD
+# tywaves: same file_info/1 divergence as GCD
 
 [[fixtures.Fifo.expected.tywaves]]
 path = "/HGLDD/file_info/1"
@@ -157,21 +165,42 @@ kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (\"\"); we synthesize `Fifo.sv` so tywaves can find the wave via the HGLDD record"
 
 [[fixtures.Fifo.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
+path_regex = "/objects/[^/]+/[^/]+/hgl_loc"
+kind = "value"
+reason = "a struct field's hgl_loc: ours is the line that declares the field, native the line that drives it"
+
+[[fixtures.Fifo.expected.tywaves]]
+path_regex = "/objects/Fifo_io_deq(/.*)?"
 kind = "missing"
-reason = "uhdi_to_hgldd does not project Bundle-typed io ports into separate struct objects; native firtool emits one object entry per Bundle type (e.g. Fifo_io).  Tracked as future converter enhancement"
+reason = "structurally equal Bundle types share one struct object (`Fifo_io_enq`); native names one per field"
+
+[[fixtures.Fifo.expected.tywaves]]
+path = "/objects/Fifo_io/deq/type_name"
+kind = "value"
+reason = "same as above: `deq` points at the shared `Fifo_io_enq` struct"
+
+[[fixtures.Fifo.expected.tywaves]]
+path = "/objects/Fifo/io/value"
+kind = "value"
+reason = "same value, another Verilog name: ours binds the port or the named Chisel signal, native a CIRCT temporary that aliases it"
+
+[[fixtures.Fifo.expected.tywaves]]
+path = "/objects/Fifo/empty/value"
+kind = "value"
+format = "2"
+reason = "equivalent expression: ours `!io_deq_valid`, native `!(cnt != 0)`; `io_deq_valid` is `cnt != 0`"
+
+[[fixtures.Fifo.expected.tywaves]]
+path_regex = "/objects/Fifo/(empty|full)/value"
+kind = "missing"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): a variable computed by an expression has no value"
+
 
 [fixtures.TywavesTorture]
 scala = "TywavesTorture.scala"
 
-# tywaves: ours=uhdi pipeline (6 objects, enum_defs, 29 SLT, ctor-params)
-# vs native=rameloni firtool (10 objects, enum_defs, no SLT).
-# Differences:
-#   1. file_info: ours has leading '/' in path, native does not.
-#   2. objects: ours and native overlap in 6 modules but differ in port_vars
-#      counts, line numbers, and source_lang_type_info presence (UHDI richer).
-#      Native has 4 extra Vec[Bundle] element objects (bvec_0/1/2/3) -- T8.
-# All 12 deltas are expected structural divergences between the two pipelines.
+# tywaves: objects compare field by field (uhdi_bench.hgldd_facts).
 
 [[fixtures.TywavesTorture.expected.tywaves]]
 path = "/HGLDD/file_info/1"
@@ -179,9 +208,45 @@ kind = "missing"
 reason = "issue #20: native rameloni firtool leaves the HDL slot empty (\"\"); we synthesize TywavesTorture.sv"
 
 [[fixtures.TywavesTorture.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
+path_regex = "/objects/TywavesTorture/(eq|tmp|tmp_1|io)/value"
+kind = "value"
+reason = "same value, another Verilog name: ours binds the port or the named Chisel signal, native a CIRCT temporary that aliases it"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path_regex = "/objects/TywavesTorture/packed_0/.*"
 kind = "missing"
-reason = "objects differ: UHDI side has 6 objects with source_lang_type_info/ctor-params; rameloni native has 10 objects (4 extra Vec[Bundle] element structs for io_bvec -- T8) with different port_vars counts and line numbers. Counter-based diff sees all as missing."
+reason = "the variable keeps its Chisel name `packed`; native takes the SV-keyword rename `packed_0`"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path_regex = "/objects/(Alu|TywavesTorture)/(clock|reset)/.*"
+kind = "missing"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): implicit clock and reset are not listed"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path_regex = "/objects/Alu_io(/[^/]+)?/hgl_loc"
+kind = "value"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): the struct object takes the location of the instance, not of the bundle"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path_regex = "/objects/TywavesTorture/(filled|shifted)/value"
+kind = "missing"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): a variable computed by an expression has no value"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path_regex = "/objects/TywavesTorture_io/(bvec|grid)/source_lang_type_info"
+kind = "value"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): a Vec has no gen/length params"
+
+[[fixtures.TywavesTorture.expected.tywaves]]
+path_regex = "/objects/TywavesTorture_io_bvec(_[0-9]+)?/[^/]+/source_lang_type_info"
+kind = "missing"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): fields of a Vec[Bundle] element object have no source_lang_type_info"
+
 
 [fixtures.TrafficLight]
 scala = "TrafficLight.scala"
@@ -191,10 +256,6 @@ path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (\"\"); we synthesize `TrafficLight.sv` so tywaves can find the wave via the HGLDD record"
 
-[[fixtures.TrafficLight.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
-kind = "missing"
-reason = "objects differ: ours adds source_lang_type_info on all port_vars (native omits it); also T10: constant operand in enum comparison emits integer_num=0 (ours) vs bit_vector=\"00\" (native, knows enum width). Both cause JSON-canonical mismatch on the whole object."
 
 # ---- ChiselTraceTorture ------------------------------------------------------
 #
@@ -216,10 +277,6 @@ path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (''); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
 
-[[fixtures.ChiselTraceTorture.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
-kind = "missing"
-reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
 
 [[fixtures.ChiselTraceTorture.expected.pdg]]
 path_regex = "/cfg/[0-9]+"
@@ -292,10 +349,6 @@ path = "/HGLDD/file_info/1"
 kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (''); we synthesize `<top>.sv` so tywaves can find the wave via the HGLDD record"
 
-[[fixtures.HgdbTorture.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
-kind = "missing"
-reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
 
 [[fixtures.HgdbTorture.expected.hgdb_firrtl]]
 path_regex = "/breakpoint/[0-9]+"
@@ -334,7 +387,7 @@ reason = "[CONV G6+G7] two converter gaps: (G6) assignment.value uses UHDI dotte
 #   G6 [CONV] assignment.value dotted vs flat naming convention
 # tywaves gaps:
 #   issue #20: native firtool leaves HDL slot empty; we synthesize <top>.sv
-#   objects: UHDI emits source_lang_type_info; native does not
+#   objects: compared field by field; see the entries below
 
 [fixtures.HgdbTortureLite]
 scala = "HgdbTortureLite.scala"
@@ -345,9 +398,32 @@ kind = "missing"
 reason = "issue #20: native firtool leaves the HDL slot empty (''); we synthesize `HgdbTortureLite.sv` so tywaves can find the wave via the HGLDD record"
 
 [[fixtures.HgdbTortureLite.expected.tywaves]]
-path_regex = "/objects/[0-9]+"
+path_regex = "/objects/[^/]+/[^/]+/hgl_loc"
+kind = "value"
+reason = "a struct field's hgl_loc: ours is the line that declares the field, native the line that drives it"
+
+[[fixtures.HgdbTortureLite.expected.tywaves]]
+path = "/objects/HgdbTortureLite/io/value"
+kind = "value"
+reason = "same value, another Verilog name: ours binds the port or the named Chisel signal, native a CIRCT temporary that aliases it"
+
+[[fixtures.HgdbTortureLite.expected.tywaves]]
+path_regex = "/objects/SubLite/reg_0/.*"
 kind = "missing"
-reason = "objects differ: UHDI side emits source_lang_type_info on module and port_vars; rameloni native firtool does not. Same structural content, UHDI is richer in type annotations"
+reason = "the variable keeps its Chisel name `reg`; native takes the SV-keyword rename `reg_0`"
+
+[[fixtures.HgdbTortureLite.expected.tywaves]]
+path_regex = "/objects/(HgdbTortureLite|SubLite)/(clock|reset)/.*"
+kind = "missing"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): implicit clock and reset are not listed"
+
+[[fixtures.HgdbTortureLite.expected.tywaves]]
+path = "/objects/SubLite_io/hgl_loc"
+kind = "value"
+format = "1"
+reason = "layout 1 (uhdi_to_hgldd): the struct object takes the location of the instance, not of the bundle"
+
 
 [[fixtures.HgdbTortureLite.expected.hgdb_circt]]
 path = "/generator"

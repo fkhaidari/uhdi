@@ -1,11 +1,13 @@
 """End-to-end pipeline tests with manifest-driven expected deltas."""
 from __future__ import annotations
 
+import os
 import pathlib
 
 import pytest
 from uhdi_bench.compile import CompileError, compile_for
 from uhdi_bench.compile import get as get_pipeline
+from uhdi_bench.hgldd_facts import object_deltas
 from uhdi_bench.manifest import CellExpectations, load_manifest
 from uhdi_bench.runner import run_target
 from uhdi_common.diff import diff_dicts, format_deltas
@@ -111,8 +113,15 @@ def test_pipeline(scala: pathlib.Path, target: str, toolchain) -> None:
     except RuntimeError as e:
         pytest.skip(f"{target} target not runnable: {e}")
 
-    deltas = diff_dicts(ours, native, mode="superset")
-    expectations = _expectations_for(scala.stem, target)
+    if target == "tywaves":
+        deltas = diff_dicts(
+            {k: v for k, v in ours.items() if k not in ("objects", "enum_defs")},
+            {k: v for k, v in native.items() if k not in ("objects", "enum_defs")},
+            mode="superset") + object_deltas(ours, native)
+    else:
+        deltas = diff_dicts(ours, native, mode="superset")
+    expectations = _expectations_for(scala.stem, target).for_format(
+        os.environ.get("UHDI_FORMAT", "1"))
     matched, surprises, unused = expectations.classify(deltas)
 
     if surprises:

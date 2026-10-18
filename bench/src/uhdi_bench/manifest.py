@@ -17,11 +17,13 @@ from uhdi_common.diff import Delta
 @dataclasses.dataclass(frozen=True)
 class Expectation:
     """One expected delta. `path` (exact) and/or `path_regex` (re.fullmatch)
-    must be set; `kind` optionally restricts to one delta kind."""
+    must be set; `kind` optionally restricts to one delta kind, `format`
+    to one UHDI layout ("1" or "2")."""
     reason: str
     path: Optional[str] = None
     path_regex: Optional[str] = None
     kind: Optional[str] = None
+    format: Optional[str] = None
 
     def matches(self, delta: Delta) -> bool:
         d_path, d_kind, _, _ = delta
@@ -41,6 +43,10 @@ class CellExpectations:
     fixture: str
     target: str
     items: List[Expectation] = dataclasses.field(default_factory=list)
+
+    def for_format(self, fmt: str) -> "CellExpectations":
+        return CellExpectations(self.fixture, self.target, [
+            e for e in self.items if e.format in (None, fmt)])
 
     def classify(self, deltas: List[Delta]
                  ) -> Tuple[List[Tuple[Delta, Expectation]], List[Delta], List[Expectation]]:
@@ -103,4 +109,5 @@ def _parse_expectation(raw: Dict[str, Any], fname: str, target: str
         path=raw.get("path"),
         path_regex=raw.get("path_regex"),
         kind=raw.get("kind"),
+        format=raw.get("format"),
     )
