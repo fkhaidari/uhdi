@@ -116,6 +116,12 @@ kind = "value"
 format = "1"
 reason = "layout 1 (uhdi_to_hgldd): a field computed by an expression has no value"
 
+[[fixtures.GCD.expected.tywaves]]
+path = "/objects/GCD/io/value"
+kind = "value"
+format = "2"
+reason = "`io.rdy`: ours binds the output port it drives, native the expression that computes it"
+
 
 # hgdb_circt: same generator + table + variables divergences as Counter,
 # plus GCD has no post-DCE port folding so the variables delta has
