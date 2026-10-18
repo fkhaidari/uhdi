@@ -87,7 +87,7 @@ Each pipeline assumes the matching Chisel checkout has been
 | Pipeline | Chisel artifact | Origin |
 |----------|----------------|--------|
 | `tywaves` | `org.chipsalliance::chisel:6.4.3-tywaves-SNAPSHOT` | `practice/rameloni-chisel` |
-| `uhdi` | (same SNAPSHOT until Farid mints a separate version) | `practice/chisel` (debug intrinsics) |
+| `uhdi` | `org.chipsalliance::chisel:7.1.1+285-774bf0a9-SNAPSHOT` | `practice/chisel` (chisel#5420, inline enum variants) |
 | `hgdb` | `org.chipsalliance::chisel:6.4.0` | Maven Central / coursier cache |
 
 Override either with env vars:

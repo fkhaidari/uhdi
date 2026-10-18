@@ -37,16 +37,16 @@ _TYWAVES = Pipeline(
     repositories=("ivy2Local",),
 )
 
-# Official Chisel: PR #5276 (circt_debug_* intrinsics) shipped in 7.13.0,
-# so the uhdi pipeline no longer needs the publishLocal'd fork.  The
-# emitted intrinsics and the resulting UHDI JSON are byte-identical to the
-# old 7.1.1+210-c6faff5e fork across the bench fixtures.  Override via
+# The publishLocal'd chisel#5420 fork: it puts enum variants inline on
+# circt_debug_var/circt_debug_subfield. Released 7.13.0 still sends
+# circt_debug_enumdef, which firtool no longer accepts. Override via
 # UHDI_BENCH_UHDI_CHISEL.
 _UHDI = Pipeline(
     name="uhdi",
     scala_version="2.13.18",
-    chisel_dep="org.chipsalliance::chisel:7.13.0",
-    plugin_dep="org.chipsalliance:::chisel-plugin:7.13.0",
+    chisel_dep="org.chipsalliance::chisel:7.1.1+285-774bf0a9-SNAPSHOT",
+    plugin_dep="org.chipsalliance:::chisel-plugin:7.1.1+285-774bf0a9-SNAPSHOT",
+    repositories=("ivy2Local",),
     fixture_flags=("--with-experimental-debug-intrinsics",),
 )
 
