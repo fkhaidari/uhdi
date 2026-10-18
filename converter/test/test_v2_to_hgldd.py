@@ -81,6 +81,32 @@ def _listify(v: Any, tref: str, types: Dict[str, Any]) -> Any:
     return v
 
 
+def _relayout(doc: Dict[str, Any]) -> None:
+    """The oracle writes instances as `target[T].inst` and inline sites as
+    `binding.at`; turn both into instance variables of the parent."""
+    types, source, bindings = doc["types"], doc["source"], doc["bindings"]
+
+    def add(target: str, scope: str, name: str, module: str,
+            loc: Any, value: Dict[str, Any]) -> None:
+        tid = "module_" + module
+        types.setdefault(tid, {"kind": "module", "module": module})
+        var = {"type": tid, **({"loc": loc} if loc else {})}
+        for b in bindings:
+            if b["target"] == target and b.get("scope", "") == scope:
+                source[b["source"]]["vars"][name] = dict(var)
+                b["vars"][name] = value
+
+    for tname, tmod in doc["target"].items():
+        for vname, inst in (tmod.pop("inst", None) or {}).items():
+            add(tname, "", inst.get("name", vname), inst["source"],
+                inst.get("at"), {"$inst": vname, "module": inst["module"]})
+    for b in bindings:
+        if scope := b.get("scope"):
+            parent, _, name = scope.rpartition(".")
+            add(b["target"], parent, name, b["source"], b.pop("at", None),
+                {"$inline": scope})
+
+
 def v2_from_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
     """Oracle output plus `hdl_locs`, split from the oracle's keep mode."""
     doc = _run_oracle(tree, False)
@@ -97,6 +123,7 @@ def v2_from_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
         sv = doc["source"][b["source"]]["vars"]
         b["vars"] = {n: _listify(v, sv[n]["type"], doc["types"])
                      for n, v in b["vars"].items()}
+    _relayout(doc)
     return doc
 
 
@@ -162,7 +189,7 @@ def test_backend_dispatches_on_uhdi_2() -> None:
 
 def _dedup_doc() -> Dict[str, Any]:
     """Two source modules deduplicated into one Verilog module, one of them
-    also inlined into Top as `h` (and `m.h`)."""
+    also inlined into Top as `h` (and, through `Mid`, `m.h`)."""
     u8 = {"kind": "uint", "width": 8}
     return {
         "uhdi": "2.0", "producer": "firtool", "profiles": ["x-chisel"],
@@ -170,9 +197,19 @@ def _dedup_doc() -> Dict[str, Any]:
         "types": {"u8": u8, "b": {"kind": "uint", "width": 1},
                   "pair": {"kind": "struct", "fields": [
                       {"name": "x", "type": "u8"}, {"name": "y", "type": "u8"}]},
-                  "vec2": {"kind": "vector", "elem": "u8", "size": 2}},
+                  "vec2": {"kind": "vector", "elem": "u8", "size": 2},
+                  "module_Left": {"kind": "module", "module": "Left"},
+                  "module_Right": {"kind": "module", "module": "Right"},
+                  "module_Mid": {"kind": "module", "module": "Mid"}},
         "source": {
-            "Top": {"loc": [0, 1, 1], "vars": {"io": {"type": "u8", "loc": [0, 2, 3]}}},
+            "Top": {"loc": [0, 1, 1], "vars": {
+                "io": {"type": "u8", "loc": [0, 2, 3]},
+                "l0": {"type": "module_Left", "loc": [0, 3, 5]},
+                "r": {"type": "module_Right", "loc": [0, 4, 5]},
+                "m": {"type": "module_Mid", "loc": [0, 7, 5]},
+                "h": {"type": "module_Right", "loc": [0, 6, 5]}}},
+            "Mid": {"loc": [0, 30, 1], "vars": {
+                "h": {"type": "module_Left", "loc": [0, 5, 5]}}},
             "Left": {"loc": [0, 10, 1], "x-chisel": {"typeName": "Left"},
                      "vars": {"a": {"type": "u8", "loc": [0, 11, 3]},
                               "p": {"type": "pair", "loc": [0, 12, 3]},
@@ -183,24 +220,27 @@ def _dedup_doc() -> Dict[str, Any]:
                                "a": {"type": "u8", "loc": [0, 22, 3]}}},
         },
         "target": {
-            "Top": {"file": 1, "inst": {
-                "l0": {"module": "Shared", "source": "Left", "at": [0, 3, 5]},
-                "r0": {"module": "Shared", "source": "Right", "name": "r",
-                       "at": [0, 4, 5]}}},
+            "Top": {"file": 1},
             "Shared": {"file": 1},
             "Ext": {"kind": "extern"},
         },
         "bindings": [
-            {"source": "Top", "target": "Top", "vars": {"io": "io"}},
+            {"source": "Top", "target": "Top", "vars": {
+                "io": "io",
+                "l0": {"$inst": "l0", "module": "Shared"},
+                "r": {"$inst": "r0", "module": "Shared"},
+                "m": {"$inline": "m"}, "h": {"$inline": "h"}}},
             {"source": "Left", "target": "Shared",
              "vars": {"a": "a_0", "p": {"x": "p_x", "y": {"$const": 5}},
                       "v": ["v_0", {"$none": "optimized"}],
                       "gone": {"$none": "optimized"}},
              "hdl_locs": {"a": [1, 7, 3]}},
             {"source": "Right", "target": "Shared", "vars": {"b": "b_0", "a": "clash"}},
-            {"source": "Left", "target": "Top", "scope": "m.h", "at": [0, 5, 5],
+            {"source": "Mid", "target": "Top", "scope": "m",
+             "vars": {"h": {"$inline": "m.h"}}},
+            {"source": "Left", "target": "Top", "scope": "m.h",
              "vars": {"a": "m_h_a"}},
-            {"source": "Right", "target": "Top", "scope": "h", "at": [0, 6, 5],
+            {"source": "Right", "target": "Top", "scope": "h",
              "vars": {"b": {"$const": "0b101"}, "a": "io"}},
         ],
     }
@@ -251,15 +291,15 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert out["HGLDD"]["hdl_file_index"] == 2
 
 
-def test_single_class_info_and_source_on_instance() -> None:
+def test_single_class_info_and_type_on_instance() -> None:
     doc = _dedup_doc()
     doc["bindings"] = [b for b in doc["bindings"] if b["source"] != "Right"]
-    del doc["target"]["Top"]["inst"]["r0"]["source"]
+    doc["source"]["Top"]["vars"]["r"]["type"] = "module_Left"
     out = to_hgldd_v2(doc)
     shared = next(o for o in out["objects"] if o.get("module_name") == "Shared")
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
     top = next(o for o in out["objects"] if o.get("module_name") == "Top")
-    assert top["children"][1]["obj_name"] == "Left"  # single unscoped binding
+    assert top["children"][1]["obj_name"] == "Left"  # the instance's type
 
 
 def test_enum_values_listed_by_value() -> None:

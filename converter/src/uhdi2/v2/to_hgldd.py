@@ -4,7 +4,7 @@
 The v2 layout keeps three things apart:
 
 * `source`   -- pre-Dedup FIRRTL modules and their variables;
-* `target`   -- Verilog modules and their instances;
+* `target`   -- Verilog modules (file, extern kind);
 * `bindings` -- which source lands in which target, and what Verilog
   signal carries each variable.
 
@@ -17,20 +17,22 @@ see below):
   order of the source variables. `{"$none": ...}` or a missing entry
   gives a variable without `value`. A `$op` (expr profile) becomes the
   HGLDD expression with that opcode.
-* Children come from `target[T].inst`. `obj_name` is the instance's
-  `source`; when absent, the single unscoped binding of the instantiated
-  target, else the target's own name.
+* An instance is a source variable whose type has `kind: "module"`. It
+  is not a port variable. A `{"$inst": ..., "module": T}` value makes a
+  child `{name (= the variable's name), obj_name (= the type's source module), module_name (=
+  T), hgl_loc (= the variable's loc)}`.
 * A *scoped* binding (`scope` = dotted inline path inside the target) is
-  an inlined module. It becomes a nested child `{name, hgl_loc (= at),
+  an inlined module. It becomes a nested child `{name, hgl_loc,
   port_vars, children}` named by each path component, as the pool
-  converter does for `dbg.scope` inline scopes.
+  converter does for `dbg.scope` inline scopes. `hgl_loc` is the loc of
+  the instance variable whose value is `{"$inline": scope}`.
 * Class info (`x-chisel.typeName/params` on the source module) becomes
   the module's `source_lang_type_info`.
 
 Dedup: several unscoped bindings can point at one target. Each becomes
 its own object, `obj_name` = the source and `module_name` = the target,
-with only that source's variables. An instance's `source` picks which
-object its child entry names.
+with only that source's variables. An instance's type names the source,
+so it picks which object its child entry names.
 
 Locations are `[file, line, col]` or `[file, line, col, endLine,
 endCol]` into `files`; a column of 0 means "no column". Source paths lose
@@ -328,6 +330,19 @@ class _Doc:
             (self.scoped if b.get("scope") else self.unscoped).setdefault(
                 b["target"], []).append(b)
 
+    def is_instance(self, var: Dict[str, Any]) -> bool:
+        return (self.types.get(var.get("type", "")) or {}).get("kind") == "module"
+
+    def instances(self, bindings: List[Dict[str, Any]]
+                  ) -> Iterator[Tuple[str, Dict[str, Any], Dict[str, Any]]]:
+        """(name, source var, binding value) of every instance in `bindings`."""
+        for b in bindings:
+            svars = (self.source.get(b["source"]) or {}).get("vars") or {}
+            for vname, value in (b.get("vars") or {}).items():
+                var = svars.get(vname)
+                if var is not None and self.is_instance(var) and isinstance(value, dict):
+                    yield vname, var, value
+
     def src_loc(self, loc: Optional[List[int]]) -> Optional[Dict[str, Any]]:
         return _hgldd_loc(loc, self.files, False, None, self.info)
 
@@ -335,9 +350,6 @@ class _Doc:
                 fallback: Optional[str]) -> Optional[Dict[str, Any]]:
         return _hgldd_loc(loc, self.files, True, fallback, self.info)
 
-    def single_source(self, target_name: str) -> Optional[str]:
-        bs = self.unscoped.get(target_name, [])
-        return bs[0]["source"] if len(bs) == 1 else None
 
 
 # ---- enums ---------------------------------------------------------------
@@ -501,8 +513,12 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
                 used.add(cand)
                 return cand
 
+    scoped = d.scoped.get(tname, [])
+    inline_locs = {value["$inline"]: var.get("loc")
+                   for _, var, value in d.instances(d.unscoped.get(tname, []) + scoped)
+                   if "$inline" in value}
     roots: List[Dict[str, Any]] = []
-    for b in d.scoped.get(tname, []):
+    for b in scoped:
         level = roots
         node: Dict[str, Any] = {}
         for comp in b["scope"].split("."):
@@ -511,9 +527,11 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
                 node = {"name": comp, "port_vars": [], "children": []}
                 level.append(node)
             level = node["children"]
-        if loc := d.src_loc(b.get("at")):
+        if loc := d.src_loc(inline_locs.get(b["scope"])):
             node["hgl_loc"] = loc
         for vname, var in (d.source.get(b["source"], {}).get("vars") or {}).items():
+            if d.is_instance(var):
+                continue
             pv = _port_var(d, vname, var, b, enum_ids, hdl_path)
             pv["var_name"] = uniquify(pv["var_name"])
             node["port_vars"].append(pv)
@@ -548,21 +566,24 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
     seen: set = set()
     for b in bindings:
         for vname, var in (d.source.get(b["source"], {}).get("vars") or {}).items():
-            if vname in seen:
+            if vname in seen or d.is_instance(var):
                 continue
             seen.add(vname)
             port_vars.append(_port_var(d, vname, var, b, enum_ids, hdl_path))
     out["port_vars"] = port_vars
 
     children = []
-    for iname, inst in (tmod.get("inst") or {}).items():
-        mod = inst["module"]
+    seen = set()
+    for iname, var, value in d.instances(bindings):
+        if "$inst" not in value or iname in seen:
+            continue
+        seen.add(iname)
         child: Dict[str, Any] = {
-            "name": inst.get("name", iname),
-            "obj_name": inst.get("source") or d.single_source(mod) or mod,
-            "module_name": mod,
+            "name": iname,
+            "obj_name": d.types[var["type"]]["module"],
+            "module_name": value["module"],
         }
-        if loc := d.src_loc(inst.get("at")):
+        if loc := d.src_loc(var.get("loc")):
             child["hgl_loc"] = loc
         children.append(child)
     used = {pv["var_name"] for pv in port_vars}
@@ -575,8 +596,9 @@ def _hdl_path(d: _Doc) -> Optional[str]:
     for f in d.files:
         if f.get("target") and f.get("path"):
             return str(f["path"])
-    referenced = {i["module"] for m in d.target.values()
-                  for i in (m.get("inst") or {}).values()}
+    referenced = {value["module"]
+                  for bs in d.unscoped.values()
+                  for _, _, value in d.instances(bs) if "$inst" in value}
     roots = [t for t in d.target if t not in referenced]
     return roots[0] + ".sv" if roots else None
 
@@ -591,7 +613,7 @@ def convert(doc: Dict[str, Any]) -> Dict[str, Any]:
     objects = _struct_objects(d, enum_ids)
     for t in d.target:
         # Dedup merged several sources into this target: one object per
-        # source, each with its own variables, so an instance's `source`
+        # source, each with its own variables, so an instance's type
         # names the object it shows.
         bindings = d.unscoped.get(t, [])
         groups = [[b] for b in bindings] if len(bindings) > 1 else [bindings]

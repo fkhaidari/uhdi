@@ -208,6 +208,12 @@ kind = "missing"
 format = "2"
 reason = "the memory module is made by lowering, not declared in Chisel: layout 2 keeps it in `target` only, so it gets no object; native lists its ports as untyped `logic`"
 
+[[fixtures.Fifo.expected.tywaves]]
+path_regex = "/objects/Fifo/child:mem_ext(/.*)?"
+kind = "missing"
+format = "2"
+reason = "layout 2 lists instances as source variables only; the memory instance has no source module, so Fifo gets no `mem_ext` child"
+
 
 [fixtures.TywavesTorture]
 scala = "TywavesTorture.scala"
