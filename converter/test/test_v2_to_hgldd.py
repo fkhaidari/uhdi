@@ -185,7 +185,8 @@ def _dedup_doc() -> Dict[str, Any]:
         "target": {
             "Top": {"file": 1, "inst": {
                 "l0": {"module": "Shared", "source": "Left", "at": [0, 3, 5]},
-                "r0": {"module": "Shared", "name": "r", "at": [0, 4, 5]}}},
+                "r0": {"module": "Shared", "source": "Right", "name": "r",
+                       "at": [0, 4, 5]}}},
             "Shared": {"file": 1},
             "Ext": {"kind": "extern"},
         },
@@ -205,15 +206,22 @@ def _dedup_doc() -> Dict[str, Any]:
     }
 
 
-def test_dedup_chimera_and_inline_scopes() -> None:
+def test_dedup_objects_and_inline_scopes() -> None:
     out = to_hgldd_v2(_dedup_doc())
+    objs = {o["obj_name"]: o for o in out["objects"] if o["kind"] == "module"}
     mods = {o["module_name"]: o for o in out["objects"] if o["kind"] == "module"}
 
-    shared = mods["Shared"]
-    assert shared["obj_name"] == "Left"
-    assert [p["var_name"] for p in shared["port_vars"]] == ["a", "p", "v_0", "gone", "b"]
+    # One object per source merged into Shared, each with its own variables.
+    shared = objs["Left"]
+    assert shared["module_name"] == "Shared"
+    assert [p["var_name"] for p in shared["port_vars"]] == ["a", "p", "v_0", "gone"]
+    right = objs["Right"]
+    assert right["module_name"] == "Shared"
+    assert [(p["var_name"], p["value"]) for p in right["port_vars"]] == [
+        ("b", {"sig_name": "b_0"}), ("a", {"sig_name": "clash"})]
+    assert right["source_lang_type_info"] == {"type_name": "Right"}
     a = shared["port_vars"][0]
-    assert a["value"] == {"sig_name": "a_0"}  # first binding wins the clash
+    assert a["value"] == {"sig_name": "a_0"}
     assert a["hgl_loc"] == {"file": 1, "begin_line": 11, "end_line": 11,
                             "begin_column": 3, "end_column": 3}
     assert a["hdl_loc"]["file"] == 2 and a["hdl_loc"]["begin_line"] == 7
@@ -221,11 +229,12 @@ def test_dedup_chimera_and_inline_scopes() -> None:
         "opcode": "'{", "operands": [{"sig_name": "p_x"}, {"bit_vector": "00000101"}]}
     assert shared["port_vars"][2]["value"] == {"opcode": "'{", "operands": [{"sig_name": "v_0"}, {}]}
     assert "value" not in shared["port_vars"][3]  # $none
-    assert "source_lang_type_info" not in shared  # Left and Right disagree
+    assert shared["source_lang_type_info"] == {"type_name": "Left"}
 
     top = mods["Top"]
     assert [c["name"] for c in top["children"][:2]] == ["l0", "r"]
-    assert [c["obj_name"] for c in top["children"][:2]] == ["Left", "Shared"]  # honest chimera
+    assert [c["obj_name"] for c in top["children"][:2]] == ["Left", "Right"]
+    assert [c["module_name"] for c in top["children"][:2]] == ["Shared", "Shared"]
     inline = {c["name"]: c for c in top["children"][2:]}
     assert set(inline) == {"m", "h"}
     assert inline["m"]["port_vars"] == []
@@ -245,6 +254,7 @@ def test_dedup_chimera_and_inline_scopes() -> None:
 def test_single_class_info_and_source_on_instance() -> None:
     doc = _dedup_doc()
     doc["bindings"] = [b for b in doc["bindings"] if b["source"] != "Right"]
+    del doc["target"]["Top"]["inst"]["r0"]["source"]
     out = to_hgldd_v2(doc)
     shared = next(o for o in out["objects"] if o.get("module_name") == "Shared")
     assert shared["source_lang_type_info"] == {"type_name": "Left"}

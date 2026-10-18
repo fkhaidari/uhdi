@@ -26,11 +26,10 @@ object:
 * Class info (`x-chisel.typeName/params` on the source module) becomes
   the module's `source_lang_type_info`.
 
-Dedup: several unscoped bindings can point at one target. The object is
-the union of their variables (a chimera, on purpose): on a name clash the
-first binding wins; `obj_name`, `hgl_loc` and the first-leaf naming come
-from the first binding; `source_lang_type_info` is kept only when all
-sources that have one agree.
+Dedup: several unscoped bindings can point at one target. Each becomes
+its own object, `obj_name` = the source and `module_name` = the target,
+with only that source's variables. An instance's `source` picks which
+object its child entry names.
 
 Locations are `[file, line, col]` or `[file, line, col, endLine,
 endCol]` into `files`; a column of 0 means "no column". Source paths lose
@@ -502,11 +501,11 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
     return roots
 
 
-def _module_object(d: _Doc, tname: str, enum_ids: Dict[str, int],
+def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
+                   enum_ids: Dict[str, int],
                    enum_defs: Dict[str, Dict[str, Any]],
                    hdl_path: Optional[str]) -> Dict[str, Any]:
     tmod = d.target[tname]
-    bindings = d.unscoped.get(tname, [])
     first_src = bindings[0]["source"] if bindings else tname
     out: Dict[str, Any] = {"kind": "module", "obj_name": first_src, "module_name": tname}
     fi = tmod.get("file")
@@ -571,7 +570,14 @@ def convert(doc: Dict[str, Any]) -> Dict[str, Any]:
     enum_ids, enum_defs = _enum_index(d)
 
     objects = _struct_objects(d, enum_ids)
-    objects.extend(_module_object(d, t, enum_ids, enum_defs, hdl_path) for t in d.target)
+    for t in d.target:
+        # Dedup merged several sources into this target: one object per
+        # source, each with its own variables, so an instance's `source`
+        # names the object it shows.
+        bindings = d.unscoped.get(t, [])
+        groups = [[b] for b in bindings] if len(bindings) > 1 else [bindings]
+        objects.extend(_module_object(d, t, g, enum_ids, enum_defs, hdl_path)
+                       for g in groups)
 
     info = d.info
     hdl_start = info.hdl_start if info.hdl_start is not None else len(info.ordered)
