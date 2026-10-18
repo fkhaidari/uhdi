@@ -270,3 +270,38 @@ def test_enum_values_listed_by_value() -> None:
     doc["bindings"][0]["vars"]["op"] = "op"
     top = next(o for o in to_hgldd_v2(doc)["objects"] if o.get("module_name") == "Top")
     assert list(top["enum_defs"]["0"].items()) == [("0", "Add"), ("1", "Sub"), ("2", "And")]
+
+
+def test_expression_value() -> None:
+    doc = _dedup_doc()
+    doc["profiles"].append("expr")
+    doc["bindings"][1]["vars"]["a"] = {"$op": "^", "args": [
+        {"$op": "[]", "args": ["w", 3, 0]}, {"$const": "0b1111"}]}
+    out = to_hgldd_v2(doc)
+    left = next(o for o in out["objects"] if o["obj_name"] == "Left")
+    assert left["port_vars"][0]["value"] == {"opcode": "^", "operands": [
+        {"opcode": "[]", "operands": [{"sig_name": "w"}, {"integer_num": 3},
+                                      {"integer_num": 0}]},
+        {"bit_vector": "1111"}]}
+
+
+def test_vector_type_info() -> None:
+    doc = _dedup_doc()
+    doc["types"]["pvec"] = {"kind": "vector", "elem": "pair", "size": 2}
+    doc["source"]["Left"]["vars"]["pv"] = {
+        "type": "pvec", "loc": [0, 15, 3], "x-chisel": {"binding": "IO"}}
+    doc["types"]["u8"]["name"] = "UInt<8>"
+    doc["types"]["pvec"]["name"] = "Pair[2]"
+    doc["bindings"][1]["vars"]["pv"] = [{"x": "pv_0_x", "y": "pv_0_y"},
+                                        {"x": "pv_1_x", "y": "pv_1_y"}]
+    out = to_hgldd_v2(doc)
+    left = next(o for o in out["objects"] if o["obj_name"] == "Left")
+    pv = next(p for p in left["port_vars"] if p["var_name"].startswith("pv"))
+    assert pv["source_lang_type_info"] == {"type_name": "IO[Pair[2]]", "params": [
+        {"name": "gen", "type": "=> T"},
+        {"name": "length", "type": "Int", "value": "2"}]}
+    elems = [o for o in out["objects"] if o["obj_name"].startswith("pvec")]
+    assert elems
+    for o in elems:
+        assert [p.get("source_lang_type_info") for p in o["port_vars"]] == [
+            {"type_name": "IO[UInt<8>]"}, {"type_name": "IO[UInt<8>]"}]

@@ -141,7 +141,15 @@ def _variable_source_lang_type_info(var_source: Dict[str, Any], type_ref: str,
     var_ext = ext(var_source)
     binding = var_ext.get("binding")
     out: Dict[str, Any] = {"type_name": f"{binding}[{name}]" if binding else name}
-    if params := var_ext.get("params") or ext(tsrc).get("params"):
+    params = var_ext.get("params") or ext(tsrc).get("params")
+    t = ctx.types.get(type_ref) or {}
+    if not params and t.get("kind") == "vector":
+        # The parameters of Chisel's `Vec(length, gen)`, as native HGLDD
+        # lists them.
+        params = [{"name": "gen", "type": "=> T"},
+                  {"name": "length", "type": "Int",
+                   "value": str(t.get("size", 0))}]
+    if params:
         out["params"] = _hgldd_params(params)
     return out
 
@@ -316,16 +324,16 @@ def _location_candidate_types(type_ref: str, ctx: "_TypesCtx",
 def _collect_location_candidates(
     doc_v2: Dict[str, Any], ctx: "_TypesCtx"
 ) -> Tuple[Dict[str, List[Tuple[Dict[str, Any], str, Optional[str]]]],
-           Dict[str, Tuple[Dict[str, Any], str]]]:
+           Dict[str, Tuple[Dict[str, Any], str, Optional[str]]]]:
     """`struct_candidates[struct_id] = [(loc, module_id, root_binding), ...]`
     (every candidate; the winner is `min` by `(str(module_id), beginLine,
     beginColumn)`, mirroring v1). `vec_candidates[vector_id] = (loc,
-    module_id)` (first found, mirroring v1's first-match `vec_loc`
+    module_id, root_binding)` (first found, mirroring v1's first-match `vec_loc`
     search -- module dict order, then variable dict order, then
     `_location_candidate_types` order, all of which reproduce v1's
     document order)."""
     struct_candidates: Dict[str, List[Tuple[Dict[str, Any], str, Optional[str]]]] = {}
-    vec_candidates: Dict[str, Tuple[Dict[str, Any], str]] = {}
+    vec_candidates: Dict[str, Tuple[Dict[str, Any], str, Optional[str]]] = {}
     for mid, mod in doc_v2["modules"].items():
         for var in (mod.get("variables") or {}).values():
             root_loc = (var.get("source") or {}).get("loc")
@@ -339,7 +347,7 @@ def _collect_location_candidates(
                     struct_candidates.setdefault(tref, []).append(
                         (root_loc, mid, root_binding))
                 elif kind == "vector" and tref not in vec_candidates:
-                    vec_candidates[tref] = (root_loc, mid)
+                    vec_candidates[tref] = (root_loc, mid, root_binding)
     return struct_candidates, vec_candidates
 
 
@@ -368,7 +376,8 @@ def _struct_objects(doc_v2: Dict[str, Any], ctx: "_TypesCtx",
         struct_loc[tid] = _loc_to_hgldd2(loc, src_files, False, None, files)
         struct_binding[tid] = binding
 
-    vec_by_elem: Dict[str, List[Tuple[str, int, Optional[Dict[str, Any]]]]] = {}
+    vec_by_elem: Dict[str, List[Tuple[str, int, Optional[Dict[str, Any]],
+                                      Optional[str]]]] = {}
     for vtid, vd in ctx.types.items():
         if vd.get("kind") != "vector":
             continue
@@ -378,10 +387,11 @@ def _struct_objects(doc_v2: Dict[str, Any], ctx: "_TypesCtx",
         size = int(vd.get("size", 0))
         if size < 1:
             continue
-        vec_loc = None
+        vec_loc = vec_binding = None
         if (cand := vec_candidates.get(vtid)) is not None:
             vec_loc = _loc_to_hgldd2(cand[0], src_files, False, None, files)
-        vec_by_elem.setdefault(eref, []).append((vtid, size, vec_loc))
+            vec_binding = cand[2]
+        vec_by_elem.setdefault(eref, []).append((vtid, size, vec_loc, vec_binding))
 
     out = []
     for tid in _topo_sorted_struct_ids(ctx):
@@ -406,7 +416,7 @@ def _struct_objects(doc_v2: Dict[str, Any], ctx: "_TypesCtx",
             obj["hgl_loc"] = loc
         out.append(obj)
 
-        for vtid, size, vec_loc in vec_by_elem.get(tid, []):
+        for vtid, size, vec_loc, vec_binding in vec_by_elem.get(tid, []):
             elem_pvs = []
             for m in d.get("members") or []:
                 epv = {"var_name": m.get("name", ""),
@@ -415,6 +425,9 @@ def _struct_objects(doc_v2: Dict[str, Any], ctx: "_TypesCtx",
                     epv["hgl_loc"] = l
                 if (eid := enum_id_by_type.get(m.get("typeRef", ""))) is not None:
                     epv["enum_def_ref"] = eid
+                if vec_binding and (slti := _variable_source_lang_type_info(
+                        {EXT_KEY: {"binding": vec_binding}}, m.get("typeRef", ""), ctx)):
+                    epv["source_lang_type_info"] = slti
                 elem_pvs.append(epv)
             base = {"kind": "struct", "obj_name": vtid, "port_vars": elem_pvs}
             if vec_loc:

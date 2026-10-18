@@ -118,7 +118,17 @@ def test_v2_to_hgldd_matches_v1(fixture: pathlib.Path) -> None:
     expected = to_hgldd_v1(doc_v1)
     actual = to_hgldd_v2(upgrade(doc_v1))
 
-    deltas = diff_dicts(actual, expected)
+    # The v1 converter gives no source_lang_type_info to the fields of a
+    # Vec[Bundle] element object; native HGLDD and uhdi2 do.
+    vec_ids = {k for k, t in doc_v1.get("types", {}).items()
+               if t.get("kind") == "vector"}
+    def vec_elem_slt(d) -> bool:
+        parts = d[0].split("/")
+        if d[1] != "extra" or parts[-1] != "source_lang_type_info":
+            return False
+        name = actual["objects"][int(parts[2])]["obj_name"]
+        return name in vec_ids or name.rsplit("_", 1)[0] in vec_ids
+    deltas = [d for d in diff_dicts(actual, expected) if not vec_elem_slt(d)]
     assert not deltas, format_deltas(deltas)
 
 

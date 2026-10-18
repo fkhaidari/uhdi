@@ -8,14 +8,15 @@ The v2 layout keeps three things apart:
 * `bindings` -- which source lands in which target, and what Verilog
   signal carries each variable.
 
-HGLDD has one object per Verilog module, so a target module becomes one
-object:
+A target module becomes one HGLDD object (one per source after Dedup,
+see below):
 
 * Variables come from the *unscoped* bindings of the target, each joined
   with `source[binding.source].vars` (hgl_loc, type, class info) and
   `binding.vars` / `binding.hdl_locs` (value, hdl_loc). Order is the
   order of the source variables. `{"$none": ...}` or a missing entry
-  gives a variable without `value`.
+  gives a variable without `value`. A `$op` (expr profile) becomes the
+  HGLDD expression with that opcode.
 * Children come from `target[T].inst`. `obj_name` is the instance's
   `source`; when absent, the single unscoped binding of the instantiated
   target, else the target's own name.
@@ -203,7 +204,14 @@ def _var_type_info(var_xc: Dict[str, Any], tref: str,
         return None
     binding = var_xc.get("binding")
     out: Dict[str, Any] = {"type_name": f"{binding}[{name}]" if binding else name}
-    if params := var_xc.get("params") or (t.get(EXT_KEY) or {}).get("params"):
+    params = var_xc.get("params") or (t.get(EXT_KEY) or {}).get("params")
+    if not params and t.get("kind") == "vector":
+        # The parameters of Chisel's `Vec(length, gen)`, as native HGLDD
+        # lists them.
+        params = [{"name": "gen", "type": "=> T"},
+                  {"name": "length", "type": "Int",
+                   "value": str(t.get("size", 0))}]
+    if params:
         out["params"] = _hgldd_params(params)
     return out
 
@@ -221,6 +229,12 @@ def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
         width = int((types.get(tref) or {}).get("width", 0))
         return ({"bit_vector": format(c & ((1 << width) - 1), f"0{width}b")}
                 if width > 0 else {"integer_num": c})
+    if isinstance(v, dict) and "$op" in v:
+        # The expr profile uses HGLDD's opcodes; a plain number is a count
+        # or a bit index.
+        return {"opcode": v["$op"], "operands": [
+            {"integer_num": a} if isinstance(a, int) else _scalar(a, "", types)
+            for a in v.get("args") or []]}
     return {}
 
 
@@ -353,7 +367,7 @@ def _enum_index(d: _Doc) -> Tuple[Dict[str, int], Dict[str, Dict[str, Any]]]:
 
 def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
     structs: Dict[str, List[Tuple[List[int], str, Optional[str]]]] = {}
-    vecs: Dict[str, Tuple[List[int], str]] = {}
+    vecs: Dict[str, Tuple[List[int], str, Optional[str]]] = {}
     for skey, smod in d.source.items():
         for var in (smod.get("vars") or {}).values():
             loc = var.get("loc")
@@ -365,7 +379,7 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
                 if kind == "struct":
                     structs.setdefault(tref, []).append((loc, skey, binding))
                 elif kind == "vector" and tref not in vecs:
-                    vecs[tref] = (loc, skey)
+                    vecs[tref] = (loc, skey, binding)
 
     struct_loc: Dict[str, Any] = {}
     struct_binding: Dict[str, Optional[str]] = {}
@@ -375,7 +389,8 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
         struct_loc[tid] = d.src_loc(loc)
         struct_binding[tid] = binding
 
-    vec_by_elem: Dict[str, List[Tuple[str, int, Optional[Dict[str, Any]]]]] = {}
+    vec_by_elem: Dict[str, List[Tuple[str, int, Optional[Dict[str, Any]],
+                                      Optional[str]]]] = {}
     for vtid, vd in d.types.items():
         if vd.get("kind") != "vector":
             continue
@@ -386,7 +401,8 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
         if size < 1:
             continue
         vloc = d.src_loc(vecs[vtid][0]) if vtid in vecs else None
-        vec_by_elem.setdefault(eref, []).append((vtid, size, vloc))
+        vbinding = vecs[vtid][2] if vtid in vecs else None
+        vec_by_elem.setdefault(eref, []).append((vtid, size, vloc, vbinding))
 
     out = []
     for tid in _topo_structs(d.types):
@@ -408,7 +424,7 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
             obj["hgl_loc"] = loc
         out.append(obj)
 
-        for vtid, size, vloc in vec_by_elem.get(tid, []):
+        for vtid, size, vloc, vbinding in vec_by_elem.get(tid, []):
             elem_pvs = []
             for f in t.get("fields") or []:
                 epv = {"var_name": f["name"], **_type_description(f["type"], d.types)}
@@ -416,6 +432,9 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
                     epv["hgl_loc"] = l
                 if (eid := enum_ids.get(f["type"])) is not None:
                     epv["enum_def_ref"] = eid
+                if vbinding and (slti := _var_type_info(
+                        {"binding": vbinding}, f["type"], d.types)):
+                    epv["source_lang_type_info"] = slti
                 elem_pvs.append(epv)
             base = {"kind": "struct", "obj_name": vtid, "port_vars": elem_pvs}
             if vloc:
