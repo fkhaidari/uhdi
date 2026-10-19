@@ -212,7 +212,7 @@ reason = "the memory module is made by lowering, not declared in Chisel: layout 
 path_regex = "/objects/Fifo/child:mem_ext(/.*)?"
 kind = "missing"
 format = "2"
-reason = "layout 2 lists instances as source variables only; the memory instance has no source module, so Fifo gets no `mem_ext` child"
+reason = "layout 2 makes the memory a vector variable `mem` of Fifo whose value is the path `mem_ext.Memory`; `mem_ext` itself is no variable, so Fifo gets no child for it"
 
 
 [fixtures.TywavesTorture]
