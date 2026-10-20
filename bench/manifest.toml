@@ -52,12 +52,20 @@ reason = "same value, another Verilog name: output port `q` (ours) vs the regist
 # `{name=q, variable_value=q}` doesn't exist on our side.
 path_regex = "/generator_variable/[0-9]+"
 kind = "missing"
+format = "1"
 reason = "post-DCE: pre-DCE native sees output port `q` as a separate variable; our flow operates on post-DCE UHDI where q is folded into backing wire r"
 
 [[fixtures.Counter.expected.hgdb_firrtl]]
 path_regex = "/variable/[0-9]+"
 kind = "missing"
+format = "1"
 reason = "post-DCE: pre-DCE native materialises a `q` variable row; we operate post-DCE so q's row carries value=r"
+
+[[fixtures.Counter.expected.hgdb_firrtl]]
+path_regex = "/breakpoint/[0-9]+"
+kind = "missing"
+format = "2"
+reason = "hgdb-firrtl stops on the compiler temporaries of `r + 1.U` (18:21, condition `1`); layout 2 records named statements only, and line 18 keeps its breakpoints at the `when` and the connect"
 
 # hgdb_circt: modern hgdb-circt firtool emits JSON.  Same post-DCE
 # divergence as hgdb_firrtl, plus a cosmetic generator-name field.
@@ -75,6 +83,7 @@ reason = "informational: producer is `uhdi` (our converter), native is `circt` (
 # vs ours value="r", not which slot it lives in.
 path_regex = "/variables/[0-9]+"
 kind = "missing"
+format = "1"
 reason = "post-DCE: native pool entry for q has value=q (pre-DCE port wire); ours has value=r (post-DCE backing wire), so the dict-level membership check rejects ours"
 
 [[fixtures.Counter.expected.hgdb_circt]]
@@ -159,6 +168,12 @@ reason = "[CIRCT G1+G2+G4] FIRRTL 1.x emits intermediate bp (col=9/16/21 per ope
 path_regex = "/assignment/[0-9]+"
 kind = "missing"
 reason = "[CONV G6+G4] assignment.value uses UHDI dotted names (e.g. io.x) vs hgdb-firrtl flat RTL names (io_x); breakpoint_key contains CIRCT condition strings that differ from FIRRTL 1.x _T/_T_1 names (G4), preventing superset match"
+
+[[fixtures.GCD.expected.hgdb_firrtl]]
+path_regex = "/(generator_variable|variable)/[0-9]+"
+kind = "missing"
+format = "2"
+reason = "`io.q` is bound to the signal that drives the port (`x`), native names the port `io_q`; both show the same value in simulation"
 
 [fixtures.Fifo]
 scala = "Fifo.scala"
