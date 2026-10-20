@@ -1,0 +1,875 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://circt.llvm.org/uhdi/2.1-draft/schema.json",
+  "title": "UHDI 2.x draft: statements (hgdb) and dependencies (ChiselTrace)",
+  "description": "Debug information that links a source design (what the frontend declared) to the target netlist (what the compiler emitted). `source` and `target` describe the two sides on their own; `bindings` is the only place that links them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uhdi",
+    "producer",
+    "profiles",
+    "files",
+    "types",
+    "source",
+    "target",
+    "bindings"
+  ],
+  "properties": {
+    "uhdi": {
+      "description": "Format version. A reader checks it before anything else.",
+      "const": "2.0"
+    },
+    "producer": {
+      "description": "Tool that wrote the document. Diagnostic only, like DWARF's DW_AT_producer; readers must not branch on it.",
+      "type": "string"
+    },
+    "profiles": {
+      "description": "Optional parts of the format the document uses. Listed only when used, so a reader that lacks a profile knows up front what it will not understand.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "oneOf": [
+          {
+            "const": "expr",
+            "description": "Values may be expressions (`$op`)."
+          },
+          {
+            "const": "x-chisel",
+            "description": "Objects may carry an `x-chisel` extension with Chisel-only facts."
+          },
+          {
+            "const": "stmt",
+            "description": "Source modules carry `stmts`; bindings carry the target value of each `when` guard."
+          },
+          {
+            "const": "deps",
+            "description": "Statements carry `reads`: the source paths their right-hand side reads."
+          }
+        ]
+      }
+    },
+    "files": {
+      "description": "Every file a location refers to, by index. Source and target files share one list, so a location is always [file, line, column].",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "description": "Path as the producer saw it.",
+            "type": "string"
+          },
+          "target": {
+            "description": "Present on files of the emitted netlist. Lets a reader tell a Verilog location from a source one without guessing from the extension.",
+            "const": true
+          }
+        }
+      }
+    },
+    "types": {
+      "description": "Type table. Keys are opaque ids; readers must not parse them.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/type"
+      }
+    },
+    "source": {
+      "description": "Modules the frontend declared, with their variables. A module made by lowering (a memory, a layer body) is not here.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/sourceModule"
+      }
+    },
+    "target": {
+      "description": "Modules of the emitted netlist, keyed by their Verilog name.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/targetModule"
+      }
+    },
+    "bindings": {
+      "description": "How the variables of a source module read in a target module. One source module may bind into several targets and back (dedup, inlining).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/binding"
+      }
+    }
+  },
+  "$defs": {
+    "loc": {
+      "description": "[file index into `files`, line, column]; line and column count from 1.",
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        }
+      ],
+      "items": false,
+      "minItems": 3
+    },
+    "typeRef": {
+      "description": "Key into `types`.",
+      "type": "string"
+    },
+    "params": {
+      "description": "Constructor parameters of a Chisel class.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "description": "Scala type of the parameter.",
+            "type": "string"
+          },
+          "value": {
+            "description": "Value as Chisel printed it, when it sent one.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "typeName": {
+      "description": "Source-language name of the type (`UInt<8>`, `Bundle` subclass). Shown to the user; never needed to decode a value.",
+      "type": "string"
+    },
+    "type": {
+      "description": "Kinds follow FIRRTL ground and aggregate types; the bits of a value are fully described by `kind` with `width`, `fields`, `elem`/`size` or `base`.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "width"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "uint",
+                "sint"
+              ],
+              "description": "Integer of `width` bits."
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "name": {
+              "$ref": "#/$defs/typeName"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "clock",
+              "description": "A clock, when the IR still knows it is one. One bit wide."
+            },
+            "name": {
+              "$ref": "#/$defs/typeName"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "fields"
+          ],
+          "properties": {
+            "kind": {
+              "const": "struct"
+            },
+            "fields": {
+              "description": "In declaration order.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "type"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "$ref": "#/$defs/typeRef"
+                  },
+                  "flip": {
+                    "description": "The field runs against the aggregate's direction, as FIRRTL `flip`.",
+                    "const": true
+                  }
+                }
+              }
+            },
+            "name": {
+              "$ref": "#/$defs/typeName"
+            },
+            "x-chisel": {
+              "$ref": "#/$defs/typeChisel"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "elem",
+            "size"
+          ],
+          "properties": {
+            "kind": {
+              "const": "vector"
+            },
+            "elem": {
+              "$ref": "#/$defs/typeRef"
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "name": {
+              "$ref": "#/$defs/typeName"
+            },
+            "x-chisel": {
+              "$ref": "#/$defs/typeChisel"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "base",
+            "values"
+          ],
+          "properties": {
+            "kind": {
+              "const": "enum"
+            },
+            "base": {
+              "description": "The integer type that holds the encoding.",
+              "$ref": "#/$defs/typeRef"
+            },
+            "values": {
+              "description": "Label to encoding. A string holds a value too wide for a JSON number.",
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "integer",
+                  "string"
+                ]
+              }
+            },
+            "name": {
+              "$ref": "#/$defs/typeName"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "module"
+          ],
+          "properties": {
+            "kind": {
+              "const": "module",
+              "description": "An instance: the type of a variable that instantiates a module."
+            },
+            "module": {
+              "description": "Key into `source`: the module as written, before dedup.",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "typeChisel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "params": {
+          "$ref": "#/$defs/params"
+        }
+      }
+    },
+    "sourceModule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vars"
+      ],
+      "properties": {
+        "loc": {
+          "description": "Where the module is declared.",
+          "$ref": "#/$defs/loc"
+        },
+        "vars": {
+          "description": "Variables the module declares, by source name.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/sourceVar"
+          }
+        },
+        "x-chisel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "typeName": {
+              "description": "Scala class of the module.",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/$defs/params"
+            }
+          }
+        },
+        "stmts": {
+          "description": "Profile `stmt`: the module body in source order.",
+          "$ref": "#/$defs/stmts"
+        }
+      }
+    },
+    "sourceVar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/typeRef"
+        },
+        "loc": {
+          "description": "Where the variable is declared.",
+          "$ref": "#/$defs/loc"
+        },
+        "dir": {
+          "description": "Present when the variable is a port of the module. For an aggregate, the direction of its unflipped fields, as in FIRRTL; flipped fields run the other way. Never on an instance.",
+          "enum": [
+            "in",
+            "out"
+          ]
+        },
+        "x-chisel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "binding"
+          ],
+          "properties": {
+            "binding": {
+              "description": "Chisel binding kind (`IO`, `Reg`, `Wire`, `OpResult`, ...).",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "targetModule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "description": "Index into `files` of the file the module is written to.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "An external module: declared, not emitted.",
+          "const": "extern"
+        }
+      },
+      "description": "A Verilog module: where it is written and whether it has a body. Instances are variables of the source modules."
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "target",
+        "vars"
+      ],
+      "properties": {
+        "source": {
+          "description": "Key into `source`.",
+          "type": "string"
+        },
+        "target": {
+          "description": "Key into `target`.",
+          "type": "string"
+        },
+        "scope": {
+          "description": "Dotted path of an inlined instance inside `target`; its signals carry the path as prefix in Verilog.",
+          "type": "string"
+        },
+        "vars": {
+          "description": "Every variable of the source module, by its key there, to its value in the target.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/value"
+          }
+        },
+        "stmts": {
+          "description": "Profile `stmt`: `when` id to the target value of its guard.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/value"
+          }
+        }
+      }
+    },
+    "value": {
+      "description": "A signal name, a literal, an expression, a value optimized away, an instance, or an aggregate of those shaped like the variable's type.",
+      "oneOf": [
+        {
+          "description": "Name of a signal in the target module.",
+          "type": "string"
+        },
+        {
+          "description": "Literal, all bits of the leaf's width.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "$const"
+          ],
+          "properties": {
+            "$const": {
+              "type": "string",
+              "pattern": "^0b[01]+$"
+            }
+          }
+        },
+        {
+          "description": "No signal carries the value any more.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "$none"
+          ],
+          "properties": {
+            "$none": {
+              "const": "optimized"
+            }
+          }
+        },
+        {
+          "description": "Value of an instance kept in Verilog: its instance name there and the target module it instantiates.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "$inst",
+            "module"
+          ],
+          "properties": {
+            "$inst": {
+              "type": "string"
+            },
+            "module": {
+              "description": "Key into `target`.",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "description": "Value of an instance inlined into the target: the `scope` of the binding that holds its variables.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "$inline"
+          ],
+          "properties": {
+            "$inline": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/expr"
+        },
+        {
+          "description": "A struct value, field name to value.",
+          "type": "object",
+          "propertyNames": {
+            "not": {
+              "pattern": "^\\$"
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/value"
+          }
+        },
+        {
+          "description": "A vector value, one element per index.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/value"
+          }
+        }
+      ]
+    },
+    "expr": {
+      "description": "Profile `expr`: the combinational op over target signals and literals that computes the value. Opcodes are Verilog's, as HGLDD uses them. A plain number in `args` is a static operand: the count of `R{}` (first), the high and low bit of `[]` (last). `$signed` marks the operands of a signed op. `^` with one operand is the reduction.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "$op",
+        "args"
+      ],
+      "properties": {
+        "$op": {
+          "enum": [
+            "&",
+            "|",
+            "^",
+            "+",
+            "-",
+            "*",
+            "/",
+            "%",
+            "<<",
+            ">>",
+            ">>>",
+            "{}",
+            "R{}",
+            "[]",
+            "?:",
+            "==",
+            "!=",
+            "===",
+            "!==",
+            "==?",
+            "!=?",
+            "<",
+            ">",
+            "<=",
+            ">=",
+            "$signed"
+          ]
+        },
+        "args": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "$ref": "#/$defs/value"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "path": {
+      "description": "Source path from a variable or instance of the module: `.field`, `[n]`, or `[path]` for a dynamic subscript.",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_$]*(\\.[A-Za-z_][A-Za-z0-9_$]*|\\[[^\\]]+\\])*$"
+    },
+    "stmt": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A register is declared. Its writes take effect at the next clock edge.",
+          "required": [
+            "id",
+            "kind",
+            "loc",
+            "var",
+            "clock"
+          ],
+          "properties": {
+            "id": {
+              "description": "Unique in the module; key of `bindings[].stmts`.",
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/loc"
+            },
+            "reads": {
+              "description": "Profile `deps`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "kind": {
+              "const": "reg"
+            },
+            "var": {
+              "description": "Key into the module's `vars`.",
+              "type": "string"
+            },
+            "clock": {
+              "$ref": "#/$defs/path"
+            },
+            "reset": {
+              "$ref": "#/$defs/path"
+            },
+            "init": {
+              "$ref": "#/$defs/value"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A combinational variable is declared.",
+          "required": [
+            "id",
+            "kind",
+            "loc",
+            "var"
+          ],
+          "properties": {
+            "id": {
+              "description": "Unique in the module; key of `bindings[].stmts`.",
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/loc"
+            },
+            "reads": {
+              "description": "Profile `deps`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "kind": {
+              "const": "wire"
+            },
+            "var": {
+              "description": "Key into the module's `vars`.",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A named node: a value computed every cycle from what it reads.",
+          "required": [
+            "id",
+            "kind",
+            "loc",
+            "var"
+          ],
+          "properties": {
+            "id": {
+              "description": "Unique in the module; key of `bindings[].stmts`.",
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/loc"
+            },
+            "reads": {
+              "description": "Profile `deps`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "kind": {
+              "const": "node"
+            },
+            "var": {
+              "description": "Key into the module's `vars`.",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A memory is declared.",
+          "required": [
+            "id",
+            "kind",
+            "loc",
+            "var",
+            "readLatency",
+            "writeLatency"
+          ],
+          "properties": {
+            "id": {
+              "description": "Unique in the module; key of `bindings[].stmts`.",
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/loc"
+            },
+            "reads": {
+              "description": "Profile `deps`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "kind": {
+              "const": "mem"
+            },
+            "var": {
+              "description": "Key into the module's `vars`.",
+              "type": "string"
+            },
+            "readLatency": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "writeLatency": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A module is instantiated. The instance is the variable `var`; its type names the module.",
+          "required": [
+            "id",
+            "kind",
+            "loc",
+            "var"
+          ],
+          "properties": {
+            "id": {
+              "description": "Unique in the module; key of `bindings[].stmts`.",
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/loc"
+            },
+            "reads": {
+              "description": "Profile `deps`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "kind": {
+              "const": "inst"
+            },
+            "var": {
+              "description": "Key into the module's `vars`: the instance variable.",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The left-hand side is driven.",
+          "required": [
+            "id",
+            "kind",
+            "loc",
+            "lhs"
+          ],
+          "properties": {
+            "id": {
+              "description": "Unique in the module; key of `bindings[].stmts`.",
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/loc"
+            },
+            "reads": {
+              "description": "Profile `deps`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "kind": {
+              "const": "connect"
+            },
+            "lhs": {
+              "$ref": "#/$defs/path"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Statements under a guard; the guard's target value is in `bindings[].stmts`.",
+          "required": [
+            "id",
+            "kind",
+            "loc",
+            "then"
+          ],
+          "properties": {
+            "id": {
+              "description": "Unique in the module; key of `bindings[].stmts`.",
+              "type": "string"
+            },
+            "loc": {
+              "$ref": "#/$defs/loc"
+            },
+            "reads": {
+              "description": "Profile `deps`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "kind": {
+              "const": "when"
+            },
+            "then": {
+              "$ref": "#/$defs/stmts"
+            },
+            "else": {
+              "$ref": "#/$defs/stmts"
+            }
+          }
+        }
+      ]
+    },
+    "stmts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stmt"
+      }
+    }
+  }
+}

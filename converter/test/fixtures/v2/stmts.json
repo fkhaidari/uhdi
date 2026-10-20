@@ -1,0 +1,748 @@
+{
+  "uhdi": "2.0",
+  "producer": "firtool",
+  "profiles": [
+    "x-chisel",
+    "stmt",
+    "deps"
+  ],
+  "files": [
+    {
+      "path": "M.scala"
+    },
+    {
+      "path": "K.scala"
+    },
+    {
+      "path": "I.scala"
+    },
+    {
+      "path": "stmts.fir"
+    },
+    {
+      "path": "stmts.sv",
+      "target": true
+    }
+  ],
+  "types": {
+    "M_v": {
+      "elem": "uint8",
+      "kind": "vector",
+      "name": "UInt<8>[2]",
+      "size": 2
+    },
+    "bool": {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    "clock": {
+      "kind": "clock"
+    },
+    "module_Inl": {
+      "kind": "module",
+      "module": "Inl"
+    },
+    "module_Kid": {
+      "kind": "module",
+      "module": "Kid"
+    },
+    "module_Kid_1": {
+      "kind": "module",
+      "module": "Kid_1"
+    },
+    "uint2": {
+      "kind": "uint",
+      "name": "UInt<2>",
+      "width": 2
+    },
+    "uint4": {
+      "kind": "uint",
+      "name": "UInt<4>",
+      "width": 4
+    },
+    "uint8": {
+      "kind": "uint",
+      "name": "UInt<8>",
+      "width": 8
+    }
+  },
+  "source": {
+    "Inl": {
+      "stmts": [
+        {
+          "id": "s1",
+          "kind": "when",
+          "loc": [
+            2,
+            4,
+            10
+          ],
+          "reads": [
+            "a"
+          ],
+          "then": [
+            {
+              "id": "s2",
+              "kind": "connect",
+              "lhs": "b",
+              "loc": [
+                2,
+                5,
+                9
+              ],
+              "reads": [
+                "a"
+              ]
+            }
+          ]
+        }
+      ],
+      "vars": {
+        "a": {
+          "dir": "in",
+          "loc": [
+            2,
+            2,
+            7
+          ],
+          "type": "bool",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "b": {
+          "dir": "out",
+          "loc": [
+            2,
+            3,
+            7
+          ],
+          "type": "bool",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "clock": {
+          "dir": "in",
+          "type": "clock"
+        }
+      }
+    },
+    "Kid": {
+      "stmts": [
+        {
+          "clock": "clock",
+          "id": "s0",
+          "kind": "reg",
+          "loc": [
+            1,
+            2,
+            16
+          ],
+          "var": "r"
+        },
+        {
+          "id": "s1",
+          "kind": "when",
+          "loc": [
+            1,
+            3,
+            12
+          ],
+          "reads": [
+            "en"
+          ],
+          "then": [
+            {
+              "id": "s2",
+              "kind": "connect",
+              "lhs": "r",
+              "loc": [
+                1,
+                3,
+                20
+              ],
+              "reads": [
+                "r"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "s3",
+          "kind": "connect",
+          "lhs": "q",
+          "loc": [
+            1,
+            4,
+            5
+          ],
+          "reads": [
+            "r"
+          ]
+        }
+      ],
+      "vars": {
+        "clock": {
+          "dir": "in",
+          "type": "clock"
+        },
+        "en": {
+          "dir": "in",
+          "loc": [
+            1,
+            1,
+            7
+          ],
+          "type": "bool",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "q": {
+          "dir": "out",
+          "loc": [
+            1,
+            1,
+            7
+          ],
+          "type": "uint4",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "r": {
+          "loc": [
+            1,
+            2,
+            16
+          ],
+          "type": "uint4",
+          "x-chisel": {
+            "binding": "Reg"
+          }
+        }
+      }
+    },
+    "Kid_1": {
+      "loc": [
+        3,
+        23,
+        3
+      ],
+      "stmts": [
+        {
+          "clock": "clock",
+          "id": "s0",
+          "kind": "reg",
+          "loc": [
+            1,
+            2,
+            16
+          ],
+          "var": "r"
+        },
+        {
+          "id": "s1",
+          "kind": "when",
+          "loc": [
+            1,
+            3,
+            12
+          ],
+          "reads": [
+            "en"
+          ],
+          "then": [
+            {
+              "id": "s2",
+              "kind": "connect",
+              "lhs": "r",
+              "loc": [
+                1,
+                3,
+                20
+              ],
+              "reads": [
+                "r"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "s3",
+          "kind": "connect",
+          "lhs": "q",
+          "loc": [
+            1,
+            4,
+            5
+          ],
+          "reads": [
+            "r"
+          ]
+        }
+      ],
+      "vars": {
+        "clock": {
+          "dir": "in",
+          "type": "clock"
+        },
+        "en": {
+          "dir": "in",
+          "loc": [
+            1,
+            1,
+            7
+          ],
+          "type": "bool",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "q": {
+          "dir": "out",
+          "loc": [
+            1,
+            1,
+            7
+          ],
+          "type": "uint4",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "r": {
+          "loc": [
+            1,
+            2,
+            16
+          ],
+          "type": "uint4",
+          "x-chisel": {
+            "binding": "Reg"
+          }
+        }
+      }
+    },
+    "M": {
+      "stmts": [
+        {
+          "clock": "clock",
+          "id": "s0",
+          "init": {
+            "$const": "0b01"
+          },
+          "kind": "reg",
+          "loc": [
+            0,
+            3,
+            20
+          ],
+          "reset": "reset",
+          "var": "cnt"
+        },
+        {
+          "clock": "clock",
+          "id": "s1",
+          "kind": "reg",
+          "loc": [
+            0,
+            4,
+            16
+          ],
+          "var": "v"
+        },
+        {
+          "id": "s2",
+          "kind": "wire",
+          "loc": [
+            0,
+            5,
+            15
+          ],
+          "var": "w"
+        },
+        {
+          "id": "s3",
+          "kind": "node",
+          "loc": [
+            0,
+            6,
+            13
+          ],
+          "reads": [
+            "d"
+          ],
+          "var": "t"
+        },
+        {
+          "id": "s4",
+          "kind": "connect",
+          "lhs": "w",
+          "loc": [
+            0,
+            6,
+            5
+          ],
+          "reads": [
+            "t"
+          ]
+        },
+        {
+          "else": [
+            {
+              "id": "s7",
+              "kind": "when",
+              "loc": [
+                0,
+                9,
+                20
+              ],
+              "reads": [
+                "cnt"
+              ],
+              "then": [
+                {
+                  "id": "s8",
+                  "kind": "connect",
+                  "lhs": "v[cnt]",
+                  "loc": [
+                    0,
+                    10,
+                    14
+                  ],
+                  "reads": [
+                    "w",
+                    "cnt"
+                  ]
+                }
+              ]
+            }
+          ],
+          "id": "s5",
+          "kind": "when",
+          "loc": [
+            0,
+            7,
+            12
+          ],
+          "reads": [
+            "sel"
+          ],
+          "then": [
+            {
+              "id": "s6",
+              "kind": "connect",
+              "lhs": "cnt",
+              "loc": [
+                0,
+                8,
+                9
+              ],
+              "reads": [
+                "cnt"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "s9",
+          "kind": "connect",
+          "lhs": "o",
+          "loc": [
+            0,
+            11,
+            5
+          ],
+          "reads": [
+            "v[sel]",
+            "sel"
+          ]
+        },
+        {
+          "id": "s10",
+          "kind": "inst",
+          "loc": [
+            0,
+            12,
+            17
+          ],
+          "var": "i"
+        },
+        {
+          "id": "s12",
+          "kind": "connect",
+          "lhs": "i.a",
+          "loc": [
+            0,
+            13,
+            7
+          ],
+          "reads": [
+            "sel"
+          ]
+        },
+        {
+          "id": "s13",
+          "kind": "inst",
+          "loc": [
+            0,
+            14,
+            18
+          ],
+          "var": "k0"
+        },
+        {
+          "id": "s15",
+          "kind": "connect",
+          "lhs": "k0.en",
+          "loc": [
+            0,
+            15,
+            8
+          ],
+          "reads": [
+            "sel"
+          ]
+        },
+        {
+          "id": "s16",
+          "kind": "inst",
+          "loc": [
+            0,
+            16,
+            18
+          ],
+          "var": "k1"
+        },
+        {
+          "id": "s18",
+          "kind": "connect",
+          "lhs": "k1.en",
+          "loc": [
+            0,
+            17,
+            8
+          ],
+          "reads": [
+            "i.b"
+          ]
+        },
+        {
+          "id": "s19",
+          "kind": "connect",
+          "lhs": "k",
+          "loc": [
+            0,
+            18,
+            5
+          ],
+          "reads": [
+            "k0.q",
+            "k1.q"
+          ]
+        }
+      ],
+      "vars": {
+        "clock": {
+          "dir": "in",
+          "type": "clock"
+        },
+        "cnt": {
+          "loc": [
+            0,
+            3,
+            20
+          ],
+          "type": "uint2",
+          "x-chisel": {
+            "binding": "Reg"
+          }
+        },
+        "d": {
+          "dir": "in",
+          "loc": [
+            0,
+            1,
+            7
+          ],
+          "type": "uint8",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "i": {
+          "loc": [
+            0,
+            12,
+            17
+          ],
+          "type": "module_Inl"
+        },
+        "k": {
+          "dir": "out",
+          "type": "uint4"
+        },
+        "k0": {
+          "loc": [
+            0,
+            14,
+            18
+          ],
+          "type": "module_Kid"
+        },
+        "k1": {
+          "loc": [
+            0,
+            16,
+            18
+          ],
+          "type": "module_Kid_1"
+        },
+        "o": {
+          "dir": "out",
+          "loc": [
+            0,
+            1,
+            7
+          ],
+          "type": "uint8",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "reset": {
+          "dir": "in",
+          "type": "bool"
+        },
+        "sel": {
+          "dir": "in",
+          "loc": [
+            0,
+            1,
+            7
+          ],
+          "type": "bool",
+          "x-chisel": {
+            "binding": "IO"
+          }
+        },
+        "t": {
+          "loc": [
+            0,
+            6,
+            13
+          ],
+          "type": "uint8"
+        },
+        "v": {
+          "loc": [
+            0,
+            4,
+            16
+          ],
+          "type": "M_v",
+          "x-chisel": {
+            "binding": "Reg"
+          }
+        },
+        "w": {
+          "loc": [
+            0,
+            5,
+            15
+          ],
+          "type": "uint8",
+          "x-chisel": {
+            "binding": "Wire"
+          }
+        }
+      }
+    }
+  },
+  "target": {
+    "Kid": {
+      "file": 4
+    },
+    "M": {
+      "file": 4
+    }
+  },
+  "bindings": [
+    {
+      "source": "Kid",
+      "stmts": {
+        "s1": "en"
+      },
+      "target": "Kid",
+      "vars": {
+        "clock": "clock",
+        "en": "en",
+        "q": "q",
+        "r": "r"
+      }
+    },
+    {
+      "source": "Kid_1",
+      "stmts": {
+        "s1": "en"
+      },
+      "target": "Kid",
+      "vars": {
+        "clock": "clock",
+        "en": "en",
+        "q": "q",
+        "r": "r"
+      }
+    },
+    {
+      "source": "M",
+      "stmts": {
+        "s5": "sel",
+        "s7": "_GEN"
+      },
+      "target": "M",
+      "vars": {
+        "clock": "clock",
+        "cnt": "cnt",
+        "d": "d",
+        "i": {
+          "$inline": "i"
+        },
+        "k": "k",
+        "k0": {
+          "$inst": "k0",
+          "module": "Kid"
+        },
+        "k1": {
+          "$inst": "k1",
+          "module": "Kid"
+        },
+        "o": "o",
+        "reset": "reset",
+        "sel": "sel",
+        "t": "t",
+        "v": [
+          "v_0",
+          "v_1"
+        ],
+        "w": "t"
+      }
+    },
+    {
+      "scope": "i",
+      "source": "Inl",
+      "stmts": {
+        "s1": "sel"
+      },
+      "target": "M",
+      "vars": {
+        "a": "sel",
+        "b": "sel",
+        "clock": "clock"
+      }
+    }
+  ]
+}

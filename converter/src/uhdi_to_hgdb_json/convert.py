@@ -249,4 +249,7 @@ class HGDBJsonBackend(Backend):
                 output: Optional[Any] = None
                 ) -> Dict[str, Any]:
         del output
+        if uhdi.get("uhdi") == "2.0":
+            from uhdi2.v2.to_hgdb_json import convert as convert_v2
+            return convert_v2(uhdi)
         return convert(uhdi)
