@@ -1,5 +1,5 @@
 """UHDI v2 layout -> hgdb SQLite symbol table, read straight from
-`source` / `bindings` (profiles `stmt` and `deps`).
+`original` / `bindings` (profiles `stmt` and `deps`).
 
 The table follows what hgdb-firrtl + toml2hgdb write for the same design:
 

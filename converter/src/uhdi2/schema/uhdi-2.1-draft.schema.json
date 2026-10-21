@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://circt.llvm.org/uhdi/2.1-draft/schema.json",
   "title": "UHDI 2.x draft: statements (hgdb) and dependencies (ChiselTrace)",
-  "description": "Debug information that links a source design (what the frontend declared) to the target netlist (what the compiler emitted). `source` and `target` describe the two sides on their own; `bindings` is the only place that links them.",
+  "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,8 +11,8 @@
     "profiles",
     "files",
     "types",
-    "source",
-    "target",
+    "original",
+    "generated",
     "bindings"
   ],
   "properties": {
@@ -40,7 +40,7 @@
           },
           {
             "const": "stmt",
-            "description": "Source modules carry `stmts`; bindings carry the target value of each `when` guard."
+            "description": "Original modules carry `stmts`; bindings carry the generated value of each `when` guard. A statement is where a debugger may stop, like a line-table row flagged `is_stmt` in DWARF."
           },
           {
             "const": "deps",
@@ -50,7 +50,7 @@
       }
     },
     "files": {
-      "description": "Every file a location refers to, by index. Source and target files share one list, so a location is always [file, line, column].",
+      "description": "Every file a location refers to, by index. Original and generated files share one list, so a location is always [file, line, column]. DWARF keeps the same list as `file_names` in the line table header; source maps as `sources`.",
       "type": "array",
       "items": {
         "type": "object",
@@ -63,7 +63,7 @@
             "description": "Path as the producer saw it.",
             "type": "string"
           },
-          "target": {
+          "generated": {
             "description": "Present on files of the emitted netlist. Lets a reader tell a Verilog location from a source one without guessing from the extension.",
             "const": true
           }
@@ -71,28 +71,28 @@
       }
     },
     "types": {
-      "description": "Type table. Keys are opaque ids; readers must not parse them.",
+      "description": "Type table. Keys are opaque ids; readers must not parse them. DWARF shares types the same way, as type DIEs that variables refer to.",
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/type"
       }
     },
-    "source": {
-      "description": "Modules the frontend declared, with their variables. A module made by lowering (a memory, a layer body) is not here.",
+    "original": {
+      "description": "Modules the frontend declared, with their variables; DWARF's abstract instance of a subprogram. A module made by lowering (a memory, a layer body) is not here.",
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/$defs/sourceModule"
+        "$ref": "#/$defs/originalModule"
       }
     },
-    "target": {
+    "generated": {
       "description": "Modules of the emitted netlist, keyed by their Verilog name.",
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/$defs/targetModule"
+        "$ref": "#/$defs/generatedModule"
       }
     },
     "bindings": {
-      "description": "How the variables of a source module read in a target module. One source module may bind into several targets and back (dedup, inlining).",
+      "description": "How the variables of an original module read in a generated module; DWARF's concrete instance with its locations. One original module may bind into several generated ones and back (dedup, inlining).",
       "type": "array",
       "items": {
         "$ref": "#/$defs/binding"
@@ -310,7 +310,7 @@
               "description": "An instance: the type of a variable that instantiates a module."
             },
             "module": {
-              "description": "Key into `source`: the module as written, before dedup.",
+              "description": "Key into `original`: the module as written, before dedup.",
               "type": "string"
             }
           }
@@ -326,7 +326,7 @@
         }
       }
     },
-    "sourceModule": {
+    "originalModule": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -341,7 +341,7 @@
           "description": "Variables the module declares, by source name.",
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/$defs/sourceVar"
+            "$ref": "#/$defs/originalVar"
           }
         },
         "x-chisel": {
@@ -363,7 +363,7 @@
         }
       }
     },
-    "sourceVar": {
+    "originalVar": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -399,7 +399,7 @@
         }
       }
     },
-    "targetModule": {
+    "generatedModule": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -413,38 +413,38 @@
           "const": "extern"
         }
       },
-      "description": "A Verilog module: where it is written and whether it has a body. Instances are variables of the source modules."
+      "description": "A Verilog module: where it is written and whether it has a body. Instances are variables of the original modules."
     },
     "binding": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "source",
-        "target",
+        "original",
+        "generated",
         "vars"
       ],
       "properties": {
-        "source": {
-          "description": "Key into `source`.",
+        "original": {
+          "description": "Key into `original`.",
           "type": "string"
         },
-        "target": {
-          "description": "Key into `target`.",
+        "generated": {
+          "description": "Key into `generated`.",
           "type": "string"
         },
         "scope": {
-          "description": "Dotted path of an inlined instance inside `target`; its signals carry the path as prefix in Verilog.",
+          "description": "Dotted path of an inlined instance inside `generated`; its signals carry the path as prefix in Verilog.",
           "type": "string"
         },
         "vars": {
-          "description": "Every variable of the source module, by its key there, to its value in the target.",
+          "description": "Every variable of the original module, by its key there, to its value in the generated one.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/value"
           }
         },
         "stmts": {
-          "description": "Profile `stmt`: `when` id to the target value of its guard.",
+          "description": "Profile `stmt`: `when` id to the generated value of its guard.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/value"
@@ -456,11 +456,11 @@
       "description": "A signal name, a literal, an expression, a value optimized away, an instance, or an aggregate of those shaped like the variable's type.",
       "oneOf": [
         {
-          "description": "Name of a signal in the target module.",
+          "description": "Name of a signal in the generated module.",
           "type": "string"
         },
         {
-          "description": "Literal, all bits of the leaf's width.",
+          "description": "Literal, all bits of the leaf's width. DWARF's `DW_AT_const_value`.",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -474,20 +474,20 @@
           }
         },
         {
-          "description": "No signal carries the value any more.",
+          "description": "No signal carries the value any more; a debugger shows it as `<optimized out>`, like a DWARF location list with a gap.",
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "$none"
+            "$optimizedOut"
           ],
           "properties": {
-            "$none": {
-              "const": "optimized"
+            "$optimizedOut": {
+              "const": true
             }
           }
         },
         {
-          "description": "Value of an instance kept in Verilog: its instance name there and the target module it instantiates.",
+          "description": "Value of an instance kept in Verilog: its instance name there and the generated module it instantiates.",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -499,13 +499,13 @@
               "type": "string"
             },
             "module": {
-              "description": "Key into `target`.",
+              "description": "Key into `generated`.",
               "type": "string"
             }
           }
         },
         {
-          "description": "Value of an instance inlined into the target: the `scope` of the binding that holds its variables.",
+          "description": "Value of an instance inlined into the generated module: the `scope` of the binding that holds its variables. DWARF's `DW_TAG_inlined_subroutine`.",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -542,7 +542,7 @@
       ]
     },
     "expr": {
-      "description": "Profile `expr`: the combinational op over target signals and literals that computes the value. Opcodes are Verilog's, as HGLDD uses them. A plain number in `args` is a static operand: the count of `R{}` (first), the high and low bit of `[]` (last). `$signed` marks the operands of a signed op. `^` with one operand is the reduction.",
+      "description": "Profile `expr`: the combinational op over generated signals and literals that computes the value; DWARF computes such a value with a `DW_OP_*` expression. Opcodes are Verilog's, as HGLDD uses them. A plain number in `args` is a static operand: the count of `R{}` (first), the high and low bit of `[]` (last). `$signed` marks the operands of a signed op. `^` with one operand is the reduction.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -830,7 +830,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "description": "Statements under a guard; the guard's target value is in `bindings[].stmts`.",
+          "description": "Statements under a guard; the guard's generated value is in `bindings[].stmts`.",
           "required": [
             "id",
             "kind",

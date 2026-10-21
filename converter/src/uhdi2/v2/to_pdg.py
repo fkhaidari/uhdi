@@ -1,4 +1,4 @@
-"""UHDI v2 layout -> ChiselTrace PDG (`pdg_spec.rs`), read from `source`
+"""UHDI v2 layout -> ChiselTrace PDG (`pdg_spec.rs`), read from `original`
 statements (profiles `stmt` and `deps`) and `bindings`.
 
 ChiselTrace replays the graph over a VCD. Per cycle it walks `cfg`,

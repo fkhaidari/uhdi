@@ -1,10 +1,10 @@
-"""UHDI v2 layout -> HGLDD 1.0, read straight from `source` / `target` /
+"""UHDI v2 layout -> HGLDD 1.0, read straight from `original` / `generated` /
 `bindings` / `types`. The document is never rebuilt in the older shapes.
 
 The v2 layout keeps three things apart:
 
-* `source`   -- pre-Dedup FIRRTL modules and their variables;
-* `target`   -- Verilog modules (file, extern kind);
+* `original` -- pre-Dedup FIRRTL modules and their variables;
+* `generated` -- Verilog modules (file, extern kind);
 * `bindings` -- which source lands in which target, and what Verilog
   signal carries each variable.
 
@@ -12,9 +12,9 @@ A target module becomes one HGLDD object (one per source after Dedup,
 see below):
 
 * Variables come from the *unscoped* bindings of the target, each joined
-  with `source[binding.source].vars` (hgl_loc, type, class info) and
+  with `original[binding.original].vars` (hgl_loc, type, class info) and
   `binding.vars` / `binding.hdl_locs` (value, hdl_loc). Order is the
-  order of the source variables. `{"$none": ...}` or a missing entry
+  order of the source variables. `{"$optimizedOut": ...}` or a missing entry
   gives a variable without `value`. A `$op` (expr profile) becomes the
   HGLDD expression with that opcode.
 * An instance is a source variable whose type has `kind: "module"`. It
@@ -241,7 +241,7 @@ def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
 
 
 def _is_none(v: Any) -> bool:
-    return v is None or (isinstance(v, dict) and "$none" in v)
+    return v is None or (isinstance(v, dict) and "$optimizedOut" in v)
 
 
 def _value(v: Any, tref: str, types: Types) -> Dict[str, Any]:
@@ -321,14 +321,14 @@ class _Doc:
     def __init__(self, doc: Dict[str, Any]):
         self.types: Types = doc.get("types", {})
         self.files: List[Dict[str, Any]] = doc.get("files", [])
-        self.source: Dict[str, Any] = doc.get("source", {})
-        self.target: Dict[str, Any] = doc.get("target", {})
+        self.source: Dict[str, Any] = doc.get("original", {})
+        self.target: Dict[str, Any] = doc.get("generated", {})
         self.info = _FileInfo()
         self.unscoped: Dict[str, List[Dict[str, Any]]] = {}
         self.scoped: Dict[str, List[Dict[str, Any]]] = {}
         for b in doc.get("bindings", []):
             (self.scoped if b.get("scope") else self.unscoped).setdefault(
-                b["target"], []).append(b)
+                b["generated"], []).append(b)
 
     def is_instance(self, var: Dict[str, Any]) -> bool:
         return (self.types.get(var.get("type", "")) or {}).get("kind") == "module"
@@ -337,7 +337,7 @@ class _Doc:
                   ) -> Iterator[Tuple[str, Dict[str, Any], Dict[str, Any]]]:
         """(name, source var, binding value) of every instance in `bindings`."""
         for b in bindings:
-            svars = (self.source.get(b["source"]) or {}).get("vars") or {}
+            svars = (self.source.get(b["original"]) or {}).get("vars") or {}
             for vname, value in (b.get("vars") or {}).items():
                 var = svars.get(vname)
                 if var is not None and self.is_instance(var) and isinstance(value, dict):
@@ -361,7 +361,7 @@ def _enum_index(d: _Doc) -> Tuple[Dict[str, int], Dict[str, Dict[str, Any]]]:
     for tname in d.target:
         defs: Dict[str, Any] = {}
         for b in d.unscoped.get(tname, []) + d.scoped.get(tname, []):
-            for var in (d.source.get(b["source"], {}).get("vars") or {}).values():
+            for var in (d.source.get(b["original"], {}).get("vars") or {}).values():
                 for tref in _type_refs(var.get("type", ""), d.types):
                     t = d.types.get(tref) or {}
                     if t.get("kind") != "enum":
@@ -490,7 +490,7 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
 def _module_class_info(d: _Doc, bindings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     records = []
     for b in bindings:
-        info = _class_info((d.source.get(b["source"]) or {}).get(EXT_KEY))
+        info = _class_info((d.source.get(b["original"]) or {}).get(EXT_KEY))
         if info and info not in records:
             records.append(info)
     return records[0] if len(records) == 1 else None
@@ -529,7 +529,7 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
             level = node["children"]
         if loc := d.src_loc(inline_locs.get(b["scope"])):
             node["hgl_loc"] = loc
-        for vname, var in (d.source.get(b["source"], {}).get("vars") or {}).items():
+        for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
             if d.is_instance(var):
                 continue
             pv = _port_var(d, vname, var, b, enum_ids, hdl_path)
@@ -543,7 +543,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
                    enum_defs: Dict[str, Dict[str, Any]],
                    hdl_path: Optional[str]) -> Dict[str, Any]:
     tmod = d.target[tname]
-    first_src = bindings[0]["source"] if bindings else tname
+    first_src = bindings[0]["original"] if bindings else tname
     out: Dict[str, Any] = {"kind": "module", "obj_name": first_src, "module_name": tname}
     fi = tmod.get("file")
     if isinstance(fi, int) and 0 <= fi < len(d.files) and d.files[fi].get("path"):
@@ -554,7 +554,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
         out["children"] = []
         return out
     for b in bindings:
-        if loc := d.src_loc((d.source.get(b["source"]) or {}).get("loc")):
+        if loc := d.src_loc((d.source.get(b["original"]) or {}).get("loc")):
             out["hgl_loc"] = loc
             break
     if slti := _module_class_info(d, bindings):
@@ -565,7 +565,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
     port_vars: List[Dict[str, Any]] = []
     seen: set = set()
     for b in bindings:
-        for vname, var in (d.source.get(b["source"], {}).get("vars") or {}).items():
+        for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
             if vname in seen or d.is_instance(var):
                 continue
             seen.add(vname)
@@ -594,7 +594,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
 
 def _hdl_path(d: _Doc) -> Optional[str]:
     for f in d.files:
-        if f.get("target") and f.get("path"):
+        if f.get("generated") and f.get("path"):
             return str(f["path"])
     referenced = {value["module"]
                   for bs in d.unscoped.values()

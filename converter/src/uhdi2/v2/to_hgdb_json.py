@@ -1,5 +1,5 @@
 """UHDI v2 layout -> hgdb JSON symbol table (the shape hgdb-circt's
-`firtool --hgdb=<file>` writes), read from `source` / `bindings`.
+`firtool --hgdb=<file>` writes), read from `original` / `bindings`.
 
 One `table` entry per source module that some instance shows, named by
 the source module (a deduplicated target serves several of them):

@@ -20,8 +20,8 @@
       "path": "stmts.fir"
     },
     {
-      "path": "stmts.sv",
-      "target": true
+      "generated": true,
+      "path": "stmts.sv"
     }
   ],
   "types": {
@@ -67,7 +67,7 @@
       "width": 8
     }
   },
-  "source": {
+  "original": {
     "Inl": {
       "stmts": [
         {
@@ -228,7 +228,7 @@
     "Kid_1": {
       "loc": [
         3,
-        23,
+        36,
         3
       ],
       "stmts": [
@@ -662,7 +662,7 @@
       }
     }
   },
-  "target": {
+  "generated": {
     "Kid": {
       "file": 4
     },
@@ -672,11 +672,11 @@
   },
   "bindings": [
     {
-      "source": "Kid",
+      "generated": "Kid",
+      "original": "Kid",
       "stmts": {
         "s1": "en"
       },
-      "target": "Kid",
       "vars": {
         "clock": "clock",
         "en": "en",
@@ -685,11 +685,11 @@
       }
     },
     {
-      "source": "Kid_1",
+      "generated": "Kid",
+      "original": "Kid_1",
       "stmts": {
         "s1": "en"
       },
-      "target": "Kid",
       "vars": {
         "clock": "clock",
         "en": "en",
@@ -698,12 +698,12 @@
       }
     },
     {
-      "source": "M",
+      "generated": "M",
+      "original": "M",
       "stmts": {
         "s5": "sel",
         "s7": "_GEN"
       },
-      "target": "M",
       "vars": {
         "clock": "clock",
         "cnt": "cnt",
@@ -732,12 +732,12 @@
       }
     },
     {
+      "generated": "M",
+      "original": "Inl",
       "scope": "i",
-      "source": "Inl",
       "stmts": {
         "s1": "sel"
       },
-      "target": "M",
       "vars": {
         "a": "sel",
         "b": "sel",

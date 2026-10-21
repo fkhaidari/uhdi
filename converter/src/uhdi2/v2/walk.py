@@ -36,7 +36,7 @@ class Instance:
 
 
 def _is_none(v: Any) -> bool:
-    return v is None or (isinstance(v, dict) and "$none" in v)
+    return v is None or (isinstance(v, dict) and "$optimizedOut" in v)
 
 
 class Doc:
@@ -44,17 +44,17 @@ class Doc:
         self.doc = doc
         self.types: Types = doc.get("types", {})
         self.files: List[Dict[str, Any]] = doc.get("files", [])
-        self.source: Dict[str, Any] = doc.get("source", {})
-        self.target: Dict[str, Any] = doc.get("target", {})
+        self.source: Dict[str, Any] = doc.get("original", {})
+        self.target: Dict[str, Any] = doc.get("generated", {})
         self.unscoped: Dict[Tuple[str, str], Dict[str, Any]] = {}
         self.by_target: Dict[str, List[Dict[str, Any]]] = {}
         self.scoped: Dict[Tuple[str, str], Dict[str, Any]] = {}
         for b in doc.get("bindings", []):
             if b.get("scope"):
-                self.scoped[(b["target"], b["scope"])] = b
+                self.scoped[(b["generated"], b["scope"])] = b
             else:
-                self.unscoped[(b["source"], b["target"])] = b
-                self.by_target.setdefault(b["target"], []).append(b)
+                self.unscoped[(b["original"], b["generated"])] = b
+                self.by_target.setdefault(b["generated"], []).append(b)
 
     # ---- sources -------------------------------------------------------
 
@@ -89,8 +89,8 @@ class Doc:
             if not bs:
                 continue
             # A root is not deduplicated; prefer the source of its own name.
-            b = next((b for b in bs if b["source"] == t), bs[0])
-            out.append(self._instance(t, t, b["source"], b, set()))
+            b = next((b for b in bs if b["original"] == t), bs[0])
+            out.append(self._instance(t, t, b["original"], b, set()))
         return out
 
     def _instance(self, path: str, target: str, source: str,
@@ -112,7 +112,7 @@ class Doc:
             if "$inline" in value:
                 scoped = self.scoped.get((inst.target, value["$inline"]))
                 if scoped is not None:
-                    self._lay(inst, Part(scoped["source"], scoped,
+                    self._lay(inst, Part(scoped["original"], scoped,
                                          value["$inline"] + "."), on_path)
             elif "$inst" in value:
                 child_src = self.module_of(var) or ""
@@ -183,12 +183,12 @@ class Doc:
             if isinstance(value, dict) and "$inline" in value and n == 1:
                 # A port of an inlined module: its signal in the binding
                 # the module was inlined with.
-                b = self.scoped.get((part.binding.get("target", ""),
+                b = self.scoped.get((part.binding.get("generated", ""),
                                      value["$inline"]))
                 if b is None:
                     return None
                 rest = path[len(fname_of(steps[0])):].lstrip(".")
-                return self.value_at(Part(b["source"], b), rest)
+                return self.value_at(Part(b["original"], b), rest)
             if isinstance(value, dict) and not any(k.startswith("$")
                                                    for k in value):
                 value = value.get(key)
@@ -237,7 +237,7 @@ _REDUCE = {"andr": "&", "orr": "|", "xorr": "^"}
 
 def render(v: Any) -> Optional[str]:
     """A guard value as a Verilog-like expression, or None when the
-    value is unknown (`$none`)."""
+    value is unknown (`$optimizedOut`)."""
     if isinstance(v, str):
         return v
     if isinstance(v, bool):

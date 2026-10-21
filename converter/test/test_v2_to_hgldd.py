@@ -124,7 +124,35 @@ def v2_from_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
         b["vars"] = {n: _listify(v, sv[n]["type"], doc["types"])
                      for n, v in b["vars"].items()}
     _relayout(doc)
-    return doc
+    return _new_keys(doc)
+
+
+def _new_keys(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """The oracle still spells the layout with `source` / `target` and
+    `$none`; rename them to `original` / `generated` and `$optimizedOut`."""
+    names = {"source": "original", "target": "generated"}
+
+    def value(v: Any) -> Any:
+        if isinstance(v, list):
+            return [value(x) for x in v]
+        if not isinstance(v, dict):
+            return v
+        if "$none" in v:
+            return {"$optimizedOut": True}
+        if "$op" in v:
+            return {**v, "args": value(v.get("args") or [])}
+        if any(k.startswith("$") for k in v):
+            return v
+        return {k: value(x) for k, x in v.items()}
+
+    out = {names.get(k, k): v for k, v in doc.items()}
+    for f in out["files"]:
+        if "target" in f:
+            f["generated"] = f.pop("target")
+    out["bindings"] = [
+        {names.get(k, k): (value(x) if k == "vars" else x) for k, x in b.items()}
+        for b in out["bindings"]]
+    return out
 
 
 def _leaf_paths(types: Dict[str, Any], tref: str, prefix: str = ""):
@@ -193,7 +221,7 @@ def _dedup_doc() -> Dict[str, Any]:
     u8 = {"kind": "uint", "width": 8}
     return {
         "uhdi": "2.0", "producer": "firtool", "profiles": ["x-chisel"],
-        "files": [{"path": "/src/A.scala"}, {"path": "Top.sv", "target": True}],
+        "files": [{"path": "/src/A.scala"}, {"path": "Top.sv", "generated": True}],
         "types": {"u8": u8, "b": {"kind": "uint", "width": 1},
                   "pair": {"kind": "struct", "fields": [
                       {"name": "x", "type": "u8"}, {"name": "y", "type": "u8"}]},
@@ -201,7 +229,7 @@ def _dedup_doc() -> Dict[str, Any]:
                   "module_Left": {"kind": "module", "module": "Left"},
                   "module_Right": {"kind": "module", "module": "Right"},
                   "module_Mid": {"kind": "module", "module": "Mid"}},
-        "source": {
+        "original": {
             "Top": {"loc": [0, 1, 1], "vars": {
                 "io": {"type": "u8", "loc": [0, 2, 3]},
                 "l0": {"type": "module_Left", "loc": [0, 3, 5]},
@@ -219,28 +247,28 @@ def _dedup_doc() -> Dict[str, Any]:
                       "vars": {"b": {"type": "u8", "loc": [0, 21, 3]},
                                "a": {"type": "u8", "loc": [0, 22, 3]}}},
         },
-        "target": {
+        "generated": {
             "Top": {"file": 1},
             "Shared": {"file": 1},
             "Ext": {"kind": "extern"},
         },
         "bindings": [
-            {"source": "Top", "target": "Top", "vars": {
+            {"original": "Top", "generated": "Top", "vars": {
                 "io": "io",
                 "l0": {"$inst": "l0", "module": "Shared"},
                 "r": {"$inst": "r0", "module": "Shared"},
                 "m": {"$inline": "m"}, "h": {"$inline": "h"}}},
-            {"source": "Left", "target": "Shared",
+            {"original": "Left", "generated": "Shared",
              "vars": {"a": "a_0", "p": {"x": "p_x", "y": {"$const": 5}},
-                      "v": ["v_0", {"$none": "optimized"}],
-                      "gone": {"$none": "optimized"}},
+                      "v": ["v_0", {"$optimizedOut": True}],
+                      "gone": {"$optimizedOut": True}},
              "hdl_locs": {"a": [1, 7, 3]}},
-            {"source": "Right", "target": "Shared", "vars": {"b": "b_0", "a": "clash"}},
-            {"source": "Mid", "target": "Top", "scope": "m",
+            {"original": "Right", "generated": "Shared", "vars": {"b": "b_0", "a": "clash"}},
+            {"original": "Mid", "generated": "Top", "scope": "m",
              "vars": {"h": {"$inline": "m.h"}}},
-            {"source": "Left", "target": "Top", "scope": "m.h",
+            {"original": "Left", "generated": "Top", "scope": "m.h",
              "vars": {"a": "m_h_a"}},
-            {"source": "Right", "target": "Top", "scope": "h",
+            {"original": "Right", "generated": "Top", "scope": "h",
              "vars": {"b": {"$const": "0b101"}, "a": "io"}},
         ],
     }
@@ -268,7 +296,7 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert shared["port_vars"][1]["value"] == {
         "opcode": "'{", "operands": [{"sig_name": "p_x"}, {"bit_vector": "00000101"}]}
     assert shared["port_vars"][2]["value"] == {"opcode": "'{", "operands": [{"sig_name": "v_0"}, {}]}
-    assert "value" not in shared["port_vars"][3]  # $none
+    assert "value" not in shared["port_vars"][3]  # $optimizedOut
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
 
     top = mods["Top"]
@@ -293,8 +321,8 @@ def test_dedup_objects_and_inline_scopes() -> None:
 
 def test_single_class_info_and_type_on_instance() -> None:
     doc = _dedup_doc()
-    doc["bindings"] = [b for b in doc["bindings"] if b["source"] != "Right"]
-    doc["source"]["Top"]["vars"]["r"]["type"] = "module_Left"
+    doc["bindings"] = [b for b in doc["bindings"] if b["original"] != "Right"]
+    doc["original"]["Top"]["vars"]["r"]["type"] = "module_Left"
     out = to_hgldd_v2(doc)
     shared = next(o for o in out["objects"] if o.get("module_name") == "Shared")
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
@@ -306,7 +334,7 @@ def test_enum_values_listed_by_value() -> None:
     doc = _dedup_doc()
     doc["types"]["op"] = {"kind": "enum", "width": 2,
                           "values": {"Add": 0, "And": 2, "Sub": 1}}
-    doc["source"]["Top"]["vars"]["op"] = {"type": "op", "loc": [0, 2, 5]}
+    doc["original"]["Top"]["vars"]["op"] = {"type": "op", "loc": [0, 2, 5]}
     doc["bindings"][0]["vars"]["op"] = "op"
     top = next(o for o in to_hgldd_v2(doc)["objects"] if o.get("module_name") == "Top")
     assert list(top["enum_defs"]["0"].items()) == [("0", "Add"), ("1", "Sub"), ("2", "And")]
@@ -328,7 +356,7 @@ def test_expression_value() -> None:
 def test_vector_type_info() -> None:
     doc = _dedup_doc()
     doc["types"]["pvec"] = {"kind": "vector", "elem": "pair", "size": 2}
-    doc["source"]["Left"]["vars"]["pv"] = {
+    doc["original"]["Left"]["vars"]["pv"] = {
         "type": "pvec", "loc": [0, 15, 3], "x-chisel": {"binding": "IO"}}
     doc["types"]["u8"]["name"] = "UInt<8>"
     doc["types"]["pvec"]["name"] = "Pair[2]"
