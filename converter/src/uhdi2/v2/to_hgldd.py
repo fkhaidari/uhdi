@@ -72,6 +72,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from uhdi_common.context import ConversionError
 from uhdi_to_hgldd.convert import _FileInfo
+from .types import named_types
 
 EXT_KEY = "x-chisel"
 
@@ -319,6 +320,7 @@ def _location_types(tref: str, types: Types,
 
 class _Doc:
     def __init__(self, doc: Dict[str, Any]):
+        doc = named_types(doc)
         self.types: Types = doc.get("types", {})
         self.files: List[Dict[str, Any]] = doc.get("files", [])
         self.source: Dict[str, Any] = doc.get("original", {})

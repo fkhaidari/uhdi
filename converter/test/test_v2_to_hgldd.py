@@ -26,7 +26,7 @@ from typing import Any, Dict, List
 import pytest
 from uhdi2.to_hgldd import convert as to_hgldd_tree
 from uhdi2.upgrade import upgrade
-from uhdi2.v2.to_hgldd import convert as to_hgldd_v2
+from uhdi2.v2.to_hgldd import convert as _convert_v2
 from uhdi_to_hgldd import HGLDDBackend
 
 _REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -55,6 +55,35 @@ def _to_new():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def _indexed(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """The documents below key their types by name for readability; the
+    layout lists them and refers to one by index, a type after its parts."""
+    doc = copy.deepcopy(doc)
+    types, index, out = doc["types"], {}, []
+
+    def number(key: str) -> int:
+        if key not in index:
+            t = dict(types[key])
+            if "fields" in t:
+                t["fields"] = [{**f, "type": number(f["type"])} for f in t["fields"]]
+            for ref in ("elem", "base"):
+                if ref in t:
+                    t[ref] = number(t[ref])
+            index[key] = len(out)
+            out.append(t)
+        return index[key]
+
+    for module in doc["original"].values():
+        for var in (module.get("vars") or {}).values():
+            var["type"] = number(var["type"])
+    doc["types"] = out
+    return doc
+
+
+def to_hgldd_v2(doc: Dict[str, Any]) -> Dict[str, Any]:
+    return _convert_v2(_indexed(doc))
 
 
 def _tree(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -208,8 +237,8 @@ def test_matches_tree_converter(path: pathlib.Path) -> None:
 
 
 def test_backend_dispatches_on_uhdi_2() -> None:
-    doc = _dedup_doc()
-    assert HGLDDBackend().convert(doc) == to_hgldd_v2(doc)
+    doc = _indexed(_dedup_doc())
+    assert HGLDDBackend().convert(doc) == _convert_v2(doc)
 
 
 # ---- hand-written documents ----------------------------------------------
@@ -368,8 +397,33 @@ def test_vector_type_info() -> None:
     assert pv["source_lang_type_info"] == {"type_name": "IO[Pair[2]]", "params": [
         {"name": "gen", "type": "=> T"},
         {"name": "length", "type": "Int", "value": "2"}]}
-    elems = [o for o in out["objects"] if o["obj_name"].startswith("pvec")]
+    elems = [o for o in out["objects"] if o["obj_name"].startswith("Shared_pv")]
     assert elems
     for o in elems:
         assert [p.get("source_lang_type_info") for p in o["port_vars"]] == [
             {"type_name": "IO[UInt<8>]"}, {"type_name": "IO[UInt<8>]"}]
+
+
+def test_struct_names_follow_hgldd() -> None:
+    """A struct is named after the first variable reaching it, in its Verilog
+    module; two types hinted to one name both append their source name."""
+    from uhdi2.v2.types import named_types
+    u8 = {"kind": "uint", "width": 8}
+    doc = _indexed({
+        "types": {"u8": u8,
+                  "outer": {"kind": "struct", "name": "AnonymousBundle",
+                            "fields": [{"name": "a", "type": "u8"}]},
+                  "stage": {"kind": "struct", "name": "StageIO",
+                            "fields": [{"name": "in", "type": "u8"},
+                                       {"name": "x", "type": "inner"}]},
+                  "inner": {"kind": "struct",
+                            "fields": [{"name": "b", "type": "u8"}]}},
+        "original": {"Cpu": {"vars": {"io": {"type": "outer"}}},
+                     "Stage": {"vars": {"io": {"type": "stage"}}}},
+        "bindings": [{"original": "Cpu", "generated": "Cpu", "vars": {}},
+                     {"original": "Stage", "generated": "Cpu", "scope": "s",
+                      "vars": {}}],
+    })
+    names = {k for k, t in named_types(doc)["types"].items()
+             if t["kind"] == "struct"}
+    assert names == {"Cpu_io_AnonymousBundle", "Cpu_io_StageIO", "Cpu_io_x"}

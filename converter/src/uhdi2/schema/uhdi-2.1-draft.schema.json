@@ -71,9 +71,9 @@
       }
     },
     "types": {
-      "description": "Type table. Keys are opaque ids; readers must not parse them. DWARF shares types the same way, as type DIEs that variables refer to.",
-      "type": "object",
-      "additionalProperties": {
+      "description": "Type table, referred to by index. A type comes after the types it is built from. DWARF shares types the same way, as type DIEs that variables refer to.",
+      "type": "array",
+      "items": {
         "$ref": "#/$defs/type"
       }
     },
@@ -121,8 +121,9 @@
       "minItems": 3
     },
     "typeRef": {
-      "description": "Key into `types`.",
-      "type": "string"
+      "description": "Index into `types`.",
+      "type": "integer",
+      "minimum": 0
     },
     "params": {
       "description": "Constructor parameters of a Chisel class.",

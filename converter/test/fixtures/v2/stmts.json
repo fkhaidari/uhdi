@@ -24,49 +24,49 @@
       "path": "stmts.sv"
     }
   ],
-  "types": {
-    "M_v": {
-      "elem": "uint8",
-      "kind": "vector",
-      "name": "UInt<8>[2]",
-      "size": 2
-    },
-    "bool": {
+  "types": [
+    {
       "kind": "uint",
       "name": "Bool",
       "width": 1
     },
-    "clock": {
+    {
       "kind": "clock"
     },
-    "module_Inl": {
-      "kind": "module",
-      "module": "Inl"
-    },
-    "module_Kid": {
-      "kind": "module",
-      "module": "Kid"
-    },
-    "module_Kid_1": {
-      "kind": "module",
-      "module": "Kid_1"
-    },
-    "uint2": {
-      "kind": "uint",
-      "name": "UInt<2>",
-      "width": 2
-    },
-    "uint4": {
+    {
       "kind": "uint",
       "name": "UInt<4>",
       "width": 4
     },
-    "uint8": {
+    {
+      "kind": "uint",
+      "name": "UInt<2>",
+      "width": 2
+    },
+    {
       "kind": "uint",
       "name": "UInt<8>",
       "width": 8
+    },
+    {
+      "kind": "module",
+      "module": "Inl"
+    },
+    {
+      "kind": "module",
+      "module": "Kid"
+    },
+    {
+      "kind": "module",
+      "module": "Kid_1"
+    },
+    {
+      "elem": 4,
+      "kind": "vector",
+      "name": "UInt<8>[2]",
+      "size": 2
     }
-  },
+  ],
   "original": {
     "Inl": {
       "stmts": [
@@ -106,7 +106,7 @@
             2,
             7
           ],
-          "type": "bool",
+          "type": 0,
           "x-chisel": {
             "binding": "IO"
           }
@@ -118,14 +118,14 @@
             3,
             7
           ],
-          "type": "bool",
+          "type": 0,
           "x-chisel": {
             "binding": "IO"
           }
         },
         "clock": {
           "dir": "in",
-          "type": "clock"
+          "type": 1
         }
       }
     },
@@ -186,7 +186,7 @@
       "vars": {
         "clock": {
           "dir": "in",
-          "type": "clock"
+          "type": 1
         },
         "en": {
           "dir": "in",
@@ -195,7 +195,7 @@
             1,
             7
           ],
-          "type": "bool",
+          "type": 0,
           "x-chisel": {
             "binding": "IO"
           }
@@ -207,7 +207,7 @@
             1,
             7
           ],
-          "type": "uint4",
+          "type": 2,
           "x-chisel": {
             "binding": "IO"
           }
@@ -218,7 +218,7 @@
             2,
             16
           ],
-          "type": "uint4",
+          "type": 2,
           "x-chisel": {
             "binding": "Reg"
           }
@@ -287,7 +287,7 @@
       "vars": {
         "clock": {
           "dir": "in",
-          "type": "clock"
+          "type": 1
         },
         "en": {
           "dir": "in",
@@ -296,7 +296,7 @@
             1,
             7
           ],
-          "type": "bool",
+          "type": 0,
           "x-chisel": {
             "binding": "IO"
           }
@@ -308,7 +308,7 @@
             1,
             7
           ],
-          "type": "uint4",
+          "type": 2,
           "x-chisel": {
             "binding": "IO"
           }
@@ -319,7 +319,7 @@
             2,
             16
           ],
-          "type": "uint4",
+          "type": 2,
           "x-chisel": {
             "binding": "Reg"
           }
@@ -548,7 +548,7 @@
       "vars": {
         "clock": {
           "dir": "in",
-          "type": "clock"
+          "type": 1
         },
         "cnt": {
           "loc": [
@@ -556,7 +556,7 @@
             3,
             20
           ],
-          "type": "uint2",
+          "type": 3,
           "x-chisel": {
             "binding": "Reg"
           }
@@ -568,7 +568,7 @@
             1,
             7
           ],
-          "type": "uint8",
+          "type": 4,
           "x-chisel": {
             "binding": "IO"
           }
@@ -579,11 +579,11 @@
             12,
             17
           ],
-          "type": "module_Inl"
+          "type": 5
         },
         "k": {
           "dir": "out",
-          "type": "uint4"
+          "type": 2
         },
         "k0": {
           "loc": [
@@ -591,7 +591,7 @@
             14,
             18
           ],
-          "type": "module_Kid"
+          "type": 6
         },
         "k1": {
           "loc": [
@@ -599,7 +599,7 @@
             16,
             18
           ],
-          "type": "module_Kid_1"
+          "type": 7
         },
         "o": {
           "dir": "out",
@@ -608,14 +608,14 @@
             1,
             7
           ],
-          "type": "uint8",
+          "type": 4,
           "x-chisel": {
             "binding": "IO"
           }
         },
         "reset": {
           "dir": "in",
-          "type": "bool"
+          "type": 0
         },
         "sel": {
           "dir": "in",
@@ -624,7 +624,7 @@
             1,
             7
           ],
-          "type": "bool",
+          "type": 0,
           "x-chisel": {
             "binding": "IO"
           }
@@ -635,7 +635,7 @@
             6,
             13
           ],
-          "type": "uint8"
+          "type": 4
         },
         "v": {
           "loc": [
@@ -643,7 +643,7 @@
             4,
             16
           ],
-          "type": "M_v",
+          "type": 8,
           "x-chisel": {
             "binding": "Reg"
           }
@@ -654,7 +654,7 @@
             5,
             15
           ],
-          "type": "uint8",
+          "type": 4,
           "x-chisel": {
             "binding": "Wire"
           }
