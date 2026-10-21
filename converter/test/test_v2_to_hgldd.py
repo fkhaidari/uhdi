@@ -277,8 +277,8 @@ def _dedup_doc() -> Dict[str, Any]:
                                "a": {"type": "u8", "loc": [0, 22, 3]}}},
         },
         "generated": {
-            "Top": {"file": 1},
-            "Shared": {"file": 1},
+            "Top": {"loc": [1, 40]},
+            "Shared": {"loc": [1, 2]},
             "Ext": {"kind": "extern"},
         },
         "bindings": [
@@ -317,6 +317,9 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert [(p["var_name"], p["value"]) for p in right["port_vars"]] == [
         ("b", {"sig_name": "b_0"}), ("a", {"sig_name": "clash"})]
     assert right["source_lang_type_info"] == {"type_name": "Right"}
+    # Both objects of Shared point at its one Verilog declaration.
+    assert shared["hdl_loc"] == right["hdl_loc"] == {
+        "file": 2, "begin_line": 2, "end_line": 2}
     a = shared["port_vars"][0]
     assert a["value"] == {"sig_name": "a_0"}
     assert a["hgl_loc"] == {"file": 1, "begin_line": 11, "end_line": 11,
@@ -329,6 +332,8 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
 
     top = mods["Top"]
+    assert top["hdl_loc"]["begin_line"] == 40
+    assert "hdl_loc" not in mods["Ext"]
     assert [c["name"] for c in top["children"][:2]] == ["l0", "r"]
     assert [c["obj_name"] for c in top["children"][:2]] == ["Left", "Right"]
     assert [c["module_name"] for c in top["children"][:2]] == ["Shared", "Shared"]

@@ -664,10 +664,16 @@
   },
   "generated": {
     "Kid": {
-      "file": 4
+      "loc": [
+        4,
+        2
+      ]
     },
     "M": {
-      "file": 4
+      "loc": [
+        4,
+        19
+      ]
     }
   },
   "bindings": [

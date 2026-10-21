@@ -101,7 +101,7 @@
   },
   "$defs": {
     "loc": {
-      "description": "[file index into `files`, line, column]; line and column count from 1.",
+      "description": "[file index into `files`, line, column]; line and column count from 1. The column is left out where it says nothing.",
       "type": "array",
       "prefixItems": [
         {
@@ -118,7 +118,7 @@
         }
       ],
       "items": false,
-      "minItems": 3
+      "minItems": 2
     },
     "typeRef": {
       "description": "Index into `types`.",
@@ -404,10 +404,9 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "file": {
-          "description": "Index into `files` of the file the module is written to.",
-          "type": "integer",
-          "minimum": 0
+        "loc": {
+          "description": "Where the module is declared in the netlist.",
+          "$ref": "#/$defs/loc"
         },
         "kind": {
           "description": "An external module: declared, not emitted.",

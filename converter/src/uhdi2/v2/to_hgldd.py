@@ -4,7 +4,7 @@
 The v2 layout keeps three things apart:
 
 * `original` -- pre-Dedup FIRRTL modules and their variables;
-* `generated` -- Verilog modules (file, extern kind);
+* `generated` -- Verilog modules (declaration `loc`, extern kind);
 * `bindings` -- which source lands in which target, and what Verilog
   signal carries each variable.
 
@@ -39,9 +39,9 @@ endCol]` into `files`; a column of 0 means "no column". Source paths lose
 their leading `/`, as in the other HGLDD converters.
 
 Known differences from the tree-shaped converter (`uhdi2.to_hgldd`), by
-design of the layout: no module-level or instance-level `hdl_loc` (the
-layout stores only the target file), no variables or ports for
-extern modules, no synthetic leaf ports.
+design of the layout: no instance-level `hdl_loc` (the layout locates
+modules, not instances), no variables or ports for extern modules, no
+synthetic leaf ports.
 
 Known differences from the pool converter (`uhdi_to_hgldd`) run on the
 layout-1 document of the same design:
@@ -547,9 +547,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
     tmod = d.target[tname]
     first_src = bindings[0]["original"] if bindings else tname
     out: Dict[str, Any] = {"kind": "module", "obj_name": first_src, "module_name": tname}
-    fi = tmod.get("file")
-    if isinstance(fi, int) and 0 <= fi < len(d.files) and d.files[fi].get("path"):
-        d.info.add_hdl(str(d.files[fi]["path"]))
+    hdl_loc = d.hdl_loc(tmod.get("loc"), hdl_path)
     if tmod.get("kind") == "extern":
         out["isExtModule"] = 1
         out["port_vars"] = []
@@ -559,6 +557,8 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
         if loc := d.src_loc((d.source.get(b["original"]) or {}).get("loc")):
             out["hgl_loc"] = loc
             break
+    if hdl_loc:
+        out["hdl_loc"] = hdl_loc
     if slti := _module_class_info(d, bindings):
         out["source_lang_type_info"] = slti
     if defs := enum_defs.get(tname):
