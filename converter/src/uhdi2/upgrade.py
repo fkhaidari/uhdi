@@ -340,7 +340,7 @@ def _module_source(scope: Dict[str, Any], ctx: BaseContext) -> Dict[str, Any]:
         out["name"] = name
     slt = chisel.get("sourceLangType") or {}
     if type_name := slt.get("typeName"):
-        put_ext(out, "typeName", type_name)
+        put_ext(out, "type_name", type_name)
     if params := _render_params(slt.get("params")):
         put_ext(out, "params", params)
     if loc := _loc_dict(chisel.get("location")):

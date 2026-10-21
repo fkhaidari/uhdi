@@ -349,7 +349,7 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "typeName": {
+            "type_name": {
               "description": "Scala class of the module.",
               "type": "string"
             },
@@ -478,10 +478,10 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "$optimizedOut"
+            "$optimized_out"
           ],
           "properties": {
-            "$optimizedOut": {
+            "$optimized_out": {
               "const": true
             }
           }
@@ -725,8 +725,8 @@
             "kind",
             "loc",
             "var",
-            "readLatency",
-            "writeLatency"
+            "read_latency",
+            "write_latency"
           ],
           "properties": {
             "id": {
@@ -750,11 +750,11 @@
               "description": "Key into the module's `vars`.",
               "type": "string"
             },
-            "readLatency": {
+            "read_latency": {
               "type": "integer",
               "minimum": 0
             },
-            "writeLatency": {
+            "write_latency": {
               "type": "integer",
               "minimum": 1
             }

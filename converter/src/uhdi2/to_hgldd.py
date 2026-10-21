@@ -115,7 +115,7 @@ def _module_source_lang_type_info(source: Optional[Dict[str, Any]],
     `class_ext_by_module`). HGLDD has one slot per module object, so a
     module whose instances name different classes gets neither."""
     record = ext(source) or borrowed or {}
-    type_name = record.get("typeName")
+    type_name = record.get("type_name")
     if not type_name:
         return None
     out: Dict[str, Any] = {"type_name": type_name}

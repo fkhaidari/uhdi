@@ -226,7 +226,7 @@ class _Builder:
     def _latency(self, part: Part, root: str) -> int:
         for s in _flat(self.d.stmts(part.source)):
             if s.get("var") == root and s.get("kind") == "mem":
-                return int(s.get("readLatency") or 0)
+                return int(s.get("read_latency") or 0)
         return 0
 
     def predicate(self, inst, guard, loc) -> Optional[int]:

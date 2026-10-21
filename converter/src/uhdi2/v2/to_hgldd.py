@@ -14,7 +14,7 @@ see below):
 * Variables come from the *unscoped* bindings of the target, each joined
   with `original[binding.original].vars` (hgl_loc, type, class info) and
   `binding.vars` / `binding.hdl_locs` (value, hdl_loc). Order is the
-  order of the source variables. `{"$optimizedOut": ...}` or a missing entry
+  order of the source variables. `{"$optimized_out": ...}` or a missing entry
   gives a variable without `value`. A `$op` (expr profile) becomes the
   HGLDD expression with that opcode.
 * An instance is a source variable whose type has `kind: "module"`. It
@@ -26,7 +26,7 @@ see below):
   port_vars, children}` named by each path component, as the pool
   converter does for `dbg.scope` inline scopes. `hgl_loc` is the loc of
   the instance variable whose value is `{"$inline": scope}`.
-* Class info (`x-chisel.typeName/params` on the source module) becomes
+* Class info (`x-chisel.type_name/params` on the source module) becomes
   the module's `source_lang_type_info`.
 
 Dedup: several unscoped bindings can point at one target. Each becomes
@@ -189,9 +189,9 @@ def _hgldd_params(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def _class_info(xc: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    if not xc or not xc.get("typeName"):
+    if not xc or not xc.get("type_name"):
         return None
-    out: Dict[str, Any] = {"type_name": xc["typeName"]}
+    out: Dict[str, Any] = {"type_name": xc["type_name"]}
     if params := xc.get("params"):
         out["params"] = _hgldd_params(params)
     return out
@@ -242,7 +242,7 @@ def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
 
 
 def _is_none(v: Any) -> bool:
-    return v is None or (isinstance(v, dict) and "$optimizedOut" in v)
+    return v is None or (isinstance(v, dict) and "$optimized_out" in v)
 
 
 def _value(v: Any, tref: str, types: Types) -> Dict[str, Any]:

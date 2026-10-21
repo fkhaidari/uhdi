@@ -38,7 +38,7 @@ class Instance:
 
 
 def _is_none(v: Any) -> bool:
-    return v is None or (isinstance(v, dict) and "$optimizedOut" in v)
+    return v is None or (isinstance(v, dict) and "$optimized_out" in v)
 
 
 class Doc:
@@ -240,7 +240,7 @@ _REDUCE = {"andr": "&", "orr": "|", "xorr": "^"}
 
 def render(v: Any) -> Optional[str]:
     """A guard value as a Verilog-like expression, or None when the
-    value is unknown (`$optimizedOut`)."""
+    value is unknown (`$optimized_out`)."""
     if isinstance(v, str):
         return v
     if isinstance(v, bool):

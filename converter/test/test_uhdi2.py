@@ -309,9 +309,9 @@ def _two_instance_doc(class_a: str, class_b: str) -> Dict[str, Any]:
                 "variables": {},
                 "instances": {
                     "ia": {"moduleRef": "A",
-                           "source": {"x-chisel": {"typeName": class_a}}},
+                           "source": {"x-chisel": {"type_name": class_a}}},
                     "ib": {"moduleRef": "A",
-                           "source": {"x-chisel": {"typeName": class_b}}},
+                           "source": {"x-chisel": {"type_name": class_b}}},
                 },
             },
         },
@@ -350,8 +350,8 @@ def test_core_rejects_a_frontend_key_left_at_the_top() -> None:
     rather than into `x-chisel`, is a schema error and not a silently
     ignored one."""
     doc = _two_instance_doc("ClassA", "ClassA")
-    doc["modules"]["A"]["source"] = {"typeName": "ClassA"}
-    assert [e for e in iter_errors(doc) if "typeName" in e.message]
+    doc["modules"]["A"]["source"] = {"type_name": "ClassA"}
+    assert [e for e in iter_errors(doc) if "type_name" in e.message]
 
 
 def test_hgldd_params_values_are_strings() -> None:
@@ -365,7 +365,7 @@ def test_hgldd_params_values_are_strings() -> None:
         "types": {},
         "modules": {
             "M": {
-                "source": {"x-chisel": {"typeName": "M", "params": [
+                "source": {"x-chisel": {"type_name": "M", "params": [
                     {"name": "width", "type": "Int", "value": "5"},
                     {"name": "hasReset", "type": "Boolean", "value": True},
                     {"name": "depth", "type": "Int", "value": 8},

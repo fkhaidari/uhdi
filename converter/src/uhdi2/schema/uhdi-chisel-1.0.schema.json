@@ -33,14 +33,14 @@
       }
     },
     "ClassExt": {
-      "description": "What Chisel knows about a module record or an instantiation beyond its FIRRTL name.\n\n`typeName` is `target.desiredName` passed through verbatim: the name the module author wants the Verilog module to carry, taken before uniquification. Its default is the Scala class name, but it is a plain `def` anyone may override, and parametrized generators do -- `chisel3.util.Queue` sets it to `s\"Queue${entries}_${gen.typeName}\"`. So it identifies neither a class (two classes may share one `desiredName`) nor a parameterization (one class yields several). Treat it as a display name: show it, do not match on it, and do not use it to decide that two records share an origin.\n\n`params` are constructor parameters, read by reflection over the Scala constructor.",
+      "description": "What Chisel knows about a module record or an instantiation beyond its FIRRTL name.\n\n`type_name` is `target.desiredName` passed through verbatim: the name the module author wants the Verilog module to carry, taken before uniquification. Its default is the Scala class name, but it is a plain `def` anyone may override, and parametrized generators do -- `chisel3.util.Queue` sets it to `s\"Queue${entries}_${gen.typeName}\"`. So it identifies neither a class (two classes may share one `desiredName`) nor a parameterization (one class yields several). Treat it as a display name: show it, do not match on it, and do not use it to decide that two records share an origin.\n\n`params` are constructor parameters, read by reflection over the Scala constructor.",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
         "^x-": true
       },
       "properties": {
-        "typeName": {
+        "type_name": {
           "type": "string"
         },
         "params": {

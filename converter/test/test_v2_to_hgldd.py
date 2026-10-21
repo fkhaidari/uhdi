@@ -158,7 +158,7 @@ def v2_from_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
 
 def _new_keys(doc: Dict[str, Any]) -> Dict[str, Any]:
     """The oracle still spells the layout with `source` / `target` and
-    `$none`; rename them to `original` / `generated` and `$optimizedOut`."""
+    `$none`; rename them to `original` / `generated` and `$optimized_out`."""
     names = {"source": "original", "target": "generated"}
 
     def value(v: Any) -> Any:
@@ -167,7 +167,7 @@ def _new_keys(doc: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(v, dict):
             return v
         if "$none" in v:
-            return {"$optimizedOut": True}
+            return {"$optimized_out": True}
         if "$op" in v:
             return {**v, "args": value(v.get("args") or [])}
         if any(k.startswith("$") for k in v):
@@ -267,12 +267,12 @@ def _dedup_doc() -> Dict[str, Any]:
                 "h": {"type": "module_Right", "loc": [0, 6, 5]}}},
             "Mid": {"loc": [0, 30, 1], "vars": {
                 "h": {"type": "module_Left", "loc": [0, 5, 5]}}},
-            "Left": {"loc": [0, 10, 1], "x-chisel": {"typeName": "Left"},
+            "Left": {"loc": [0, 10, 1], "x-chisel": {"type_name": "Left"},
                      "vars": {"a": {"type": "u8", "loc": [0, 11, 3]},
                               "p": {"type": "pair", "loc": [0, 12, 3]},
                               "v": {"type": "vec2", "loc": [0, 13, 3]},
                               "gone": {"type": "u8", "loc": [0, 14, 3]}}},
-            "Right": {"loc": [0, 20, 1], "x-chisel": {"typeName": "Right"},
+            "Right": {"loc": [0, 20, 1], "x-chisel": {"type_name": "Right"},
                       "vars": {"b": {"type": "u8", "loc": [0, 21, 3]},
                                "a": {"type": "u8", "loc": [0, 22, 3]}}},
         },
@@ -289,8 +289,8 @@ def _dedup_doc() -> Dict[str, Any]:
                 "m": {"$inline": "m"}, "h": {"$inline": "h"}}},
             {"original": "Left", "generated": "Shared",
              "vars": {"a": "a_0", "p": {"x": "p_x", "y": {"$const": 5}},
-                      "v": ["v_0", {"$optimizedOut": True}],
-                      "gone": {"$optimizedOut": True}},
+                      "v": ["v_0", {"$optimized_out": True}],
+                      "gone": {"$optimized_out": True}},
              "hdl_locs": {"a": [1, 7, 3]}},
             {"original": "Right", "generated": "Shared", "vars": {"b": "b_0", "a": "clash"}},
             {"original": "Mid", "generated": "Top", "scope": "m",
@@ -328,7 +328,7 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert shared["port_vars"][1]["value"] == {
         "opcode": "'{", "operands": [{"sig_name": "p_x"}, {"bit_vector": "00000101"}]}
     assert shared["port_vars"][2]["value"] == {"opcode": "'{", "operands": [{"sig_name": "v_0"}, {}]}
-    assert "value" not in shared["port_vars"][3]  # $optimizedOut
+    assert "value" not in shared["port_vars"][3]  # $optimized_out
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
 
     top = mods["Top"]

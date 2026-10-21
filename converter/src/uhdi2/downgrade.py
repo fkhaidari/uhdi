@@ -180,7 +180,7 @@ def _emit_module(scope_id: str, mod: Dict[str, Any], container: Optional[str],
     # inline scope and a module nobody instantiates carry their own record,
     # the rest borrow the one their instances agree on.
     class_record = ext(source) or class_ext.get(scope_id) or {}
-    if type_name := class_record.get("typeName"):
+    if type_name := class_record.get("type_name"):
         st: Dict[str, Any] = {"typeName": type_name}
         if params := _v1_params(class_record.get("params")):
             st["params"] = params

@@ -2,7 +2,7 @@
 
 A UHDI document describes hardware. What only Chisel knows about an entity
 sits one level down, under `x-chisel`: a variable's `binding`, and the
-`typeName` and `params` of a type, a module or an instance. A reader that
+`type_name` and `params` of a type, a module or an instance. A reader that
 does not know the frontend skips the object whole.
 """
 from __future__ import annotations
