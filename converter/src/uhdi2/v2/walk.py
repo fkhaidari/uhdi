@@ -253,7 +253,7 @@ def render(v: Any) -> Optional[str]:
     if "$const" in v:
         c = v["$const"]
         if isinstance(c, str):
-            return str(int(c[2:], 2) if c.startswith("0b") else int(c, 0))
+            return str(int(c[2:] or "0", 2) if c.startswith("0b") else int(c, 0))
         return str(c)
     if "$op" in v:
         op = v["$op"]
