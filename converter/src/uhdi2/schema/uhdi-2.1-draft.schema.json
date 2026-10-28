@@ -201,6 +201,25 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "reset",
+                "asyncreset"
+              ],
+              "description": "A reset, when the IR still knows it is one: `reset` is synchronous, `asyncreset` asynchronous. One bit wide."
+            },
+            "name": {
+              "$ref": "#/$defs/typeName"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
             "kind",
             "fields"
           ],
@@ -377,6 +396,13 @@
         "loc": {
           "description": "Where the variable is declared.",
           "$ref": "#/$defs/loc"
+        },
+        "storage": {
+          "description": "Present when the variable holds state: `reg` keeps its value between clock edges, `mem` is a memory. Absent for ports, wires and other combinational values.",
+          "enum": [
+            "reg",
+            "mem"
+          ]
         },
         "dir": {
           "description": "Present when the variable is a port of the module. For an aggregate, the direction of its unflipped fields, as in FIRRTL; flipped fields run the other way. Never on an instance.",
