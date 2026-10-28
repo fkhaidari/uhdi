@@ -25,7 +25,7 @@ see below):
   an inlined module. It becomes a nested child `{name, hgl_loc,
   port_vars, children}` named by each path component, as the pool
   converter does for `dbg.scope` inline scopes. `hgl_loc` is the loc of
-  the instance variable whose value is `{"$inline": scope}`.
+  the instance variable whose value is `{"$inline": path}`.
 * Class info (`x-chisel.type_name/params` on the source module) becomes
   the module's `source_lang_type_info`.
 
@@ -329,7 +329,7 @@ class _Doc:
         self.unscoped: Dict[str, List[Dict[str, Any]]] = {}
         self.scoped: Dict[str, List[Dict[str, Any]]] = {}
         for b in doc.get("bindings", []):
-            (self.scoped if b.get("scope") else self.unscoped).setdefault(
+            (self.scoped if b.get("inline_path") else self.unscoped).setdefault(
                 b["generated"], []).append(b)
 
     def is_instance(self, var: Dict[str, Any]) -> bool:
@@ -516,20 +516,20 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
                 return cand
 
     scoped = d.scoped.get(tname, [])
-    inline_locs = {value["$inline"]: var.get("loc")
+    inline_locs = {tuple(value["$inline"]): var.get("loc")
                    for _, var, value in d.instances(d.unscoped.get(tname, []) + scoped)
                    if "$inline" in value}
     roots: List[Dict[str, Any]] = []
     for b in scoped:
         level = roots
         node: Dict[str, Any] = {}
-        for comp in b["scope"].split("."):
+        for comp in b["inline_path"]:
             node = next((n for n in level if n["name"] == comp), None)
             if node is None:
                 node = {"name": comp, "port_vars": [], "children": []}
                 level.append(node)
             level = node["children"]
-        if loc := d.src_loc(inline_locs.get(b["scope"])):
+        if loc := d.src_loc(inline_locs.get(tuple(b["inline_path"]))):
             node["hgl_loc"] = loc
         for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
             if d.is_instance(var):

@@ -51,10 +51,10 @@ class Doc:
         self.target: Dict[str, Any] = doc.get("generated", {})
         self.unscoped: Dict[Tuple[str, str], Dict[str, Any]] = {}
         self.by_target: Dict[str, List[Dict[str, Any]]] = {}
-        self.scoped: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        self.scoped: Dict[Tuple[str, Tuple[str, ...]], Dict[str, Any]] = {}
         for b in doc.get("bindings", []):
-            if b.get("scope"):
-                self.scoped[(b["generated"], b["scope"])] = b
+            if b.get("inline_path"):
+                self.scoped[(b["generated"], tuple(b["inline_path"]))] = b
             else:
                 self.unscoped[(b["original"], b["generated"])] = b
                 self.by_target.setdefault(b["generated"], []).append(b)
@@ -113,10 +113,11 @@ class Doc:
             if var is None or not isinstance(value, dict):
                 continue
             if "$inline" in value:
-                scoped = self.scoped.get((inst.target, value["$inline"]))
+                path = tuple(value["$inline"])
+                scoped = self.scoped.get((inst.target, path))
                 if scoped is not None:
                     self._lay(inst, Part(scoped["original"], scoped,
-                                         value["$inline"] + "."), on_path)
+                                         ".".join(path) + "."), on_path)
             elif "$inst" in value:
                 child_src = self.module_of(var) or ""
                 child_tgt = value.get("module", "")
@@ -187,7 +188,7 @@ class Doc:
                 # A port of an inlined module: its signal in the binding
                 # the module was inlined with.
                 b = self.scoped.get((part.binding.get("generated", ""),
-                                     value["$inline"]))
+                                     tuple(value["$inline"])))
                 if b is None:
                     return None
                 rest = path[len(fname_of(steps[0])):].lstrip(".")

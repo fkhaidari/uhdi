@@ -715,7 +715,9 @@
         "cnt": "cnt",
         "d": "d",
         "i": {
-          "$inline": "i"
+          "$inline": [
+            "i"
+          ]
         },
         "k": "k",
         "k0": {
@@ -740,7 +742,9 @@
     {
       "generated": "M",
       "original": "Inl",
-      "scope": "i",
+      "inline_path": [
+        "i"
+      ],
       "stmts": {
         "s1": "sel"
       },

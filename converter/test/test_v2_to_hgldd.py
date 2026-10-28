@@ -168,6 +168,8 @@ def _new_keys(doc: Dict[str, Any]) -> Dict[str, Any]:
             return v
         if "$none" in v:
             return {"$optimized_out": True}
+        if "$inline" in v:
+            return {"$inline": v["$inline"].split(".")}
         if "$op" in v:
             return {**v, "args": value(v.get("args") or [])}
         if any(k.startswith("$") for k in v):
@@ -178,8 +180,11 @@ def _new_keys(doc: Dict[str, Any]) -> Dict[str, Any]:
     for f in out["files"]:
         if "target" in f:
             f["generated"] = f.pop("target")
+    names["scope"] = "inline_path"
     out["bindings"] = [
-        {names.get(k, k): (value(x) if k == "vars" else x) for k, x in b.items()}
+        {names.get(k, k): (value(x) if k == "vars" else
+                           x.split(".") if k == "scope" else x)
+         for k, x in b.items()}
         for b in out["bindings"]]
     return out
 
@@ -286,18 +291,18 @@ def _dedup_doc() -> Dict[str, Any]:
                 "io": "io",
                 "l0": {"$inst": "l0", "module": "Shared"},
                 "r": {"$inst": "r0", "module": "Shared"},
-                "m": {"$inline": "m"}, "h": {"$inline": "h"}}},
+                "m": {"$inline": ["m"]}, "h": {"$inline": ["h"]}}},
             {"original": "Left", "generated": "Shared",
              "vars": {"a": "a_0", "p": {"x": "p_x", "y": {"$const": 5}},
                       "v": ["v_0", {"$optimized_out": True}],
                       "gone": {"$optimized_out": True}},
              "hdl_locs": {"a": [1, 7, 3]}},
             {"original": "Right", "generated": "Shared", "vars": {"b": "b_0", "a": "clash"}},
-            {"original": "Mid", "generated": "Top", "scope": "m",
-             "vars": {"h": {"$inline": "m.h"}}},
-            {"original": "Left", "generated": "Top", "scope": "m.h",
+            {"original": "Mid", "generated": "Top", "inline_path": ["m"],
+             "vars": {"h": {"$inline": ["m", "h"]}}},
+            {"original": "Left", "generated": "Top", "inline_path": ["m", "h"],
              "vars": {"a": "m_h_a"}},
-            {"original": "Right", "generated": "Top", "scope": "h",
+            {"original": "Right", "generated": "Top", "inline_path": ["h"],
              "vars": {"b": {"$const": "0b101"}, "a": "io"}},
         ],
     }
@@ -426,7 +431,7 @@ def test_struct_names_follow_hgldd() -> None:
         "original": {"Cpu": {"vars": {"io": {"type": "outer"}}},
                      "Stage": {"vars": {"io": {"type": "stage"}}}},
         "bindings": [{"original": "Cpu", "generated": "Cpu", "vars": {}},
-                     {"original": "Stage", "generated": "Cpu", "scope": "s",
+                     {"original": "Stage", "generated": "Cpu", "inline_path": ["s"],
                       "vars": {}}],
     })
     names = {k for k, t in named_types(doc)["types"].items()
