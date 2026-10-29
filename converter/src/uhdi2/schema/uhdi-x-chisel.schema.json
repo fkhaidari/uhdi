@@ -91,6 +91,10 @@
         "binding": {
           "description": "Chisel binding kind (`IO`, `Reg`, `Wire`, `OpResult`, ...).",
           "type": "string"
+        },
+        "params": {
+          "description": "Parameters of this variable's class, when they differ from its type's.",
+          "$ref": "#/$defs/params"
         }
       }
     },

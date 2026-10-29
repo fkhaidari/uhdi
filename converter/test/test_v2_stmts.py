@@ -130,3 +130,9 @@ def test_schema_extensions(doc):
     next(t for t in misplaced["types"] if t["kind"] == "uint")["x-chisel"] = {}
     assert core.is_valid(misplaced)
     assert not ext.is_valid(misplaced)
+    # A variable may carry its own class parameters, as `to_hgldd` reads them.
+    params = copy.deepcopy(doc)
+    var = next(v for m in params["original"].values()
+               for v in (m.get("vars") or {}).values() if "x-chisel" in v)
+    var["x-chisel"]["params"] = [{"name": "w", "type": "Int", "value": "8"}]
+    assert ext.is_valid(params)
