@@ -424,6 +424,25 @@
         "kind": {
           "description": "An external module: declared, not emitted.",
           "const": "extern"
+        },
+        "signals": {
+          "description": "Where each signal of the module is declared in the netlist, by its Verilog name. A debugger goes from a variable bound to a signal to the signal's declaration.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+              "^x-": true
+            },
+            "required": [
+              "loc"
+            ],
+            "properties": {
+              "loc": {
+                "$ref": "#/$defs/loc"
+              }
+            }
+          }
         }
       },
       "description": "A Verilog module: where it is written and whether it has a body. Instances are variables of the original modules."

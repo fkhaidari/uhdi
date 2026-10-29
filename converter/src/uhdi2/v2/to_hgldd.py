@@ -489,7 +489,11 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
         out["value"] = value
     if loc := d.src_loc(var.get("loc")):
         out["hgl_loc"] = loc
-    if loc := d.hdl_loc((binding.get("hdl_locs") or {}).get(name), hdl_path):
+    raw = (binding.get("vars") or {}).get(name)
+    signals = (d.target.get(binding.get("generated", "")) or {}).get("signals") or {}
+    vloc = (binding.get("hdl_locs") or {}).get(name) or (
+        (signals.get(raw) or {}).get("loc") if isinstance(raw, str) else None)
+    if loc := d.hdl_loc(vloc, hdl_path):
         out["hdl_loc"] = loc
     xc = var.get(EXT_KEY) or {}
     if xc.get("binding") and (slti := _var_type_info(xc, tref, d.types)):

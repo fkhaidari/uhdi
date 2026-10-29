@@ -283,7 +283,7 @@ def _dedup_doc() -> Dict[str, Any]:
         },
         "generated": {
             "Top": {"loc": [1, 40]},
-            "Shared": {"loc": [1, 2]},
+            "Shared": {"loc": [1, 2], "signals": {"a_0": {"loc": [1, 7, 3]}}},
             "Ext": {"kind": "extern"},
         },
         "bindings": [
@@ -295,8 +295,7 @@ def _dedup_doc() -> Dict[str, Any]:
             {"original": "Left", "generated": "Shared",
              "vars": {"a": "a_0", "p": {"x": "p_x", "y": {"$const": 5}},
                       "v": ["v_0", {"$optimized_out": True}],
-                      "gone": {"$optimized_out": True}},
-             "hdl_locs": {"a": [1, 7, 3]}},
+                      "gone": {"$optimized_out": True}}},
             {"original": "Right", "generated": "Shared", "vars": {"b": "b_0", "a": "clash"}},
             {"original": "Mid", "generated": "Top", "inline_path": ["m"],
              "vars": {"h": {"$inline": ["m", "h"]}}},
