@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://circt.llvm.org/uhdi/2.1-draft/schema.json",
-  "title": "UHDI 2.x draft: statements (hgdb) and dependencies (ChiselTrace)",
+  "$id": "https://circt.llvm.org/uhdi/0.1/schema.json",
+  "title": "UHDI",
   "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings.",
   "type": "object",
   "additionalProperties": false,
@@ -85,7 +85,7 @@
       }
     },
     "original": {
-      "description": "Modules the frontend declared, with their variables; DWARF's abstract instance of a subprogram. A module made by lowering (a memory, a layer body) is not here.",
+      "description": "Modules the frontend declared, with their variables; DWARF's abstract instance of a subprogram. A module made by lowering, such as a memory, is not here, unless it holds variables the frontend declared: the module a layer block is extracted into is here, marked `artificial`.",
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/originalModule"
@@ -386,7 +386,7 @@
           "$ref": "#/$defs/loc"
         },
         "storage": {
-          "description": "Present when the variable holds state: `reg` keeps its value between clock edges, `mem` is a memory. Absent for ports, wires and other combinational values.",
+          "description": "Present when the source treats the variable as state: `reg` keeps its value between clock edges, `mem` is a memory. The frontend decides it, from a declaration or from how the variable is assigned. A port may be `reg`. Absent for wires and other combinational values.",
           "enum": [
             "reg",
             "mem"
@@ -476,7 +476,7 @@
           "type": "string"
         },
         {
-          "description": "Literal, all bits of the leaf's width. DWARF's `DW_AT_const_value`.",
+          "description": "Literal, all bits of the leaf's width, most significant first; a signed value in two's complement. DWARF's `DW_AT_const_value`.",
           "type": "object",
           "additionalProperties": false,
           "required": [
