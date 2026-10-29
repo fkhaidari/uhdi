@@ -103,7 +103,7 @@ class _Builder:
     def ports(self, inst, part, p, top) -> List[Dict[str, Any]]:
         cfg = []
         for name, var in self.d.vars(part.source).items():
-            if "dir" not in var or \
+            if var.get("dir") in (None, "inout") or \
                     (self.d.types.get(var.get("type", "")) or {}).get("kind") \
                     == "clock":
                 continue

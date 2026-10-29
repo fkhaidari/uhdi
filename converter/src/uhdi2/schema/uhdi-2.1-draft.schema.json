@@ -393,10 +393,11 @@
           ]
         },
         "dir": {
-          "description": "Present when the variable is a port of the module. For an aggregate, the direction of its unflipped fields, as in FIRRTL; flipped fields run the other way. Never on an instance.",
+          "description": "Present when the variable is a port of the module; `inout` is a bidirectional port, such as an analog one. For an aggregate, the direction of its unflipped fields, as in FIRRTL; flipped fields run the other way. Never on an instance.",
           "enum": [
             "in",
-            "out"
+            "out",
+            "inout"
           ]
         },
         "artificial": {
