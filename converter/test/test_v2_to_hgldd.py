@@ -481,3 +481,9 @@ def test_unknown_reads_as_bits_or_nothing() -> None:
                           {"name": "a", "type": 0}]}]}}]}
     case = named_types(doc)["types"]["struct_0"]["variant"]["cases"][0]
     assert case["fields"][0]["type"] == "#0"
+
+
+def test_any_minor_is_v2() -> None:
+    from uhdi2.v2 import is_v2
+    assert is_v2({"uhdi": "0.1"}) and is_v2({"uhdi": "0.7"})
+    assert not is_v2({"uhdi": "1.0"}) and not is_v2({})

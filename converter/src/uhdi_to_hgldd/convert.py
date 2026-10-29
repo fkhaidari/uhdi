@@ -5,6 +5,7 @@ import pathlib
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from uhdi2.v2 import is_v2
 from uhdi_common.backend import Backend, register
 from uhdi_common.context import BaseContext, ConversionError
 from uhdi_common.expressions import walk as walk_expression
@@ -837,7 +838,7 @@ class HGLDDBackend(Backend):
                 output: Optional[pathlib.Path] = None
                 ) -> Dict[str, Any]:
         del output
-        if uhdi.get("uhdi") == "0.1":
+        if is_v2(uhdi):
             from uhdi2.v2.to_hgldd import convert as convert_v2
             return convert_v2(uhdi)
         return convert(uhdi)

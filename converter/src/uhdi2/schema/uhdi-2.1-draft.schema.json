@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://circt.llvm.org/uhdi/0.1/schema.json",
   "title": "UHDI",
-  "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings.",
+  "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings. A reader meets a newer document as follows: it ignores a key it does not know; it shows a type of unknown `kind` as its bits if it has a `width`, otherwise as opaque; it treats an unknown `$` value as `$optimized_out`, and an expression with such an operand as having no value; it skips a statement of unknown `kind`.",
   "type": "object",
   "additionalProperties": false,
   "patternProperties": {
@@ -20,8 +20,9 @@
   ],
   "properties": {
     "uhdi": {
-      "description": "Format version. A reader checks it before anything else.",
-      "const": "0.1"
+      "description": "Format version, `<major>.<minor>`. A change that only adds keys, kinds or values raises the minor number; any other change raises the major. A reader checks it before anything else and accepts any minor of a major it knows.",
+      "type": "string",
+      "pattern": "^0\\.[0-9]+$"
     },
     "producer": {
       "description": "Tool that wrote the document. Diagnostic only, like DWARF's DW_AT_producer; readers must not branch on it.",
