@@ -235,7 +235,7 @@ def _expected(tree: Dict[str, Any]) -> Dict[str, Any]:
 def test_matches_tree_converter(path: pathlib.Path) -> None:
     tree = _tree(json.loads(path.read_text(encoding="utf-8")))
     v2 = v2_from_tree(tree)
-    assert v2["uhdi"] == "2.0"
+    assert v2["uhdi"] == "0.1"
     got = to_hgldd_v2(v2)
     want = _expected(tree)
     assert got == want
@@ -254,7 +254,7 @@ def _dedup_doc() -> Dict[str, Any]:
     also inlined into Top as `h` (and, through `Mid`, `m.h`)."""
     u8 = {"kind": "uint", "width": 8}
     return {
-        "uhdi": "2.0", "producer": "firtool", "profiles": ["x-chisel"],
+        "uhdi": "0.1", "producer": "firtool", "profiles": ["x-chisel"],
         "files": [{"path": "/src/A.scala"}, {"path": "Top.sv", "generated": True}],
         "types": {"u8": u8, "b": {"kind": "uint", "width": 1},
                   "pair": {"kind": "struct", "fields": [

@@ -1,5 +1,5 @@
 {
-  "uhdi": "2.0",
+  "uhdi": "0.1",
   "producer": "firtool",
   "profiles": [
     "x-chisel",

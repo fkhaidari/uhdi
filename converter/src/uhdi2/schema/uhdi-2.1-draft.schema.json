@@ -18,7 +18,7 @@
   "properties": {
     "uhdi": {
       "description": "Format version. A reader checks it before anything else.",
-      "const": "2.0"
+      "const": "0.1"
     },
     "producer": {
       "description": "Tool that wrote the document. Diagnostic only, like DWARF's DW_AT_producer; readers must not branch on it.",

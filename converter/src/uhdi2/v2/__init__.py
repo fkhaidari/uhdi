@@ -1,1 +1,1 @@
-"""Readers for the UHDI "v2 layout" (`"uhdi": "2.0"`)."""
+"""Readers for the UHDI "v2 layout" (`"uhdi": "0.1"`)."""

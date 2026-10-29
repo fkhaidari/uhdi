@@ -771,7 +771,7 @@ class PDGBackend(Backend):
                 output: Optional[pathlib.Path] = None
                 ) -> Dict[str, Any]:
         del output
-        if uhdi.get("uhdi") == "2.0":
+        if uhdi.get("uhdi") == "0.1":
             from uhdi2.v2.to_pdg import convert as convert_v2
             return convert_v2(uhdi)
         return convert(uhdi)

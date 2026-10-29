@@ -509,7 +509,7 @@ class HGDBBackend(Backend):
         if output is None:
             raise HGDBConversionError(
                 "hgdb backend requires an output path (binary SQLite)")
-        if uhdi.get("uhdi") == "2.0":
+        if uhdi.get("uhdi") == "0.1":
             from uhdi2.v2.to_hgdb import convert as convert_v2
             convert_v2(uhdi, output)
             return None
