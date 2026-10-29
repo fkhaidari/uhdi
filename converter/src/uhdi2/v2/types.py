@@ -15,6 +15,8 @@ from collections import Counter
 from typing import Any, Dict, List
 
 _AGGREGATE = ("struct", "vector")
+# Keys whose integer value is an index into `types`.
+_REFS = ("type", "elem", "base")
 
 
 def _sanitize(name: str) -> str:
@@ -78,13 +80,7 @@ def named_types(doc: Dict[str, Any]) -> Dict[str, Any]:
     out = copy.copy(doc)
     named: Dict[str, Any] = {}
     for index, t in enumerate(types):
-        t = copy.deepcopy(t)
-        for f in t.get("fields") or []:
-            f["type"] = keys[f["type"]]
-        for ref in ("elem", "base"):
-            if ref in t:
-                t[ref] = keys[t[ref]]
-        named[keys[index]] = t
+        named[keys[index]] = _rekey(t, keys)
     out["types"] = dict(sorted(named.items()))
     out["original"] = copy.deepcopy(doc.get("original", {}))
     for module in out["original"].values():
@@ -92,3 +88,15 @@ def named_types(doc: Dict[str, Any]) -> Dict[str, Any]:
             if isinstance(var.get("type"), int):
                 var["type"] = keys[var["type"]]
     return out
+
+
+def _rekey(obj: Any, keys: Dict[int, str]) -> Any:
+    """A copy of a type object with every type index replaced by its key,
+    at any depth, so a type that nests references in a new way needs no
+    change here."""
+    if isinstance(obj, list):
+        return [_rekey(x, keys) for x in obj]
+    if not isinstance(obj, dict):
+        return obj
+    return {k: keys[v] if k in _REFS and isinstance(v, int) else _rekey(v, keys)
+            for k, v in obj.items()}

@@ -250,6 +250,13 @@ _UNARY = {"!", "~", "-"}
 _REDUCE = {"andr": "&", "orr": "|", "xorr": "^"}
 
 
+def const_bits(c: str) -> Optional[str]:
+    """The digits of a `0b...` literal, or None for a form this reader does
+    not know, such as x or z bits."""
+    m = re.fullmatch(r"0b([01]+)", c)
+    return m.group(1) if m else None
+
+
 def render(v: Any) -> Optional[str]:
     """A guard value as a Verilog-like expression, or None when the
     value is unknown (`$optimized_out`)."""
@@ -268,7 +275,8 @@ def render(v: Any) -> Optional[str]:
     if "$const" in v:
         c = v["$const"]
         if isinstance(c, str):
-            return str(int(c[2:], 2) if c.startswith("0b") else int(c, 0))
+            bits = const_bits(c)
+            return None if bits is None else str(int(bits, 2))
         return str(c)
     if "$op" in v:
         op = v["$op"]

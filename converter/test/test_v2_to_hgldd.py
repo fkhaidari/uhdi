@@ -460,3 +460,24 @@ def test_slice() -> None:
     assert _scalar(v, "", {}) == {"opcode": "[]", "operands": [
         {"sig_name": "io"}, {"integer_num": 9}, {"integer_num": 6}]}
     assert render(v) == "io[9:6]"
+
+
+def test_unknown_reads_as_bits_or_nothing() -> None:
+    """What a newer producer may write degrades instead of being guessed."""
+    from uhdi2.v2.to_hgldd import _scalar, _type_description
+    from uhdi2.v2.types import named_types
+    from uhdi2.v2.walk import render
+    types = {"f": {"kind": "float", "width": 32}}
+    assert _type_description("f", types) == {
+        "type_name": "logic", "packed_range": [31, 0]}
+    assert _scalar({"$const": "0b1x"}, "", {}) == {}
+    assert render({"$const": "0b1x"}) is None
+    assert _scalar({"$weird": 1}, "", {}) == {}
+    assert _scalar({"$op": "?:", "args": [
+        "sel", {"$optimized_out": True}, "b"]}, "", {}) == {}
+    doc = {"types": [{"kind": "uint", "width": 1},
+                     {"kind": "struct", "fields": [],
+                      "variant": {"cases": [{"fields": [
+                          {"name": "a", "type": 0}]}]}}]}
+    case = named_types(doc)["types"]["struct_0"]["variant"]["cases"][0]
+    assert case["fields"][0]["type"] == "#0"

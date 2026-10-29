@@ -73,6 +73,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 from uhdi_common.context import ConversionError
 from uhdi_to_hgldd.convert import _FileInfo
 from .types import named_types
+from .walk import const_bits
 from .walk import check_bindings
 
 EXT_KEY = "x-chisel"
@@ -121,10 +122,6 @@ def _type_description(tref: str, types: Types) -> Dict[str, Any]:
     if t is None:
         return {"type_name": "logic"}
     kind = t.get("kind")
-    if kind in ("uint", "sint"):
-        width = int(t.get("width", 1))
-        return {"type_name": "logic"} if width <= 1 else \
-               {"type_name": "logic", "packed_range": [width - 1, 0]}
     if kind == "struct":
         return {"type_name": tref}
     if kind == "vector":
@@ -141,7 +138,10 @@ def _type_description(tref: str, types: Types) -> Dict[str, Any]:
         return elem
     if kind == "enum":
         return _type_description(t.get("base", ""), types)
-    return {"type_name": "logic"}
+    # Any other kind, including one this reader does not know, is its bits.
+    width = int(t.get("width", 1))
+    return {"type_name": "logic"} if width <= 1 else \
+           {"type_name": "logic", "packed_range": [width - 1, 0]}
 
 
 def _topo_structs(types: Types) -> List[str]:
@@ -237,16 +237,19 @@ def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
         c = v["$const"]
         if isinstance(c, str):
             # HGLDD reads the width from the string.
-            return {"bit_vector": c[2:] if c.startswith("0b") else c}
+            bits = const_bits(c)
+            return {} if bits is None else {"bit_vector": bits}
         width = int((types.get(tref) or {}).get("width", 0))
         return ({"bit_vector": format(c & ((1 << width) - 1), f"0{width}b")}
                 if width > 0 else {"integer_num": c})
     if isinstance(v, dict) and "$op" in v:
         # The expr profile uses HGLDD's opcodes; a plain number is a count
-        # or a bit index.
-        return {"opcode": v["$op"], "operands": [
+        # or a bit index. An operand without a value leaves the whole
+        # expression without one.
+        operands = [
             {"integer_num": a} if isinstance(a, int) else _scalar(a, "", types)
-            for a in v.get("args") or []]}
+            for a in v.get("args") or []]
+        return {} if {} in operands else {"opcode": v["$op"], "operands": operands}
     return {}
 
 
