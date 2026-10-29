@@ -92,7 +92,7 @@
       }
     },
     "bindings": {
-      "description": "How the variables of an original module read in a generated module; DWARF's concrete instance with its locations. One original module may bind into several generated ones and back (dedup, inlining).",
+      "description": "How the variables of an original module read in a generated module; DWARF's concrete instance with its locations. One original module may bind into several generated ones and back (dedup, inlining). At most one binding per `original`, `generated` and `inline_path`.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/binding"

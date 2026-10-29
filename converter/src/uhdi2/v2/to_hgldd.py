@@ -73,6 +73,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 from uhdi_common.context import ConversionError
 from uhdi_to_hgldd.convert import _FileInfo
 from .types import named_types
+from .walk import check_bindings
 
 EXT_KEY = "x-chisel"
 
@@ -330,6 +331,7 @@ class _Doc:
         self.info = _FileInfo()
         self.unscoped: Dict[str, List[Dict[str, Any]]] = {}
         self.scoped: Dict[str, List[Dict[str, Any]]] = {}
+        check_bindings(doc.get("bindings", []))
         for b in doc.get("bindings", []):
             (self.scoped if b.get("inline_path") else self.unscoped).setdefault(
                 b["generated"], []).append(b)

@@ -52,6 +52,7 @@ class Doc:
         self.unscoped: Dict[Tuple[str, str], Dict[str, Any]] = {}
         self.by_target: Dict[str, List[Dict[str, Any]]] = {}
         self.scoped: Dict[Tuple[str, Tuple[str, ...]], Dict[str, Any]] = {}
+        check_bindings(doc.get("bindings", []))
         for b in doc.get("bindings", []):
             if b.get("inline_path"):
                 self.scoped[(b["generated"], tuple(b["inline_path"]))] = b
@@ -202,6 +203,16 @@ class Doc:
             else:
                 return None
         return value
+
+
+def check_bindings(bindings: List[Dict[str, Any]]) -> None:
+    """At most one binding per original, generated and inline path."""
+    seen = set()
+    for b in bindings:
+        key = (b["original"], b["generated"], tuple(b.get("inline_path") or ()))
+        if key in seen:
+            raise ValueError(f"more than one binding for {key}")
+        seen.add(key)
 
 
 def fname_of(step: Tuple[str, str]) -> str:

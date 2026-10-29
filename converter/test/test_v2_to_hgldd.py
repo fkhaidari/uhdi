@@ -358,6 +358,14 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert out["HGLDD"]["hdl_file_index"] == 2
 
 
+@pytest.mark.parametrize("index", [1, 5])
+def test_duplicate_binding_rejected(index: int) -> None:
+    doc = _dedup_doc()
+    doc["bindings"].append(copy.deepcopy(doc["bindings"][index]))
+    with pytest.raises(ValueError, match="more than one binding"):
+        to_hgldd_v2(doc)
+
+
 def test_single_class_info_and_type_on_instance() -> None:
     doc = _dedup_doc()
     doc["bindings"] = [b for b in doc["bindings"] if b["original"] != "Right"]
