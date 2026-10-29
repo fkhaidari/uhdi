@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://circt.llvm.org/uhdi/2.1-draft/x-chisel.schema.json",
+  "title": "UHDI x-chisel extension",
+  "description": "Validates the `x-chisel` keys of a document that lists `x-chisel` in `profiles`. Apply it together with the core schema, which accepts `x-` keys without looking inside.",
+  "type": "object",
+  "properties": {
+    "types": {
+      "type": "array",
+      "items": {
+        "if": {
+          "properties": {
+            "kind": {
+              "enum": [
+                "struct",
+                "vector"
+              ]
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "then": {
+          "properties": {
+            "x-chisel": {
+              "$ref": "#/$defs/typeChisel"
+            }
+          }
+        },
+        "else": {
+          "not": {
+            "required": [
+              "x-chisel"
+            ]
+          }
+        }
+      }
+    },
+    "original": {
+      "type": "object",
+      "additionalProperties": {
+        "properties": {
+          "x-chisel": {
+            "$ref": "#/$defs/moduleChisel"
+          },
+          "vars": {
+            "type": "object",
+            "additionalProperties": {
+              "properties": {
+                "x-chisel": {
+                  "$ref": "#/$defs/varChisel"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "typeChisel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "params": {
+          "$ref": "#/$defs/params"
+        }
+      }
+    },
+    "moduleChisel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type_name": {
+          "description": "Scala class of the module.",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/params"
+        }
+      }
+    },
+    "varChisel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding"
+      ],
+      "properties": {
+        "binding": {
+          "description": "Chisel binding kind (`IO`, `Reg`, `Wire`, `OpResult`, ...).",
+          "type": "string"
+        }
+      }
+    },
+    "params": {
+      "description": "Constructor parameters of a Chisel class.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "description": "Scala type of the parameter.",
+            "type": "string"
+          },
+          "value": {
+            "description": "Value as Chisel printed it, when it sent one.",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

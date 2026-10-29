@@ -5,6 +5,9 @@
   "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings.",
   "type": "object",
   "additionalProperties": false,
+  "patternProperties": {
+    "^x-": true
+  },
   "required": [
     "uhdi",
     "producer",
@@ -29,14 +32,10 @@
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "oneOf": [
+        "anyOf": [
           {
             "const": "expr",
             "description": "Values may be expressions (`$op`)."
-          },
-          {
-            "const": "x-chisel",
-            "description": "Objects may carry an `x-chisel` extension with Chisel-only facts."
           },
           {
             "const": "stmt",
@@ -45,6 +44,11 @@
           {
             "const": "deps",
             "description": "Statements carry `reads`: the source paths their right-hand side reads."
+          },
+          {
+            "type": "string",
+            "pattern": "^x-[a-z][a-z0-9-]*$",
+            "description": "A language extension. A record object may carry the key `x-<name>` only when `x-<name>` is listed here. The core does not look inside it; a companion schema does, such as `uhdi-x-chisel.schema.json`."
           }
         ]
       }
@@ -55,6 +59,9 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
+        "patternProperties": {
+          "^x-": true
+        },
         "required": [
           "path"
         ],
@@ -125,31 +132,6 @@
       "type": "integer",
       "minimum": 0
     },
-    "params": {
-      "description": "Constructor parameters of a Chisel class.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "name",
-          "type"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "description": "Scala type of the parameter.",
-            "type": "string"
-          },
-          "value": {
-            "description": "Value as Chisel printed it, when it sent one.",
-            "type": "string"
-          }
-        }
-      }
-    },
     "typeName": {
       "description": "Source-language name of the type (`UInt<8>`, `Bundle` subclass). Shown to the user; never needed to decode a value.",
       "type": "string"
@@ -160,6 +142,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "required": [
             "kind",
             "width"
@@ -184,6 +169,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "required": [
             "kind"
           ],
@@ -200,6 +188,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "required": [
             "kind"
           ],
@@ -219,6 +210,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "required": [
             "kind",
             "fields"
@@ -233,6 +227,9 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
+                "patternProperties": {
+                  "^x-": true
+                },
                 "required": [
                   "name",
                   "type"
@@ -253,15 +250,15 @@
             },
             "name": {
               "$ref": "#/$defs/typeName"
-            },
-            "x-chisel": {
-              "$ref": "#/$defs/typeChisel"
             }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "required": [
             "kind",
             "elem",
@@ -280,15 +277,15 @@
             },
             "name": {
               "$ref": "#/$defs/typeName"
-            },
-            "x-chisel": {
-              "$ref": "#/$defs/typeChisel"
             }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "required": [
             "kind",
             "base",
@@ -320,6 +317,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "required": [
             "kind",
             "module"
@@ -337,18 +337,12 @@
         }
       ]
     },
-    "typeChisel": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "params": {
-          "$ref": "#/$defs/params"
-        }
-      }
-    },
     "originalModule": {
       "type": "object",
       "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
       "required": [
         "vars"
       ],
@@ -368,19 +362,6 @@
             "$ref": "#/$defs/originalVar"
           }
         },
-        "x-chisel": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "type_name": {
-              "description": "Scala class of the module.",
-              "type": "string"
-            },
-            "params": {
-              "$ref": "#/$defs/params"
-            }
-          }
-        },
         "stmts": {
           "description": "Profile `stmt`: the module body in source order.",
           "$ref": "#/$defs/stmts"
@@ -390,6 +371,9 @@
     "originalVar": {
       "type": "object",
       "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
       "required": [
         "type"
       ],
@@ -418,25 +402,15 @@
         "artificial": {
           "description": "Made by the compiler, not written in the source, such as an instance of an artificial module.",
           "const": true
-        },
-        "x-chisel": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "binding"
-          ],
-          "properties": {
-            "binding": {
-              "description": "Chisel binding kind (`IO`, `Reg`, `Wire`, `OpResult`, ...).",
-              "type": "string"
-            }
-          }
         }
       }
     },
     "generatedModule": {
       "type": "object",
       "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
       "properties": {
         "loc": {
           "description": "Where the module is declared in the netlist.",
@@ -452,6 +426,9 @@
     "binding": {
       "type": "object",
       "additionalProperties": false,
+      "patternProperties": {
+        "^x-": true
+      },
       "required": [
         "original",
         "generated",
@@ -662,6 +639,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "description": "A register is declared. Its writes take effect at the next clock edge.",
           "required": [
             "id",
@@ -706,6 +686,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "description": "A combinational variable is declared.",
           "required": [
             "id",
@@ -740,6 +723,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "description": "A named node: a value computed every cycle from what it reads.",
           "required": [
             "id",
@@ -774,6 +760,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "description": "A memory is declared.",
           "required": [
             "id",
@@ -818,6 +807,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "description": "A module is instantiated. The instance is the variable `var`; its type names the module.",
           "required": [
             "id",
@@ -852,6 +844,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "description": "The left-hand side is driven.",
           "required": [
             "id",
@@ -885,6 +880,9 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "patternProperties": {
+            "^x-": true
+          },
           "description": "Statements under a guard; the guard's generated value is in `bindings[].stmts`.",
           "required": [
             "id",

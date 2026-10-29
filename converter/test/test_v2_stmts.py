@@ -8,6 +8,7 @@ two instances of a deduplicated `Kid`.
 """
 from __future__ import annotations
 
+import copy
 import json
 import pathlib
 import sqlite3
@@ -105,6 +106,27 @@ def test_pdg_graph(doc):
 
 def test_schema(doc):
     jsonschema = pytest.importorskip("jsonschema")
-    schema = json.loads((pathlib.Path(to_pdg.__file__).parent.parent / "schema"
-                         / "uhdi-2.1-draft.schema.json").read_text())
-    jsonschema.Draft202012Validator(schema).validate(doc)
+    root = pathlib.Path(to_pdg.__file__).parent.parent / "schema"
+    for name in ("uhdi-2.1-draft.schema.json", "uhdi-x-chisel.schema.json"):
+        schema = json.loads((root / name).read_text())
+        jsonschema.Draft202012Validator(schema).validate(doc)
+
+
+def test_schema_extensions(doc):
+    jsonschema = pytest.importorskip("jsonschema")
+    root = pathlib.Path(to_pdg.__file__).parent.parent / "schema"
+    core, ext = (jsonschema.Draft202012Validator(
+        json.loads((root / name).read_text()))
+        for name in ("uhdi-2.1-draft.schema.json", "uhdi-x-chisel.schema.json"))
+    # The core takes any `x-` key and any `x-` profile without looking inside.
+    other = copy.deepcopy(doc)
+    other["profiles"].append("x-other")
+    other["x-other"] = {"anything": 1}
+    assert core.is_valid(other)
+    other["profiles"].append("other")
+    assert not core.is_valid(other)
+    # The companion checks where `x-chisel` sits.
+    misplaced = copy.deepcopy(doc)
+    next(t for t in misplaced["types"] if t["kind"] == "uint")["x-chisel"] = {}
+    assert core.is_valid(misplaced)
+    assert not ext.is_valid(misplaced)
