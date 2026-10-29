@@ -356,7 +356,7 @@
           "const": true
         },
         "vars": {
-          "description": "Variables the module declares, by source name.",
+          "description": "Variables the module declares, by a name unique in the module.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/originalVar"
@@ -380,6 +380,10 @@
       "properties": {
         "type": {
           "$ref": "#/$defs/typeRef"
+        },
+        "name": {
+          "description": "Name a debugger shows, when it differs from the key. The key stays the identifier that paths use; it may be made unique, such as `x_1` for a second `x`.",
+          "type": "string"
         },
         "loc": {
           "description": "Where the variable is declared.",
