@@ -226,12 +226,14 @@ def _var_type_info(var_xc: Dict[str, Any], tref: str,
 def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
     if isinstance(v, str):
         return {"sig_name": v}
+    if isinstance(v, dict) and "$zero_width" in v:
+        # HGLDD has no zero-width value; EmitHGLDD writes one zero bit.
+        return {"bit_vector": "0"}
     if isinstance(v, dict) and "$const" in v:
         c = v["$const"]
         if isinstance(c, str):
-            # HGLDD reads the width from the string; a zero-width value
-            # becomes one zero bit, as EmitHGLDD does.
-            return {"bit_vector": (c[2:] or "0") if c.startswith("0b") else c}
+            # HGLDD reads the width from the string.
+            return {"bit_vector": c[2:] if c.startswith("0b") else c}
         width = int((types.get(tref) or {}).get("width", 0))
         return ({"bit_vector": format(c & ((1 << width) - 1), f"0{width}b")}
                 if width > 0 else {"integer_num": c})

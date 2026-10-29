@@ -498,7 +498,7 @@
           "type": "string"
         },
         {
-          "description": "Literal, all bits of the leaf's width, so `0b` for a zero-width leaf. DWARF's `DW_AT_const_value`.",
+          "description": "Literal, all bits of the leaf's width. DWARF's `DW_AT_const_value`.",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -507,7 +507,20 @@
           "properties": {
             "$const": {
               "type": "string",
-              "pattern": "^0b[01]*$"
+              "pattern": "^0b[01]+$"
+            }
+          }
+        },
+        {
+          "description": "Value of a zero-width leaf, which has no bits.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "$zero_width"
+          ],
+          "properties": {
+            "$zero_width": {
+              "const": true
             }
           }
         },

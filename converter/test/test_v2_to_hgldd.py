@@ -450,5 +450,5 @@ def test_struct_names_follow_hgldd() -> None:
 def test_zero_width_const() -> None:
     from uhdi2.v2.to_hgldd import _scalar
     from uhdi2.v2.walk import render
-    assert _scalar({"$const": "0b"}, "", {}) == {"bit_vector": "0"}
-    assert render({"$const": "0b"}) == "0"
+    assert _scalar({"$zero_width": True}, "", {}) == {"bit_vector": "0"}
+    assert render({"$zero_width": True}) == "0"
