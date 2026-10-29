@@ -469,10 +469,10 @@
       }
     },
     "value": {
-      "description": "A signal name, a literal, an expression, a value optimized away, an instance, or an aggregate of those shaped like the variable's type.",
+      "description": "A signal name, a slice of a signal, a literal, an expression, a value optimized away, an instance, or an aggregate of those shaped like the variable's type.",
       "oneOf": [
         {
-          "description": "Name of a signal in the generated module.",
+          "description": "Name of a signal in the generated module. On a struct or vector it is the whole value, and its layout is not known: a debugger shows the bits. To give the layout, bind each leaf to a `$slice`.",
           "type": "string"
         },
         {
@@ -486,6 +486,29 @@
             "$const": {
               "type": "string",
               "pattern": "^0b[01]+$"
+            }
+          }
+        },
+        {
+          "description": "Bits `lo` to `hi` of a signal in the generated module, both included; bit 0 is the least significant. A leaf of an aggregate that the netlist keeps in one signal, such as a packed struct.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "$slice",
+            "hi",
+            "lo"
+          ],
+          "properties": {
+            "$slice": {
+              "type": "string"
+            },
+            "hi": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lo": {
+              "type": "integer",
+              "minimum": 0
             }
           }
         },

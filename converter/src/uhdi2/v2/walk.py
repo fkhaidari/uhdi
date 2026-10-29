@@ -263,6 +263,8 @@ def render(v: Any) -> Optional[str]:
         return None
     if "$zero_width" in v:
         return "0"
+    if "$slice" in v:
+        return f"{v['$slice']}[{v['hi']}:{v['lo']}]"
     if "$const" in v:
         c = v["$const"]
         if isinstance(c, str):

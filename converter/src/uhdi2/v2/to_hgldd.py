@@ -229,6 +229,10 @@ def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
     if isinstance(v, dict) and "$zero_width" in v:
         # HGLDD has no zero-width value; EmitHGLDD writes one zero bit.
         return {"bit_vector": "0"}
+    if isinstance(v, dict) and "$slice" in v:
+        return {"opcode": "[]", "operands": [
+            {"sig_name": v["$slice"]},
+            {"integer_num": v["hi"]}, {"integer_num": v["lo"]}]}
     if isinstance(v, dict) and "$const" in v:
         c = v["$const"]
         if isinstance(c, str):

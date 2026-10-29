@@ -452,3 +452,12 @@ def test_zero_width_const() -> None:
     from uhdi2.v2.walk import render
     assert _scalar({"$zero_width": True}, "", {}) == {"bit_vector": "0"}
     assert render({"$zero_width": True}) == "0"
+
+
+def test_slice() -> None:
+    from uhdi2.v2.to_hgldd import _scalar
+    from uhdi2.v2.walk import render
+    v = {"$slice": "io", "hi": 9, "lo": 6}
+    assert _scalar(v, "", {}) == {"opcode": "[]", "operands": [
+        {"sig_name": "io"}, {"integer_num": 9}, {"integer_num": 6}]}
+    assert render(v) == "io[9:6]"
