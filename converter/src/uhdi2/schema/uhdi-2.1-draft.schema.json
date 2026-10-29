@@ -357,6 +357,10 @@
           "description": "Where the module is declared.",
           "$ref": "#/$defs/loc"
         },
+        "artificial": {
+          "description": "Made by the compiler, not written in the source, such as the module a layer block is extracted into; DWARF's `DW_AT_artificial`. A debugger may show its variables in the scope of the module that instantiates it.",
+          "const": true
+        },
         "vars": {
           "description": "Variables the module declares, by source name.",
           "type": "object",
@@ -410,6 +414,10 @@
             "in",
             "out"
           ]
+        },
+        "artificial": {
+          "description": "Made by the compiler, not written in the source, such as an instance of an artificial module.",
+          "const": true
         },
         "x-chisel": {
           "type": "object",
