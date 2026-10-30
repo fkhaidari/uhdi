@@ -13,21 +13,26 @@ see below):
 
 * Variables come from the *unscoped* bindings of the target, each joined
   with `original[binding.original].vars` (hgl_loc, type, class info) and
-  `binding.vars` / `binding.hdl_locs` (value, hdl_loc). Order is the
-  order of the source variables. `{"$optimized_out": ...}` or a missing entry
+  `binding.vars` (value) and `generated[...].signals` (hdl_loc). A
+  variable is named by its `name` when it has one, else its key. Order is
+  the order of the source variables. `{"$optimized_out": ...}` or a missing entry
   gives a variable without `value`. A `$op` (expr profile) becomes the
   HGLDD expression with that opcode.
-* An instance is a source variable whose type has `kind: "module"`. It
-  is not a port variable. A `{"$inst": ..., "module": T}` value makes a
-  child `{name (= the variable's name), obj_name (= the type's source module), module_name (=
-  T), hgl_loc (= the variable's loc)}`.
-* A *scoped* binding (`scope` = dotted inline path inside the target) is
+* An instance is a source variable whose type has `kind: "module"`, or a
+  vector of them. It is not a port variable. A `{"$inst": I, "module": T}`
+  value makes a child `{name (= the variable's name), hdl_obj_name (= I,
+  when it differs from the name), obj_name (= the type's source module),
+  module_name (= T), hgl_loc (= the variable's loc)}`. An element of a
+  vector is a child named `<variable>_<index>`.
+* A *scoped* binding (`inline_path`, the instance names inside the target) is
   an inlined module. It becomes a nested child `{name, hgl_loc,
   port_vars, children}` named by each path component, as the pool
   converter does for `dbg.scope` inline scopes. `hgl_loc` is the loc of
   the instance variable whose value is `{"$inline": path}`.
-* Class info (`x-chisel.type_name/params` on the source module) becomes
-  the module's `source_lang_type_info`.
+* Class info (`x-chisel.type_name/params`) becomes the module's
+  `source_lang_type_info`. It is read from the variable that instantiates
+  the module in its parent, and from the source module when no instance
+  names a single class (the root, or instances that differ).
 
 Dedup: several unscoped bindings can point at one target. Each becomes
 its own object, `obj_name` = the source and `module_name` = the target,
@@ -40,8 +45,8 @@ their leading `/`, as in the other HGLDD converters.
 
 Known differences from the tree-shaped converter (`uhdi2.to_hgldd`), by
 design of the layout: no instance-level `hdl_loc` (the layout locates
-modules, not instances), no variables or ports for extern modules, no
-synthetic leaf ports.
+modules, not instances), no synthetic leaf ports. An extern module has
+ports only when a binding gives their values.
 
 Known differences from the pool converter (`uhdi_to_hgldd`) run on the
 layout-1 document of the same design:
@@ -246,10 +251,20 @@ def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
     if isinstance(v, dict) and "$op" in v:
         # The expr profile uses HGLDD's opcodes; a plain number is a count
         # or a bit index. An operand without a value leaves the whole
-        # expression without one.
+        # expression without one, except a branch of `?:`.
         operands = [
             {"integer_num": a} if isinstance(a, int) else _scalar(a, "", types)
             for a in v.get("args") or []]
+        if v["$op"] == "?:" and len(operands) == 3 and operands[0] != {}:
+            # `?:` needs a value only in the branch it selects, and HGLDD has
+            # no operand for "no value". A branch without one takes the
+            # other branch's operand: the expression is right whenever the
+            # selected branch is the known one, which is when it has a value.
+            _, a, b = operands
+            if a == {} and b != {}:
+                operands[1] = b
+            elif b == {} and a != {}:
+                operands[2] = a
         return {} if {} in operands else {"opcode": v["$op"], "operands": operands}
     return {}
 
@@ -342,23 +357,73 @@ class _Doc:
         self.info = _FileInfo()
         self.unscoped: Dict[str, List[Dict[str, Any]]] = {}
         self.scoped: Dict[str, List[Dict[str, Any]]] = {}
+        self.doc_bindings: List[Dict[str, Any]] = doc.get("bindings", [])
+        self._infos: Optional[Dict[Tuple[str, str], List[Dict[str, Any]]]] = None
         check_bindings(doc.get("bindings", []))
         for b in doc.get("bindings", []):
             (self.scoped if b.get("inline_path") else self.unscoped).setdefault(
                 b["generated"], []).append(b)
 
+    def inst_module(self, var: Dict[str, Any]) -> Optional[str]:
+        """The source module a variable instantiates: its type's module, or
+        that of the elements of a vector of instances."""
+        tref, seen = var.get("type", ""), set()
+        while tref not in seen:
+            seen.add(tref)
+            t = self.types.get(tref) or {}
+            if t.get("kind") == "module":
+                return t.get("module")
+            if t.get("kind") != "vector":
+                return None
+            tref = t.get("elem", "")
+        return None
+
     def is_instance(self, var: Dict[str, Any]) -> bool:
-        return (self.types.get(var.get("type", "")) or {}).get("kind") == "module"
+        return self.inst_module(var) is not None
 
     def instances(self, bindings: List[Dict[str, Any]]
                   ) -> Iterator[Tuple[str, Dict[str, Any], Dict[str, Any]]]:
-        """(name, source var, binding value) of every instance in `bindings`."""
+        """(name, source var, binding value) of every instance in `bindings`.
+        The name is the variable's, with `_<index>` for each element of a
+        vector of instances."""
         for b in bindings:
             svars = (self.source.get(b["original"]) or {}).get("vars") or {}
             for vname, value in (b.get("vars") or {}).items():
                 var = svars.get(vname)
-                if var is not None and self.is_instance(var) and isinstance(value, dict):
-                    yield vname, var, value
+                if var is not None and self.is_instance(var):
+                    yield from self._elements(var.get("name") or vname, var,
+                                              var.get("type", ""), value)
+
+    def _elements(self, name: str, var: Dict[str, Any], tref: str, value: Any
+                  ) -> Iterator[Tuple[str, Dict[str, Any], Dict[str, Any]]]:
+        t = self.types.get(tref) or {}
+        if t.get("kind") == "vector":
+            for i in range(int(t.get("size", 0))):
+                if isinstance(value, list):
+                    sub = value[i] if i < len(value) else None
+                elif isinstance(value, dict):
+                    sub = value.get(str(i))
+                else:
+                    sub = None
+                yield from self._elements(f"{name}_{i}", var, t.get("elem", ""),
+                                          sub)
+        elif isinstance(value, dict):
+            yield name, var, value
+
+    def class_infos(self, source: str, target: str) -> List[Dict[str, Any]]:
+        """Distinct class records of the variables that instantiate `source`
+        as `target`, in document order."""
+        if self._infos is None:
+            self._infos = {}
+            for b in self.doc_bindings:
+                for _, var, value in self.instances([b]):
+                    info = _class_info(var.get(EXT_KEY))
+                    if "$inst" in value and info:
+                        key = (self.inst_module(var), value.get("module"))
+                        records = self._infos.setdefault(key, [])
+                        if info not in records:
+                            records.append(info)
+        return self._infos.get((source, target), [])
 
     def src_loc(self, loc: Optional[List[int]]) -> Optional[Dict[str, Any]]:
         return _hgldd_loc(loc, self.files, False, None, self.info)
@@ -484,7 +549,7 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
               enum_ids: Dict[str, int], hdl_path: Optional[str]) -> Dict[str, Any]:
     tref = var.get("type", "")
     value = _top_value((binding.get("vars") or {}).get(name), tref, d.types)
-    var_name = name
+    var_name = var.get("name") or name
     if (d.types.get(tref) or {}).get("kind") == "vector":
         if first := _first_leaf_sig(value):
             var_name = first
@@ -496,8 +561,7 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
         out["hgl_loc"] = loc
     raw = (binding.get("vars") or {}).get(name)
     signals = (d.target.get(binding.get("generated", "")) or {}).get("signals") or {}
-    vloc = (binding.get("hdl_locs") or {}).get(name) or (
-        (signals.get(raw) or {}).get("loc") if isinstance(raw, str) else None)
+    vloc = (signals.get(raw) or {}).get("loc") if isinstance(raw, str) else None
     if loc := d.hdl_loc(vloc, hdl_path):
         out["hdl_loc"] = loc
     xc = var.get(EXT_KEY) or {}
@@ -509,9 +573,13 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
 
 
 def _module_class_info(d: _Doc, bindings: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """The class of the module: the one record all instances agree on, else
+    the source module's own, which is all a root has."""
     records = []
     for b in bindings:
-        info = _class_info((d.source.get(b["original"]) or {}).get(EXT_KEY))
+        infos = d.class_infos(b["original"], b["generated"])
+        info = infos[0] if len(infos) == 1 else _class_info(
+            (d.source.get(b["original"]) or {}).get(EXT_KEY))
         if info and info not in records:
             records.append(info)
     return records[0] if len(records) == 1 else None
@@ -559,6 +627,19 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
     return roots
 
 
+def _ports(d: _Doc, bindings: List[Dict[str, Any]], enum_ids: Dict[str, int],
+           hdl_path: Optional[str]) -> List[Dict[str, Any]]:
+    port_vars: List[Dict[str, Any]] = []
+    seen: set = set()
+    for b in bindings:
+        for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
+            if vname in seen or d.is_instance(var):
+                continue
+            seen.add(vname)
+            port_vars.append(_port_var(d, vname, var, b, enum_ids, hdl_path))
+    return port_vars
+
+
 def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
                    enum_ids: Dict[str, int],
                    enum_defs: Dict[str, Dict[str, Any]],
@@ -569,7 +650,9 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
     hdl_loc = d.hdl_loc(tmod.get("loc"), hdl_path)
     if tmod.get("kind") == "extern":
         out["isExtModule"] = 1
-        out["port_vars"] = []
+        if defs := enum_defs.get(tname):
+            out["enum_defs"] = defs
+        out["port_vars"] = _ports(d, bindings, enum_ids, hdl_path)
         out["children"] = []
         return out
     for b in bindings:
@@ -583,14 +666,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
     if defs := enum_defs.get(tname):
         out["enum_defs"] = defs
 
-    port_vars: List[Dict[str, Any]] = []
-    seen: set = set()
-    for b in bindings:
-        for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
-            if vname in seen or d.is_instance(var):
-                continue
-            seen.add(vname)
-            port_vars.append(_port_var(d, vname, var, b, enum_ids, hdl_path))
+    port_vars = _ports(d, bindings, enum_ids, hdl_path)
     out["port_vars"] = port_vars
 
     children = []
@@ -599,11 +675,11 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
         if "$inst" not in value or iname in seen:
             continue
         seen.add(iname)
-        child: Dict[str, Any] = {
-            "name": iname,
-            "obj_name": d.types[var["type"]]["module"],
-            "module_name": value["module"],
-        }
+        child: Dict[str, Any] = {"name": iname}
+        if value["$inst"] != iname:
+            child["hdl_obj_name"] = value["$inst"]
+        child["obj_name"] = d.inst_module(var)
+        child["module_name"] = value["module"]
         if loc := d.src_loc(var.get("loc")):
             child["hgl_loc"] = loc
         children.append(child)

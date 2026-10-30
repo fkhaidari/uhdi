@@ -137,18 +137,9 @@ def _relayout(doc: Dict[str, Any]) -> None:
 
 
 def v2_from_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
-    """Oracle output plus `hdl_locs`, split from the oracle's keep mode."""
+    """Oracle output, re-laid into the layout."""
     doc = _run_oracle(tree, False)
-    kept = _run_oracle(tree, True)
-    kb = {(b["source"], b["target"]): b for b in kept["bindings"]}
     for b in doc["bindings"]:
-        src = kb[(b["source"], b["target"])]["vars"]
-        hdl = {}
-        for name, v in src.items():
-            if isinstance(v, dict) and "$v" in v and "at" in v and name in b["vars"]:
-                hdl[name] = v["at"]
-        if hdl:
-            b["hdl_locs"] = hdl
         sv = doc["source"][b["source"]]["vars"]
         b["vars"] = {n: _listify(v, sv[n]["type"], doc["types"])
                      for n, v in b["vars"].items()}
@@ -474,7 +465,11 @@ def test_unknown_reads_as_bits_or_nothing() -> None:
     assert render({"$const": "0b1x"}) is None
     assert _scalar({"$weird": 1}, "", {}) == {}
     assert _scalar({"$op": "?:", "args": [
-        "sel", {"$optimized_out": True}, "b"]}, "", {}) == {}
+        {"$optimized_out": True}, "a", "b"]}, "", {}) == {}
+    assert _scalar({"$op": "?:", "args": [
+        "sel", {"$optimized_out": True}, {"$weird": 1}]}, "", {}) == {}
+    assert _scalar({"$op": "+", "args": [
+        "a", {"$optimized_out": True}]}, "", {}) == {}
     doc = {"types": [{"kind": "uint", "width": 1},
                      {"kind": "struct", "fields": [],
                       "variant": {"cases": [{"fields": [
@@ -487,3 +482,119 @@ def test_any_minor_is_v2() -> None:
     from uhdi2.v2 import is_v2
     assert is_v2({"uhdi": "0.1"}) and is_v2({"uhdi": "0.7"})
     assert not is_v2({"uhdi": "1.0"}) and not is_v2({})
+
+
+# ---- names, instances, extern ports, class info ---------------------------
+
+
+def _object(out: Dict[str, Any], module_name: str, obj_name: str = "") -> Dict[str, Any]:
+    return next(o for o in out["objects"] if o.get("module_name") == module_name
+                and (not obj_name or o["obj_name"] == obj_name))
+
+
+def test_lazy_select_takes_the_known_branch() -> None:
+    from uhdi2.v2.to_hgldd import _scalar
+    gone = {"$optimized_out": True}
+    ops = lambda *a: _scalar({"$op": "?:", "args": list(a)}, "", {})  # noqa: E731
+    assert ops("s", "a", "b") == {"opcode": "?:", "operands": [
+        {"sig_name": "s"}, {"sig_name": "a"}, {"sig_name": "b"}]}
+    assert ops("s", "a", gone)["operands"][2] == {"sig_name": "a"}
+    assert ops("s", gone, "b")["operands"][1] == {"sig_name": "b"}
+    # Nothing known, or no selector: no value.
+    assert ops("s", gone, gone) == {}
+    assert ops(gone, "a", "b") == {}
+
+
+def test_var_name_shown_and_key_binds() -> None:
+    doc = _dedup_doc()
+    doc["original"]["Left"]["vars"]["a"]["name"] = "alpha"
+    out = to_hgldd_v2(doc)
+    pv = _object(out, "Shared", "Left")["port_vars"]
+    # The binding is read by key, the name is what the user sees.
+    assert pv[0]["var_name"] == "alpha" and pv[0]["value"] == {"sig_name": "a_0"}
+
+
+def test_instance_child_keeps_verilog_name_and_vectors() -> None:
+    doc = _dedup_doc()
+    doc["original"]["Top"]["vars"]["r"]["name"] = "right"
+    top = _object(to_hgldd_v2(doc), "Top")
+    r = top["children"][1]
+    assert r["name"] == "right" and r["hdl_obj_name"] == "r0"
+    assert r["hgl_loc"]["begin_line"] == 4
+    # The Verilog name is left out when it equals the name.
+    assert "hdl_obj_name" not in top["children"][0]
+
+    doc = _dedup_doc()
+    doc["types"]["module_Left_x2"] = {"kind": "vector", "elem": "module_Left", "size": 2}
+    doc["original"]["Top"]["vars"]["ls"] = {"type": "module_Left_x2", "loc": [0, 8, 5]}
+    doc["bindings"][0]["vars"]["ls"] = [{"$inst": "ls_0", "module": "Shared"},
+                                        {"$inst": "ls_one", "module": "Shared"}]
+    top = _object(to_hgldd_v2(doc), "Top")
+    ls = [c for c in top["children"] if c["name"].startswith("ls")]
+    assert [(c["name"], c.get("hdl_obj_name"), c["obj_name"], c["module_name"])
+            for c in ls] == [("ls_0", None, "Left", "Shared"),
+                             ("ls_1", "ls_one", "Left", "Shared")]
+    assert "ls" not in [p["var_name"] for p in top["port_vars"]]
+
+
+def test_extern_ports_come_from_the_binding() -> None:
+    doc = _dedup_doc()
+    doc["original"]["Black"] = {"vars": {"d": {"type": "u8", "loc": [0, 50, 3]}}}
+    doc["bindings"].append({"original": "Black", "generated": "Ext",
+                            "vars": {"d": "d_in"}})
+    ext = _object(to_hgldd_v2(doc), "Ext")
+    assert ext["isExtModule"] == 1 and ext["children"] == []
+    assert ext["port_vars"][0]["var_name"] == "d"
+    assert ext["port_vars"][0]["value"] == {"sig_name": "d_in"}
+    assert ext["port_vars"][0]["hgl_loc"]["begin_line"] == 50
+    # No binding, no ports, as before.
+    assert _object(to_hgldd_v2(_dedup_doc()), "Ext")["port_vars"] == []
+
+
+def test_hdl_locs_key_is_not_read() -> None:
+    doc = _dedup_doc()
+    doc["bindings"][1]["hdl_locs"] = {"a": [1, 99, 1]}
+    out = to_hgldd_v2(doc)
+    a = _object(out, "Shared", "Left")["port_vars"][0]
+    assert a["hdl_loc"]["begin_line"] == 7  # the signal's loc
+
+
+def test_class_info_from_the_instance_first() -> None:
+    doc = _dedup_doc()
+    # Producers now write the class on the instance, not on the module.
+    for m in ("Left", "Right"):
+        del doc["original"][m]["x-chisel"]
+    params = [{"name": "w", "type": "Int", "value": 8}]
+    doc["original"]["Top"]["vars"]["l0"]["x-chisel"] = {
+        "type_name": "LeftImpl", "params": params}
+    doc["original"]["Top"]["vars"]["r"]["x-chisel"] = {"type_name": "RightImpl"}
+    out = to_hgldd_v2(doc)
+    assert _object(out, "Shared", "Left")["source_lang_type_info"] == {
+        "type_name": "LeftImpl",
+        "params": [{"name": "w", "type": "Int", "value": "8"}]}
+    assert _object(out, "Shared", "Right")["source_lang_type_info"] == {
+        "type_name": "RightImpl"}
+    # The root has no instance; its own record is the fallback.
+    doc["original"]["Top"]["x-chisel"] = {"type_name": "TopImpl"}
+    assert _object(to_hgldd_v2(doc), "Top")["source_lang_type_info"] == {
+        "type_name": "TopImpl"}
+
+
+def test_class_info_instance_wins_over_module() -> None:
+    doc = _dedup_doc()
+    doc["original"]["Top"]["vars"]["l0"]["x-chisel"] = {"type_name": "LeftImpl"}
+    out = to_hgldd_v2(doc)
+    assert _object(out, "Shared", "Left")["source_lang_type_info"] == {
+        "type_name": "LeftImpl"}
+
+
+def test_class_info_instances_that_differ_fall_back() -> None:
+    doc = _dedup_doc()
+    doc["original"]["Top"]["vars"]["m2"] = {"type": "module_Left"}
+    doc["bindings"][0]["vars"]["m2"] = {"$inst": "m2", "module": "Shared"}
+    doc["original"]["Top"]["vars"]["l0"]["x-chisel"] = {"type_name": "A"}
+    doc["original"]["Top"]["vars"]["m2"]["x-chisel"] = {"type_name": "B"}
+    out = to_hgldd_v2(doc)
+    # Two classes for one module: the module's own record.
+    assert _object(out, "Shared", "Left")["source_lang_type_info"] == {
+        "type_name": "Left"}
