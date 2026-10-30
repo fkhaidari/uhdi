@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://circt.llvm.org/uhdi/0.1/schema.json",
   "title": "UHDI",
-  "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings. A reader meets a newer document as follows: it ignores a key it does not know; it shows a type of unknown `kind` as its bits if it has a `width`, otherwise as opaque; it treats an unknown `$` value as `$optimized_out`, and an expression with such an operand as having no value; it skips a statement of unknown `kind`.",
+  "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings. A reader meets a newer document as follows: it ignores a key it does not know; it shows a type of unknown `kind` as its bits if it has a `width`, otherwise as opaque; it treats an unknown `$` value as `$optimized_out`, and an expression with such an operand as having no value, except for the unselected branch of `?:`; it skips a statement of unknown `kind`. A value has bits of 0 and 1 only as far as the document goes: a reader shows X and Z bits as the simulator reports them, and the document says nothing about them.",
   "type": "object",
   "additionalProperties": false,
   "patternProperties": {
@@ -68,7 +68,7 @@
         ],
         "properties": {
           "path": {
-            "description": "Path as the producer saw it.",
+            "description": "Path as the producer saw it. A relative path resolves against the directory the producer ran in. A reader must not resolve a path outside the directories it is given.",
             "type": "string"
           },
           "generated": {
@@ -100,7 +100,7 @@
       }
     },
     "bindings": {
-      "description": "How the variables of an original module read in a generated module; DWARF's concrete instance with its locations. One original module may bind into several generated ones and back (dedup, inlining). At most one binding per `original`, `generated` and `inline_path`.",
+      "description": "How the variables of an original module read in a generated module; DWARF's concrete instance with its locations. One original module may bind into several generated ones and back (dedup, inlining). There is at most one binding per (`original`, `generated`, `inline_path`).",
       "type": "array",
       "items": {
         "$ref": "#/$defs/binding"
@@ -109,7 +109,7 @@
   },
   "$defs": {
     "loc": {
-      "description": "[file index into `files`, line, column]; line and column count from 1. The column is left out where it says nothing.",
+      "description": "[file index into `files`, line, column]; line counts from 1. Column counts from 1, as the frontend counts it, and 0 means unknown. The column may be left out.",
       "type": "array",
       "prefixItems": [
         {
@@ -122,11 +122,16 @@
         },
         {
           "type": "integer",
-          "minimum": 1
+          "minimum": 0
         }
       ],
       "items": false,
       "minItems": 2
+    },
+    "key": {
+      "description": "Name of a variable or field. It contains none of `.`, `[`, `]`, so a path splits unambiguously.",
+      "type": "string",
+      "pattern": "^[^.\\[\\]]+$"
     },
     "typeRef": {
       "description": "Index into `types`.",
@@ -201,7 +206,7 @@
                 "reset",
                 "asyncreset"
               ],
-              "description": "A reset, when the IR still knows it is one: `reset` is synchronous, `asyncreset` asynchronous. One bit wide."
+              "description": "A reset, when the IR still knows it is one: `reset` is synchronous, `asyncreset` asynchronous. Both are active-high. One bit wide."
             },
             "name": {
               "$ref": "#/$defs/typeName"
@@ -237,7 +242,8 @@
                 ],
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "description": "Contains none of `.`, `[`, `]`.",
+                    "$ref": "#/$defs/key"
                   },
                   "type": {
                     "$ref": "#/$defs/typeRef"
@@ -357,8 +363,11 @@
           "const": true
         },
         "vars": {
-          "description": "Variables the module declares, by a name unique in the module.",
+          "description": "Variables the module declares, by a name unique in the module. A key contains none of `.`, `[`, `]`.",
           "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/key"
+          },
           "additionalProperties": {
             "$ref": "#/$defs/originalVar"
           }
@@ -391,10 +400,9 @@
           "$ref": "#/$defs/loc"
         },
         "storage": {
-          "description": "Present when the source treats the variable as state: `reg` keeps its value between clock edges, `mem` is a memory. The frontend decides it, from a declaration or from how the variable is assigned. A port may be `reg`. Absent for wires and other combinational values.",
+          "description": "Present when the source treats the variable as state: `reg` keeps its value between clock edges. The frontend decides it, from a declaration or from how the variable is assigned. A port may be `reg`. Absent for wires and other combinational values. A later minor may add values.",
           "enum": [
-            "reg",
-            "mem"
+            "reg"
           ]
         },
         "dir": {
@@ -427,7 +435,7 @@
           "const": "extern"
         },
         "signals": {
-          "description": "Where each signal of the module is declared in the netlist, by its Verilog name. A debugger goes from a variable bound to a signal to the signal's declaration.",
+          "description": "Where each signal declared in the module body is, by its Verilog name. Ports are not listed. A debugger goes from a variable bound to a signal to the signal's declaration.",
           "type": "object",
           "additionalProperties": {
             "type": "object",
@@ -477,8 +485,11 @@
           }
         },
         "vars": {
-          "description": "Every variable of the original module, by its key there, to its value in the generated one.",
+          "description": "Every variable of the original module, by its key there, to its value in the generated one. The keys are a subset of the original module's vars. A missing key means the variable has no value in this generated module, the same as `$optimized_out`. For `$inst` and `$inline`, the original module of the child is the module named by the variable's type.",
           "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/key"
+          },
           "additionalProperties": {
             "$ref": "#/$defs/value"
           }
@@ -622,7 +633,7 @@
       ]
     },
     "expr": {
-      "description": "Profile `expr`: the combinational op over generated signals and literals that computes the value; DWARF computes such a value with a `DW_OP_*` expression. Opcodes are Verilog's, as HGLDD uses them. A plain number in `args` is a static operand: the count of `R{}` (first), the high and low bit of `[]` (last). `$signed` marks the operands of a signed op. `^` with one operand is the reduction.",
+      "description": "Profile `expr`: the combinational op over generated signals and literals that computes the value; DWARF computes such a value with a `DW_OP_*` expression. Opcodes are Verilog's, as HGLDD uses them. A plain number in `args` is a static operand: the count of `R{}` (first), the high and low bit of `[]` (last). `$signed` marks the operands of a signed op. `^` with one operand is the reduction. `?:` needs a value only in the branch it selects: an unselected branch may be `$optimized_out`, which expresses state shared between FSMs. Any other operator with an operand that has no value has no value.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -678,9 +689,9 @@
       }
     },
     "path": {
-      "description": "Source path from a variable or instance of the module: `.field`, `[n]`, or `[path]` for a dynamic subscript.",
+      "description": "Source path from a variable or instance of the module: a name, then `.field`, `[n]` with a decimal index, or `[path]` for a dynamic subscript. The subscript path is names and `.field` only, without nested subscripts.",
       "type": "string",
-      "pattern": "^[A-Za-z_][A-Za-z0-9_$]*(\\.[A-Za-z_][A-Za-z0-9_$]*|\\[[^\\]]+\\])*$"
+      "pattern": "^[A-Za-z_][A-Za-z0-9_$]*(\\.[A-Za-z_][A-Za-z0-9_$]*|\\[[0-9]+\\]|\\[[A-Za-z_][A-Za-z0-9_$]*(\\.[A-Za-z_][A-Za-z0-9_$]*)*\\])*$"
     },
     "stmt": {
       "oneOf": [

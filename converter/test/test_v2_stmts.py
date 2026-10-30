@@ -136,3 +136,104 @@ def test_schema_extensions(doc):
                for v in (m.get("vars") or {}).values() if "x-chisel" in v)
     var["x-chisel"]["params"] = [{"name": "w", "type": "Int", "value": "8"}]
     assert ext.is_valid(params)
+
+
+def _validators():
+    jsonschema = pytest.importorskip("jsonschema")
+    root = pathlib.Path(to_pdg.__file__).parent.parent / "schema"
+    return (jsonschema.Draft202012Validator(
+        json.loads((root / name).read_text()))
+        for name in ("uhdi-2.1-draft.schema.json", "uhdi-x-chisel.schema.json"))
+
+
+def _first_var(doc):
+    mod = next(m for m in doc["original"].values() if m.get("vars"))
+    key = next(iter(mod["vars"]))
+    return mod, key, mod["vars"][key]
+
+
+def test_schema_storage_has_no_mem(doc):
+    core, _ = _validators()
+    d = copy.deepcopy(doc)
+    _, _, var = _first_var(d)
+    var["storage"] = "reg"
+    assert core.is_valid(d)
+    var["storage"] = "mem"
+    assert not core.is_valid(d)
+
+
+def test_schema_key_alphabet(doc):
+    core, _ = _validators()
+    for bad in ("a.b", "a[0]", "a]"):
+        d = copy.deepcopy(doc)
+        mod, key, var = _first_var(d)
+        mod["vars"][bad] = var
+        assert not core.is_valid(d), bad
+        d = copy.deepcopy(doc)
+        bind = d["bindings"][0]
+        bind["vars"][bad] = {"$optimized_out": True}
+        assert not core.is_valid(d), bad
+    d = copy.deepcopy(doc)
+    mod, key, var = _first_var(d)
+    mod["vars"]["a_b$1"] = var
+    assert core.is_valid(d)
+    d["types"].append({"kind": "struct", "fields": [{"name": "x", "type": 0}]})
+    assert core.is_valid(d)
+    d["types"][-1]["fields"][0]["name"] = "x.y"
+    assert not core.is_valid(d)
+
+
+def test_schema_path_grammar():
+    core, _ = _validators()
+    v = type(core)({"$defs": core.schema["$defs"], "$ref": "#/$defs/path"})
+    for ok in ("a", "a.b", "a[0]", "a[i]", "a[i.j].k", "v[cnt][2]"):
+        assert v.is_valid(ok), ok
+    for bad in ("a.", "a[]", "a[b[0]]", "a[-1]", "a[1x]", "a..b", ".a", "a[0"):
+        assert not v.is_valid(bad), bad
+
+
+def test_schema_loc_column(doc):
+    core, _ = _validators()
+    d = copy.deepcopy(doc)
+    mod = next(m for m in d["original"].values() if m.get("loc"))
+    mod["loc"] = [mod["loc"][0], 3, 0]
+    assert core.is_valid(d)
+    mod["loc"] = [mod["loc"][0], 3, -1]
+    assert not core.is_valid(d)
+    mod["loc"] = [mod["loc"][0], 0, 1]
+    assert not core.is_valid(d)
+
+
+def test_schema_generated_module_keys(doc):
+    core, _ = _validators()
+    d = copy.deepcopy(doc)
+    name = next(iter(d["generated"]))
+    d["generated"][name]["signals"] = {"w": {"loc": [0, 1, 1]}}
+    assert core.is_valid(d)
+    d["generated"][name]["signals"]["w"]["dir"] = "in"
+    assert not core.is_valid(d)
+
+
+def test_schema_chisel_instance_var(doc):
+    _, ext = _validators()
+    d = copy.deepcopy(doc)
+    var = next(v for m in d["original"].values()
+               for v in (m.get("vars") or {}).values() if "x-chisel" in v)
+    var["x-chisel"] = {"type_name": "Kid",
+                       "params": [{"name": "w", "type": "Int"}]}
+    assert ext.is_valid(d)
+    var["x-chisel"] = {"params": [{"name": "w", "type": "Int"}]}
+    assert not ext.is_valid(d)
+    var["x-chisel"] = {"binding": "IO"}
+    assert ext.is_valid(d)
+    var["x-chisel"] = {"type_name": 1}
+    assert not ext.is_valid(d)
+
+
+def test_schema_text_rules():
+    core, _ = _validators()
+    text = json.dumps(core.schema)
+    assert "unselected branch" in text
+    assert "active-high" in text
+    assert "subset of the original module" in text
+    assert "UHDI 2" not in text and "v2" not in text

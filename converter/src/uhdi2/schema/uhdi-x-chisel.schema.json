@@ -84,10 +84,23 @@
     "varChisel": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "binding"
-      ],
+      "if": {
+        "not": {
+          "required": [
+            "type_name"
+          ]
+        }
+      },
+      "then": {
+        "required": [
+          "binding"
+        ]
+      },
       "properties": {
+        "type_name": {
+          "description": "Scala class of an instance. An instance carries `type_name` and `params`, and no `binding`.",
+          "type": "string"
+        },
         "binding": {
           "description": "Chisel binding kind (`IO`, `Reg`, `Wire`, `OpResult`, ...).",
           "type": "string"
