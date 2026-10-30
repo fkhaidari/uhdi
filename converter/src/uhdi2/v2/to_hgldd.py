@@ -292,7 +292,14 @@ def _value(v: Any, tref: str, types: Types) -> Dict[str, Any]:
                 e = None
             operands.append(_value(e, elem, types))
         return {"opcode": "'{", "operands": operands}
-    return {} if _is_none(v) else _scalar(v, tref, types)
+    if not _is_none(v):
+        if value := _scalar(v, tref, types):
+            return value
+    # HGLDD has no empty operand, and readers reject one. An unknown leaf is
+    # x bits of its width, so the aggregate keeps its shape.
+    if t.get("kind") == "enum":
+        t = types.get(t.get("base", "")) or {}
+    return {"bit_vector": "x" * max(int(t.get("width", 1)), 1)}
 
 
 def _top_value(v: Any, tref: str, types: Types) -> Optional[Dict[str, Any]]:

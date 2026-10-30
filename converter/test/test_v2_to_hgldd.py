@@ -322,7 +322,9 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert a["hdl_loc"]["file"] == 2 and a["hdl_loc"]["begin_line"] == 7
     assert shared["port_vars"][1]["value"] == {
         "opcode": "'{", "operands": [{"sig_name": "p_x"}, {"bit_vector": "00000101"}]}
-    assert shared["port_vars"][2]["value"] == {"opcode": "'{", "operands": [{"sig_name": "v_0"}, {}]}
+    # An element without a value is unknown: x bits, as HGLDD has no empty operand.
+    assert shared["port_vars"][2]["value"] == {
+        "opcode": "'{", "operands": [{"sig_name": "v_0"}, {"bit_vector": "xxxxxxxx"}]}
     assert "value" not in shared["port_vars"][3]  # $optimized_out
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
 
