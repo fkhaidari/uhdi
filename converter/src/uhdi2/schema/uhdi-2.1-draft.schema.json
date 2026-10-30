@@ -400,9 +400,10 @@
           "$ref": "#/$defs/loc"
         },
         "storage": {
-          "description": "Present when the source treats the variable as state: `reg` keeps its value between clock edges. The frontend decides it, from a declaration or from how the variable is assigned. A port may be `reg`. Absent for wires and other combinational values. A later minor may add values.",
+          "description": "Present when the source treats the variable as state: `reg` keeps its value between clock edges, `mem` is the contents of a memory, a vector whose elements are read and written by address. The frontend decides it, from a declaration or from how the variable is assigned. A port may be `reg`. Absent for wires and other combinational values. A later minor may add values.",
           "enum": [
-            "reg"
+            "reg",
+            "mem"
           ]
         },
         "dir": {

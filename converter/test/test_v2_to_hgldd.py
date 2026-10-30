@@ -598,3 +598,15 @@ def test_class_info_instances_that_differ_fall_back() -> None:
     # Two classes for one module: the module's own record.
     assert _object(out, "Shared", "Left")["source_lang_type_info"] == {
         "type_name": "Left"}
+
+
+def test_memory_is_one_array_signal() -> None:
+    doc = _dedup_doc()
+    doc["types"]["mem4"] = {"kind": "vector", "elem": "u8", "size": 4}
+    doc["original"]["Left"]["vars"]["Memory"] = {
+        "type": "mem4", "loc": [0, 15, 3], "storage": "mem"}
+    doc["bindings"][1]["vars"]["Memory"] = "Memory"
+    pv = _object(to_hgldd_v2(doc), "Shared", "Left")["port_vars"]
+    mem = next(p for p in pv if p["var_name"] == "Memory")
+    assert mem["value"] == {"sig_name": "Memory"}
+    assert mem["unpacked_range"] == [3, 0]

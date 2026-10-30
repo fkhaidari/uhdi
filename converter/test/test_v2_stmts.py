@@ -152,13 +152,15 @@ def _first_var(doc):
     return mod, key, mod["vars"][key]
 
 
-def test_schema_storage_has_no_mem(doc):
+def test_schema_storage_values(doc):
     core, _ = _validators()
     d = copy.deepcopy(doc)
     _, _, var = _first_var(d)
     var["storage"] = "reg"
     assert core.is_valid(d)
     var["storage"] = "mem"
+    assert core.is_valid(d)
+    var["storage"] = "ram"
     assert not core.is_valid(d)
 
 

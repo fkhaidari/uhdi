@@ -299,6 +299,9 @@ def _top_value(v: Any, tref: str, types: Types) -> Optional[Dict[str, Any]]:
     if _is_none(v):
         return None
     kind = (types.get(tref) or {}).get("kind")
+    if kind == "vector" and isinstance(v, str):
+        # One array signal holds the whole vector, such as a memory.
+        return {"sig_name": v}
     if kind in ("struct", "vector"):
         return _value(v, tref, types) if isinstance(v, (dict, list)) else None
     return _scalar(v, tref, types) or None
