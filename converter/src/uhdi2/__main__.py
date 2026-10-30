@@ -84,7 +84,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     p_down.add_argument("-o", "--output", type=pathlib.Path)
     p_down.set_defaults(func=_cmd_downgrade)
 
-    p_val = sub.add_parser("validate", help="Schema-validate a tree-shaped UHDI document.")
+    p_val = sub.add_parser("validate", help="Schema-validate a UHDI document (current layout, or the older tree shape).")
     p_val.add_argument("input", type=pathlib.Path)
     p_val.set_defaults(func=_cmd_validate)
 

@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
+from . import require_v2
 from .types import named_types
 
 Types = Dict[str, Any]
@@ -43,6 +44,7 @@ def _is_none(v: Any) -> bool:
 
 class Doc:
     def __init__(self, doc: Dict[str, Any]):
+        require_v2(doc)
         doc = named_types(doc)
         self.doc = doc
         self.types: Types = doc.get("types", {})

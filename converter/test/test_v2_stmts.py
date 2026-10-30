@@ -237,3 +237,48 @@ def test_schema_text_rules():
     assert "active-high" in text
     assert "subset of the original module" in text
     assert "UHDI 2" not in text and "v2" not in text
+
+
+# ---- validate CLI and version check ---------------------------------------
+
+
+def test_validate_current_layout(doc, tmp_path, capsys):
+    from uhdi2.__main__ import main
+    from uhdi2.validate import is_valid, iter_errors
+    path = tmp_path / "d.json"
+    path.write_text(json.dumps(doc))
+    assert main(["validate", str(path)]) == 0
+    assert is_valid(doc)
+    # The core schema applies.
+    bad = copy.deepcopy(doc)
+    bad["bindings"][0]["bogus"] = 1
+    assert list(iter_errors(bad))
+    path.write_text(json.dumps(bad))
+    assert main(["validate", str(path)]) == 2
+
+
+def test_validate_x_chisel_only_when_listed(doc):
+    from uhdi2.validate import is_valid
+    assert "x-chisel" in doc["profiles"]
+    bad = copy.deepcopy(doc)
+    next(t for t in bad["types"] if t["kind"] == "uint")["x-chisel"] = {}
+    assert not is_valid(bad)
+    bad["profiles"].remove("x-chisel")
+    bad["profiles"].append("x-other")
+    assert is_valid(bad)
+
+
+@pytest.mark.parametrize("version", ["1.0", "2.1", None])
+def test_readers_reject_other_versions(doc, version, tmp_path):
+    from uhdi2.v2 import UnsupportedVersion, to_hgldd, walk
+    other = copy.deepcopy(doc)
+    if version is None:
+        other.pop("uhdi")
+    else:
+        other["uhdi"] = version
+    for convert in (walk.Doc, to_hgldd.convert, to_pdg.convert,
+                    to_hgdb_json.convert):
+        with pytest.raises(UnsupportedVersion, match="unsupported document"):
+            convert(other)
+    with pytest.raises(UnsupportedVersion):
+        to_hgdb.convert(other, tmp_path / "x.db")

@@ -72,6 +72,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from uhdi_common.context import ConversionError
 from uhdi_to_hgldd.convert import _FileInfo
+from . import require_v2
 from .types import named_types
 from .walk import const_bits
 from .walk import check_bindings
@@ -332,6 +333,7 @@ def _location_types(tref: str, types: Types,
 
 class _Doc:
     def __init__(self, doc: Dict[str, Any]):
+        require_v2(doc)
         doc = named_types(doc)
         self.types: Types = doc.get("types", {})
         self.files: List[Dict[str, Any]] = doc.get("files", [])
