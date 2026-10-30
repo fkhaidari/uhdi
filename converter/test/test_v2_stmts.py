@@ -282,3 +282,65 @@ def test_readers_reject_other_versions(doc, version, tmp_path):
             convert(other)
     with pytest.raises(UnsupportedVersion):
         to_hgdb.convert(other, tmp_path / "x.db")
+
+
+# ---- display names, lazy ?: and flat names --------------------------------
+
+
+def _named(doc):
+    """`cnt` of `M` shown as `count`; the key stays what paths use."""
+    doc = copy.deepcopy(doc)
+    doc["original"]["M"]["vars"]["cnt"]["name"] = "count"
+    return doc
+
+
+def test_readers_show_var_name(doc, tmp_path):
+    named = _named(doc)
+    db = tmp_path / "t.db"
+    to_hgdb.convert(named, db)
+    gen = {n for (n,) in _rows(db, "SELECT name FROM generator_variable")}
+    assert "count" in gen and "cnt" not in gen
+    asg = _rows(db, "SELECT name, value FROM assignment")
+    # The lowered name keeps the key, the value is what the user reads.
+    assert ("cnt", "count") in asg
+    out = to_hgdb_json.convert(named)
+    names = {v["name"] for v in out["variables"]}
+    assert "count" in names and "cnt" not in names
+    pdg = {v["name"] for v in to_pdg.convert(named)["vertices"]}
+    assert "defreg_count" in pdg and "connect_count" in pdg
+    assert "defreg_cnt" not in pdg
+    # Without `name` the key is shown, as before.
+    assert "defreg_cnt" in {v["name"] for v in to_pdg.convert(doc)["vertices"]}
+
+
+def test_hgdb_flat_name_clash_left_out(doc, tmp_path, capsys):
+    clash = copy.deepcopy(doc)
+    # `i.a` and `i_a` both lower to `i_a`.
+    clash["original"]["M"]["stmts"].append(
+        {"id": "s99", "kind": "connect", "lhs": "i_a", "loc": [0, 20, 1],
+         "reads": ["sel"]})
+    db = tmp_path / "t.db"
+    to_hgdb.convert(clash, db)
+    asg = _rows(db, "SELECT name, value FROM assignment")
+    assert not [a for a in asg if a[0] == "i_a"]
+    assert ("cnt", "cnt") in asg
+    assert "i_a" in capsys.readouterr().err
+
+
+def test_render_select_is_lazy():
+    from uhdi2.v2.walk import render
+    gone = {"$optimized_out": True}
+
+    def sel(s, a, b):
+        return {"$op": "?:", "args": [s, a, b]}
+    assert render(sel("s", "a", "b")) == "s ? a : b"
+    # A constant selector takes its branch; the other may be unknown.
+    assert render(sel({"$const": "0b1"}, "a", gone)) == "a"
+    assert render(sel({"$const": "0b0"}, gone, "b")) == "b"
+    # The selected branch has no value, so the expression has none.
+    assert render(sel({"$const": "0b0"}, "a", gone)) is None
+    # A signal selector: hgdb cannot evaluate an unknown operand.
+    assert render(sel("s", "a", gone)) is None
+    assert render(sel(gone, "a", "b")) is None
+    # Any other operator still needs every operand.
+    assert render({"$op": "+", "args": ["a", gone]}) is None

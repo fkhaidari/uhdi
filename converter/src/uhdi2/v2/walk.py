@@ -74,6 +74,14 @@ class Doc:
         t = self.types.get(var.get("type", "")) or {}
         return t.get("module") if t.get("kind") == "module" else None
 
+    def shown(self, part: Part, path: str, prefixed: bool = True) -> str:
+        """`path` as a user reads it: the root variable under its `name`
+        when it has one, else its key, behind the inline prefix."""
+        root = root_var(path)
+        var = self.vars(part.source).get(root) or {}
+        return ((part.prefix if prefixed else "")
+                + (var.get("name") or root) + path[len(root):])
+
     def file(self, loc: Optional[List[int]]) -> str:
         if not loc or not (0 <= loc[0] < len(self.files)):
             return ""
@@ -142,12 +150,14 @@ class Doc:
 
     def leaves(self, part: Part) -> Iterator[Tuple[str, Any, str]]:
         """(dotted source name, bound value, type) of every ground leaf of
-        the part's variables, in source order. Instances are skipped."""
+        the part's variables, in source order. A variable is named by its
+        `name` when it has one, else its key. Instances are skipped."""
         bvars = part.binding.get("vars") or {}
         for name, var in self.vars(part.source).items():
             if self.module_of(var) is not None:
                 continue
-            yield from self._leaves(part.prefix + name, bvars.get(name),
+            yield from self._leaves(part.prefix + (var.get("name") or name),
+                                    bvars.get(name),
                                     var.get("type", ""))
 
     def _leaves(self, name: str, value: Any, tref: str
@@ -282,6 +292,8 @@ def render(v: Any) -> Optional[str]:
         return str(c)
     if "$op" in v:
         op = v["$op"]
+        if op == "?:" and len(v.get("args") or []) == 3:
+            return _render_select(*v["args"])
         args = [render(a) for a in v.get("args") or []]
         if any(a is None for a in args):
             return None
@@ -289,8 +301,6 @@ def render(v: Any) -> Optional[str]:
             return f"{op}{_wrap(args[0])}"
         if op in _REDUCE and len(args) == 1:
             return f"{_REDUCE[op]}{_wrap(args[0])}"
-        if op == "?:" and len(args) == 3:
-            return f"{_wrap(args[0])} ? {_wrap(args[1])} : {_wrap(args[2])}"
         if op == "[]" and len(args) in (2, 3):
             sel = ":".join(args[1:])
             return f"{_wrap(args[0])}[{sel}]"
@@ -302,6 +312,30 @@ def render(v: Any) -> Optional[str]:
             return f"{_wrap(args[0])} {op} {_wrap(args[1])}"
         return f"{op}(" + ", ".join(args) + ")"
     return None
+
+
+def _select(sel: Any) -> Optional[bool]:
+    """The value of a constant selector, None when it is not constant."""
+    if isinstance(sel, dict) and isinstance(sel.get("$const"), str):
+        bits = const_bits(sel["$const"])
+        return None if bits is None else "1" in bits
+    if isinstance(sel, int) and not isinstance(sel, bool):
+        return sel != 0
+    return None
+
+
+def _render_select(sel: Any, a: Any, b: Any) -> Optional[str]:
+    """`?:` needs a value only in the branch it selects. A constant selector
+    picks its branch statically, so the other may be unknown. With a signal
+    for a selector the branch is not known here, and a guard cannot name an
+    unknown operand for hgdb to evaluate, so the expression has no value."""
+    taken = _select(sel)
+    if taken is not None:
+        return render(a if taken else b)
+    parts = [render(x) for x in (sel, a, b)]
+    if any(p is None for p in parts):
+        return None
+    return f"{_wrap(parts[0])} ? {_wrap(parts[1])} : {_wrap(parts[2])}"
 
 
 def _wrap(s: str) -> str:

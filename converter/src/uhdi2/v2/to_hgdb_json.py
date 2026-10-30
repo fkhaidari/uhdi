@@ -91,7 +91,7 @@ def _entries(d: Doc, part: Part, stmts: List[Dict[str, Any]], ctx: "_Ctx"
                 ctx.skipped.append(f"{part.source}:{s['id']}")
             continue
         entry = _place({"type": etype,
-                        "variable": ctx.pool.id(part.prefix + path, value)},
+                        "variable": ctx.pool.id(d.shown(part, path), value)},
                        loc)
         if kind == "connect":
             reset = ctx.resets.get(root_var(path))

@@ -111,7 +111,8 @@ class _Builder:
                 inp = (var["dir"] == "in") != flipped
                 value = self.d.value_at(part, leaf)
                 sig = _signal(inst, value)
-                name = f"{'input' if inp else 'output'}_{leaf}"
+                shown = self.d.shown(part, leaf, False)
+                name = f"{'input' if inp else 'output'}_{shown}"
                 if not top:
                     # The parent's connect provides a child's input.
                     v = self.vertex(var.get("loc"), name, "Definition",
@@ -134,7 +135,9 @@ class _Builder:
             kind, loc = s.get("kind"), s.get("loc")
             if kind == "when":
                 pred = self.predicate(inst, guards.get(s["id"]), loc)
-                v = self.vertex(loc, f"cond_on_[{','.join(s.get('reads') or [])}]",
+                shown = ",".join(self.d.shown(part, r, False)
+                                 for r in s.get("reads") or [])
+                v = self.vertex(loc, f"cond_on_[{shown}]",
                                 "ControlFlow", inst=inst,
                                 signal=(self.predicates[pred]["name"]
                                         if pred is not None else None))
@@ -174,25 +177,25 @@ class _Builder:
         kind, loc = s.get("kind"), s.get("loc")
         var = s.get("var") or ""
         if kind == "reg":
-            v = self.vertex(loc, f"defreg_{var}", "DataDefinition",
+            v = self.vertex(loc, f"defreg_{self.d.shown(part, var, False)}", "DataDefinition",
                             clocked=True, assigns=p + var, inst=inst,
                             signal=_signal(inst, self.d.value_at(part, var)))
             self.decls[p + var] = v
             return v
         if kind == "wire":
-            v = self.vertex(loc, f"defwire_{var}", "Definition", inst=inst)
+            v = self.vertex(loc, f"defwire_{self.d.shown(part, var, False)}", "Definition", inst=inst)
             self.decls[p + var] = v
             return v
         if kind == "mem":
-            v = self.vertex(loc, f"defmem_{var}", "Definition", clocked=True,
+            v = self.vertex(loc, f"defmem_{self.d.shown(part, var, False)}", "Definition", clocked=True,
                             inst=inst)
             self.decls[p + var] = v
             return v
         if kind == "inst":
-            return self.vertex(loc, f"definstance_{var}", "Definition",
+            return self.vertex(loc, f"definstance_{self.d.shown(part, var, False)}", "Definition",
                                inst=inst)
         if kind == "node":
-            v = self.vertex(loc, f"defnode_{var}", "DataDefinition",
+            v = self.vertex(loc, f"defnode_{self.d.shown(part, var, False)}", "DataDefinition",
                             assigns=p + var, inst=inst,
                             signal=_signal(inst, self.d.value_at(part, var)))
             self.decls[p + var] = v
@@ -208,7 +211,7 @@ class _Builder:
             # A synchronous read port shows its data a read latency later.
             delay = max((self._latency(part, root_var(r)) for r in reads),
                         default=0)
-            v = self.vertex(loc, f"connect_{lhs}", "Connection",
+            v = self.vertex(loc, f"connect_{self.d.shown(part, lhs, False)}", "Connection",
                             clocked=clocked, assigns=p + _static(lhs),
                             inst=inst, delay=delay,
                             signal=_signal(inst, self.d.value_at(part, lhs)))

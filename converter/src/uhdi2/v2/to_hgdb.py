@@ -111,6 +111,7 @@ def convert(doc: Dict[str, Any], output_path) -> None:
         conn.executescript(_SCHEMA)
         inst_rows, var_rows, gen_rows = [], [], []
         bp_rows, asg_rows, ann_rows = [], [], []
+        asg_paths: Dict[Tuple[int, str], set] = {}
         for iid, inst in enumerate(instances, 1):
             inst_rows.append((iid, inst.path, ""))
             for part in inst.parts:
@@ -131,7 +132,10 @@ def convert(doc: Dict[str, Any], output_path) -> None:
                     # A write through a dynamic index has no single name.
                     if s["kind"] == "connect" and not is_dynamic(s["lhs"]):
                         lhs = part.prefix + s["lhs"]
-                        asg_rows.append((flat_name(lhs), lhs, bid, "", None))
+                        flat = flat_name(lhs)
+                        asg_paths.setdefault((iid, flat), set()).add(lhs)
+                        asg_rows.append((iid, flat, d.shown(part, s["lhs"]),
+                                         bid))
         conn.executemany("INSERT INTO instance(id, name, annotation)"
                          " VALUES (?, ?, ?)", inst_rows)
         conn.executemany("INSERT INTO variable(id, value, is_rtl)"
@@ -142,9 +146,19 @@ def convert(doc: Dict[str, Any], output_path) -> None:
         conn.executemany("INSERT INTO breakpoint(id, instance_id, filename,"
                          " line_num, column_num, condition, trigger)"
                          " VALUES (?, ?, ?, ?, ?, ?, ?)", bp_rows)
+        # `v[2].x` and `v_2.x` flatten to one name; which one the lowered
+        # name belongs to is not known, so neither gets a row.
+        clash = {k for k, paths in asg_paths.items() if len(paths) > 1}
         conn.executemany("INSERT INTO assignment(name, value, breakpoint_id,"
                          " condition, scope_id) VALUES (?, ?, ?, ?, ?)",
-                         asg_rows)
+                         [(flat, value, bid, "", None)
+                          for iid, flat, value, bid in asg_rows
+                          if (iid, flat) not in clash])
+        if clash:
+            print(f"warning: {len(clash)} lowered name(s) stand for more than "
+                  f"one source path; their assignments are left out, e.g. "
+                  f"{', '.join(sorted(f for _, f in clash)[:5])}",
+                  file=sys.stderr)
         conn.executemany("INSERT INTO annotation(name, value) VALUES (?, ?)",
                          sorted(set(ann_rows)))
         conn.commit()
