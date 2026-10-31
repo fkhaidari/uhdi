@@ -93,10 +93,13 @@ def named_types(doc: Dict[str, Any]) -> Dict[str, Any]:
 def _rekey(obj: Any, keys: Dict[int, str]) -> Any:
     """A copy of a type object with every type index replaced by its key,
     at any depth, so a type that nests references in a new way needs no
-    change here."""
+    change here. An `x-<lang>` value is opaque and is copied as is."""
     if isinstance(obj, list):
         return [_rekey(x, keys) for x in obj]
     if not isinstance(obj, dict):
         return obj
-    return {k: keys[v] if k in _REFS and isinstance(v, int) else _rekey(v, keys)
-            for k, v in obj.items()}
+    return {
+        k: v if k.startswith("x-") else
+        keys[v] if k in _REFS and isinstance(v, int) else _rekey(v, keys)
+        for k, v in obj.items()
+    }

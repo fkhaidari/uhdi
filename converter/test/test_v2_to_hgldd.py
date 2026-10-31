@@ -613,3 +613,14 @@ def test_memory_is_an_array_of_element_traces() -> None:
     assert mem["value"] == {"opcode": "'{", "operands": [
         {"sig_name": f"Memory[{i}]"} for i in range(4)]}
     assert mem["unpacked_range"] == [3, 0]
+
+
+def test_named_types_keeps_ext_values_opaque() -> None:
+    from uhdi2.v2.types import named_types
+    ext = {"base": 16, "type": 0, "n": {"elem": 1}}
+    doc = {"types": [
+        {"kind": "uint", "width": 1, "x-vhdl": copy.deepcopy(ext)},
+        {"kind": "vector", "elem": 0, "size": 2}]}
+    out = named_types(doc)["types"]
+    assert out["#0"]["x-vhdl"] == ext
+    assert out["array_0"]["elem"] == "#0"
