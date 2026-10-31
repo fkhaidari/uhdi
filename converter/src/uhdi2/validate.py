@@ -16,7 +16,7 @@ from typing import Any, Iterator, List
 import jsonschema
 
 _SCHEMA_DIR = pathlib.Path(__file__).parent / "schema"
-_CORE_PATH = _SCHEMA_DIR / "uhdi-2.1-draft.schema.json"
+_CORE_PATH = _SCHEMA_DIR / "uhdi.schema.json"
 _X_CHISEL_PATH = _SCHEMA_DIR / "uhdi-x-chisel.schema.json"
 # The tree shape, kept for `uhdi2 upgrade` / `downgrade` output.
 _TREE_CORE_PATH = _SCHEMA_DIR / "uhdi-core-1.0.schema.json"

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://circt.llvm.org/uhdi/0.1/x-chisel.schema.json",
+  "$id": "https://circt.llvm.org/uhdi/x-chisel.schema.json",
   "title": "UHDI x-chisel extension",
   "description": "Validates the `x-chisel` keys of a document that lists `x-chisel` in `profiles`. Apply it together with the core schema, which accepts `x-` keys without looking inside. The class name itself is the core `name`; `x-chisel` adds only the constructor parameters.",
   "type": "object",

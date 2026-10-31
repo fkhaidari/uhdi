@@ -107,7 +107,7 @@ def test_pdg_graph(doc):
 def test_schema(doc):
     jsonschema = pytest.importorskip("jsonschema")
     root = pathlib.Path(to_pdg.__file__).parent.parent / "schema"
-    for name in ("uhdi-2.1-draft.schema.json", "uhdi-x-chisel.schema.json"):
+    for name in ("uhdi.schema.json", "uhdi-x-chisel.schema.json"):
         schema = json.loads((root / name).read_text())
         jsonschema.Draft202012Validator(schema).validate(doc)
 
@@ -117,7 +117,7 @@ def test_schema_extensions(doc):
     root = pathlib.Path(to_pdg.__file__).parent.parent / "schema"
     core, ext = (jsonschema.Draft202012Validator(
         json.loads((root / name).read_text()))
-        for name in ("uhdi-2.1-draft.schema.json", "uhdi-x-chisel.schema.json"))
+        for name in ("uhdi.schema.json", "uhdi-x-chisel.schema.json"))
     # The core takes any `x-` key and any `x-` profile without looking inside.
     other = copy.deepcopy(doc)
     other["profiles"].append("x-other")
@@ -143,7 +143,7 @@ def _validators():
     root = pathlib.Path(to_pdg.__file__).parent.parent / "schema"
     return (jsonschema.Draft202012Validator(
         json.loads((root / name).read_text()))
-        for name in ("uhdi-2.1-draft.schema.json", "uhdi-x-chisel.schema.json"))
+        for name in ("uhdi.schema.json", "uhdi-x-chisel.schema.json"))
 
 
 def _first_var(doc):

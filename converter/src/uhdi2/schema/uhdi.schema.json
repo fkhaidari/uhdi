@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://circt.llvm.org/uhdi/0.1/schema.json",
+  "$id": "https://circt.llvm.org/uhdi/schema.json",
   "title": "UHDI",
   "description": "Debug information that links an original design (what the frontend declared) to the generated netlist (what the compiler emitted). `original` and `generated` describe the two sides on their own; `bindings` is the only place that links them. The names follow the scopes proposal for source maps: `originalScopes`, `generatedRanges` and their bindings. A reader meets a newer document as follows: it ignores a key it does not know; it shows a type of unknown `kind` as its bits if it has a `width`, otherwise as opaque; it treats an unknown `$` value as `$optimized_out`, and an expression with such an operand as having no value, except for the unselected branch of `?:`; it skips a statement of unknown `kind`. A value has bits of 0 and 1 only as far as the document goes: a reader shows X and Z bits as the simulator reports them, and the document says nothing about them.",
   "type": "object",
