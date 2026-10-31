@@ -624,3 +624,15 @@ def test_named_types_keeps_ext_values_opaque() -> None:
     out = named_types(doc)["types"]
     assert out["#0"]["x-vhdl"] == ext
     assert out["array_0"]["elem"] == "#0"
+
+
+def test_instance_inside_inline_is_a_child_of_the_inline_node() -> None:
+    doc = _dedup_doc()
+    doc["original"]["Right"]["vars"]["w"] = {"type": "module_Left", "loc": [0, 20, 5]}
+    doc["bindings"][5]["vars"]["w"] = {"$inst": "h_w", "module": "Shared"}
+    top = _object(to_hgldd_v2(doc), "Top")
+    h = next(c for c in top["children"] if c["name"] == "h")
+    w = h["children"][0]
+    assert (w["name"], w["obj_name"], w["module_name"]) == ("h_w", "Left", "Shared")
+    assert w["hgl_loc"]["begin_line"] == 20
+    assert "w" not in [p["var_name"] for p in h["port_vars"]]

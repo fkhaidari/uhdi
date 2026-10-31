@@ -627,6 +627,15 @@ def _module_class_info(d: _Doc, bindings: List[Dict[str, Any]]) -> Optional[Dict
     return records[0] if len(records) == 1 else None
 
 
+def _instance_child(d: _Doc, var: Dict[str, Any], value: Dict[str, Any]) -> Dict[str, Any]:
+    child: Dict[str, Any] = {"name": value["$inst"]}
+    child["obj_name"] = d.inst_module(var)
+    child["module_name"] = value["module"]
+    if loc := d.src_loc(var.get("loc")):
+        child["hgl_loc"] = loc
+    return child
+
+
 def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
                      hdl_path: Optional[str]) -> List[Dict[str, Any]]:
     suffix: Dict[str, int] = {}
@@ -660,6 +669,9 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
             level = node["children"]
         if loc := d.src_loc(inline_locs.get(tuple(b["inline_path"]))):
             node["hgl_loc"] = loc
+        for _, var, value in d.instances([b]):
+            if "$inst" in value:
+                node["children"].append(_instance_child(d, var, value))
         for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
             if d.is_instance(var):
                 continue
@@ -717,12 +729,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
         if "$inst" not in value or value["$inst"] in seen:
             continue
         seen.add(value["$inst"])
-        child: Dict[str, Any] = {"name": value["$inst"]}
-        child["obj_name"] = d.inst_module(var)
-        child["module_name"] = value["module"]
-        if loc := d.src_loc(var.get("loc")):
-            child["hgl_loc"] = loc
-        children.append(child)
+        children.append(_instance_child(d, var, value))
     used = {pv["var_name"] for pv in port_vars}
     children.extend(_inline_children(d, tname, used, enum_ids, hdl_path))
     out["children"] = children
