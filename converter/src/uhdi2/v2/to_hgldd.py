@@ -196,6 +196,8 @@ def _hgldd_params(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     out = []
     for p in params:
         q = dict(p)
+        if "typeName" in q:
+            q["type"] = q.pop("typeName")
         v = q.get("value")
         if v is not None and not isinstance(v, str):
             q["value"] = json.dumps(v)

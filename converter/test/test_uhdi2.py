@@ -379,3 +379,10 @@ def test_hgldd_params_values_are_strings() -> None:
     mod = next(o for o in hgldd["objects"] if o["kind"] == "module")
     values = [p["value"] for p in mod["source_lang_type_info"]["params"]]
     assert values == ["5", "true", "8"]
+
+
+def test_hgldd_params_type_key() -> None:
+    """The x-chisel schema calls the Scala type `typeName`; HGLDD says `type`."""
+    from uhdi2.v2.to_hgldd import _hgldd_params
+    assert _hgldd_params([{"name": "w", "typeName": "Int", "value": "8"}]) == [
+        {"name": "w", "type": "Int", "value": "8"}]
