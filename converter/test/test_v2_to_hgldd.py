@@ -602,7 +602,7 @@ def test_class_info_instances_that_differ_fall_back() -> None:
         "type_name": "Left"}
 
 
-def test_memory_is_one_array_signal() -> None:
+def test_memory_is_an_array_of_element_traces() -> None:
     doc = _dedup_doc()
     doc["types"]["mem4"] = {"kind": "vector", "elem": "u8", "size": 4}
     doc["original"]["Left"]["vars"]["Memory"] = {
@@ -610,5 +610,6 @@ def test_memory_is_one_array_signal() -> None:
     doc["bindings"][1]["vars"]["Memory"] = "Memory"
     pv = _object(to_hgldd_v2(doc), "Shared", "Left")["port_vars"]
     mem = next(p for p in pv if p["var_name"] == "Memory")
-    assert mem["value"] == {"sig_name": "Memory"}
+    assert mem["value"] == {"opcode": "'{", "operands": [
+        {"sig_name": f"Memory[{i}]"} for i in range(4)]}
     assert mem["unpacked_range"] == [3, 0]

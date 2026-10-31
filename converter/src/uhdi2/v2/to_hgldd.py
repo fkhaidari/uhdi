@@ -344,8 +344,12 @@ def _top_value(v: Any, tref: str, types: Types) -> Optional[Dict[str, Any]]:
         return None
     kind = (types.get(tref) or {}).get("kind")
     if kind == "vector" and isinstance(v, str):
-        # One array signal holds the whole vector, such as a memory.
-        return {"sig_name": v}
+        # One array signal holds the whole vector, such as a memory. The
+        # waveform has a trace per element, `v[i]` as Verilator dumps it;
+        # tywaves finds no trace for the whole array.
+        size = int((types.get(tref) or {}).get("size", 0))
+        return {"opcode": "'{", "operands": [{"sig_name": f"{v}[{i}]"}
+                                              for i in range(size)]}
     if kind in ("struct", "vector"):
         return _value(v, tref, types) if isinstance(v, (dict, list)) else None
     return _scalar(v, tref, types) or None
