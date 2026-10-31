@@ -1,0 +1,220 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [],
+  "types": [
+    {
+      "kind": "uint",
+      "width": 8
+    },
+    {
+      "elem": 0,
+      "kind": "vector",
+      "size": 16
+    },
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "uint",
+      "width": 4
+    },
+    {
+      "kind": "module",
+      "module": "mem_16x8"
+    },
+    {
+      "kind": "module",
+      "module": "smem_16x8"
+    }
+  ],
+  "original": {
+    "mem_16x8": {
+      "loc": [
+        0,
+        84,
+        3
+      ],
+      "vars": {
+        "Memory": {
+          "type": 1,
+          "loc": [
+            0,
+            116,
+            5
+          ],
+          "storage": "mem"
+        }
+      }
+    },
+    "smem_16x8": {
+      "loc": [
+        0,
+        119,
+        3
+      ],
+      "vars": {
+        "Memory": {
+          "type": 1,
+          "loc": [
+            0,
+            167,
+            5
+          ],
+          "storage": "mem"
+        }
+      }
+    },
+    "MemModule": {
+      "loc": [
+        0,
+        170,
+        3
+      ],
+      "name": "MemModule",
+      "vars": {
+        "clock": {
+          "type": 2,
+          "loc": [
+            0,
+            183,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 3,
+          "loc": [
+            0,
+            185,
+            5
+          ],
+          "dir": "in"
+        },
+        "waddr": {
+          "type": 4,
+          "loc": [
+            0,
+            186,
+            5
+          ],
+          "dir": "in"
+        },
+        "wdata": {
+          "type": 0,
+          "loc": [
+            0,
+            187,
+            5
+          ],
+          "dir": "in"
+        },
+        "we": {
+          "type": 3,
+          "loc": [
+            0,
+            189,
+            5
+          ],
+          "dir": "in"
+        },
+        "raddr": {
+          "type": 4,
+          "loc": [
+            0,
+            190,
+            5
+          ],
+          "dir": "in"
+        },
+        "rdata": {
+          "type": 0,
+          "loc": [
+            0,
+            191,
+            5
+          ],
+          "dir": "out"
+        },
+        "sdata": {
+          "type": 0,
+          "loc": [
+            0,
+            192,
+            5
+          ],
+          "dir": "out"
+        },
+        "mem": {
+          "type": 5,
+          "loc": [
+            0,
+            176,
+            24
+          ]
+        },
+        "smem": {
+          "type": 6,
+          "loc": [
+            0,
+            178,
+            25
+          ]
+        }
+      }
+    }
+  },
+  "generated": {
+    "mem_16x8": {},
+    "smem_16x8": {},
+    "MemModule": {}
+  },
+  "bindings": [
+    {
+      "original": "mem_16x8",
+      "generated": "mem_16x8",
+      "vars": {
+        "Memory": "Memory"
+      }
+    },
+    {
+      "original": "smem_16x8",
+      "generated": "smem_16x8",
+      "vars": {
+        "Memory": "Memory"
+      }
+    },
+    {
+      "original": "MemModule",
+      "generated": "MemModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "waddr": "waddr",
+        "wdata": "wdata",
+        "we": "we",
+        "raddr": "raddr",
+        "rdata": "_mem_ext_R0_data",
+        "sdata": "_smem_ext_R0_data",
+        "mem": {
+          "$inst": "mem_ext",
+          "module": "mem_16x8"
+        },
+        "smem": {
+          "$inst": "smem_ext",
+          "module": "smem_16x8"
+        }
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}

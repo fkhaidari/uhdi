@@ -1,0 +1,248 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "DecoupledModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "struct",
+      "obj_name": "DecoupledModule_in_bits",
+      "port_vars": [
+        {
+          "var_name": "a",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "b",
+          "type_name": "logic",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 17,
+        "end_line": 17,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "struct",
+      "obj_name": "DecoupledModule_in",
+      "port_vars": [
+        {
+          "var_name": "ready",
+          "type_name": "logic",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "valid",
+          "type_name": "logic",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "bits",
+          "type_name": "DecoupledModule_in_bits",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[MyBundle]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 17,
+        "end_line": 17,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "module",
+      "obj_name": "DecoupledModule",
+      "module_name": "DecoupledModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 5,
+        "end_line": 5,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "DecoupledModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 7,
+            "end_line": 7,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 9,
+            "end_line": 9,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "DecoupledModule_in",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "out_ready"
+              },
+              {
+                "sig_name": "in_valid"
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_bits_a"
+                  },
+                  {
+                    "sig_name": "in_bits_b"
+                  }
+                ]
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[DecoupledIO]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "T"
+              }
+            ]
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "DecoupledModule_in",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "out_ready"
+              },
+              {
+                "sig_name": "in_valid"
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_bits_a"
+                  },
+                  {
+                    "sig_name": "in_bits_b"
+                  }
+                ]
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 25,
+            "end_line": 25,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[DecoupledIO]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "T"
+              }
+            ]
+          }
+        }
+      ],
+      "children": []
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [
+    "x-chisel"
+  ],
+  "types": [
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "uint",
+      "width": 8
+    }
+  ],
+  "original": {
+    "ParamModule_8_true": {
+      "loc": [
+        0,
+        5,
+        3
+      ],
+      "name": "ParamModule",
+      "x-chisel": {
+        "params": [
+          {
+            "name": "width",
+            "typeName": "Int",
+            "value": "8"
+          },
+          {
+            "name": "hasReset",
+            "typeName": "Boolean",
+            "value": true
+          }
+        ]
+      },
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            7,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            9,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 2,
+          "loc": [
+            0,
+            10,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 2,
+          "loc": [
+            0,
+            11,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    }
+  },
+  "generated": {
+    "ParamModule_8_true": {}
+  },
+  "bindings": [
+    {
+      "original": "ParamModule_8_true",
+      "generated": "ParamModule_8_true",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": "in",
+        "out": "in"
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}

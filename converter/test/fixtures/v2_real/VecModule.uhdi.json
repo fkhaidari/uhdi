@@ -1,0 +1,100 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [],
+  "types": [
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "uint",
+      "width": 4
+    },
+    {
+      "elem": 2,
+      "kind": "vector",
+      "size": 3
+    }
+  ],
+  "original": {
+    "VecModule": {
+      "loc": [
+        0,
+        5,
+        3
+      ],
+      "name": "VecModule",
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            7,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            9,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 3,
+          "loc": [
+            0,
+            11,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 3,
+          "loc": [
+            0,
+            12,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    }
+  },
+  "generated": {
+    "VecModule": {}
+  },
+  "bindings": [
+    {
+      "original": "VecModule",
+      "generated": "VecModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": [
+          "in_0",
+          "in_1",
+          "in_2"
+        ],
+        "out": [
+          "in_0",
+          "in_1",
+          "in_2"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}

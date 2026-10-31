@@ -1,0 +1,256 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [
+    "x-chisel"
+  ],
+  "types": [
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "reset"
+    },
+    {
+      "kind": "uint",
+      "width": 4
+    },
+    {
+      "kind": "uint",
+      "width": 5
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "module",
+      "module": "SubModule",
+      "name": "SubModule"
+    },
+    {
+      "kind": "module",
+      "module": "ParamModule_5_true",
+      "name": "ParamModule",
+      "x-chisel": {
+        "params": [
+          {
+            "name": "width",
+            "typeName": "Int",
+            "value": "5"
+          },
+          {
+            "name": "hasReset",
+            "typeName": "Boolean",
+            "value": true
+          }
+        ]
+      }
+    }
+  ],
+  "original": {
+    "SubModule": {
+      "loc": [
+        0,
+        5,
+        3
+      ],
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            13,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            15,
+            5
+          ],
+          "dir": "in"
+        },
+        "a": {
+          "type": 2,
+          "loc": [
+            0,
+            16,
+            5
+          ],
+          "dir": "in"
+        },
+        "b": {
+          "type": 2,
+          "loc": [
+            0,
+            17,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    },
+    "ParamModule_5_true": {
+      "loc": [
+        0,
+        20,
+        3
+      ],
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            22,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            24,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 3,
+          "loc": [
+            0,
+            25,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 3,
+          "loc": [
+            0,
+            26,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    },
+    "HierarchyModule": {
+      "loc": [
+        0,
+        29,
+        3
+      ],
+      "name": "HierarchyModule",
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            42,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 4,
+          "loc": [
+            0,
+            44,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 2,
+          "loc": [
+            0,
+            45,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 3,
+          "loc": [
+            0,
+            46,
+            5
+          ],
+          "dir": "out"
+        },
+        "sub": {
+          "type": 5,
+          "loc": [
+            0,
+            36,
+            14
+          ]
+        },
+        "param": {
+          "type": 6,
+          "loc": [
+            0,
+            38,
+            18
+          ]
+        }
+      }
+    }
+  },
+  "generated": {
+    "SubModule": {},
+    "ParamModule_5_true": {},
+    "HierarchyModule": {}
+  },
+  "bindings": [
+    {
+      "original": "SubModule",
+      "generated": "SubModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "a": "a",
+        "b": "_b_T"
+      }
+    },
+    {
+      "original": "ParamModule_5_true",
+      "generated": "ParamModule_5_true",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": "in",
+        "out": "in"
+      }
+    },
+    {
+      "original": "HierarchyModule",
+      "generated": "HierarchyModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": "in",
+        "out": "_param_out",
+        "sub": {
+          "$inst": "sub",
+          "module": "SubModule"
+        },
+        "param": {
+          "$inst": "param",
+          "module": "ParamModule_5_true"
+        }
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}

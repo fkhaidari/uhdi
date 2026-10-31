@@ -1,0 +1,144 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [
+    "x-chisel"
+  ],
+  "types": [
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "uint",
+      "width": 8
+    },
+    {
+      "fields": [
+        {
+          "name": "a",
+          "type": 2
+        },
+        {
+          "name": "b",
+          "type": 1
+        }
+      ],
+      "kind": "struct",
+      "name": "MyBundle"
+    },
+    {
+      "fields": [
+        {
+          "flip": true,
+          "name": "ready",
+          "type": 1
+        },
+        {
+          "name": "valid",
+          "type": 1
+        },
+        {
+          "name": "bits",
+          "type": 3
+        }
+      ],
+      "kind": "struct",
+      "name": "DecoupledIO",
+      "x-chisel": {
+        "params": [
+          {
+            "name": "gen",
+            "typeName": "T"
+          }
+        ]
+      }
+    }
+  ],
+  "original": {
+    "DecoupledModule": {
+      "loc": [
+        0,
+        5,
+        3
+      ],
+      "name": "DecoupledModule",
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            7,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            9,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 4,
+          "loc": [
+            0,
+            17,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 4,
+          "loc": [
+            0,
+            25,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    }
+  },
+  "generated": {
+    "DecoupledModule": {}
+  },
+  "bindings": [
+    {
+      "original": "DecoupledModule",
+      "generated": "DecoupledModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": {
+          "ready": "out_ready",
+          "valid": "in_valid",
+          "bits": {
+            "a": "in_bits_a",
+            "b": "in_bits_b"
+          }
+        },
+        "out": {
+          "ready": "out_ready",
+          "valid": "in_valid",
+          "bits": {
+            "a": "in_bits_a",
+            "b": "in_bits_b"
+          }
+        }
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}

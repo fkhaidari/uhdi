@@ -1,0 +1,137 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "EnumModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "module",
+      "obj_name": "EnumModule",
+      "module_name": "EnumModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 65,
+        "end_line": 65,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "EnumModule"
+      },
+      "enum_defs": {
+        "0": {
+          "0": "idle",
+          "1": "run",
+          "2": "done"
+        }
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 104,
+            "end_line": 104,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 106,
+            "end_line": 106,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "logic",
+          "packed_range": [
+            1,
+            0
+          ],
+          "value": {
+            "sig_name": "in"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 108,
+            "end_line": 108,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[MyState]"
+          },
+          "enum_def_ref": 0
+        },
+        {
+          "var_name": "out",
+          "type_name": "logic",
+          "packed_range": [
+            1,
+            0
+          ],
+          "value": {
+            "sig_name": "state"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 110,
+            "end_line": 110,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[MyState]"
+          },
+          "enum_def_ref": 0
+        },
+        {
+          "var_name": "state",
+          "type_name": "logic",
+          "packed_range": [
+            1,
+            0
+          ],
+          "value": {
+            "sig_name": "state"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 111,
+            "end_line": 111,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "Reg[MyState]"
+          },
+          "enum_def_ref": 0
+        }
+      ],
+      "children": []
+    }
+  ]
+}

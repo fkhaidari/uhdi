@@ -1,0 +1,191 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "BundleModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "struct",
+      "obj_name": "BundleModule_io_in",
+      "port_vars": [
+        {
+          "var_name": "a",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 18,
+            "end_line": 18,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "b",
+          "type_name": "logic",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 18,
+            "end_line": 18,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 18,
+        "end_line": 18,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "struct",
+      "obj_name": "BundleModule_io",
+      "port_vars": [
+        {
+          "var_name": "in",
+          "type_name": "BundleModule_io_in",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 18,
+            "end_line": 18,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[MyBundle]"
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "BundleModule_io_in",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 18,
+            "end_line": 18,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[MyBundle]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 18,
+        "end_line": 18,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "module",
+      "obj_name": "BundleModule",
+      "module_name": "BundleModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 5,
+        "end_line": 5,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "BundleModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 7,
+            "end_line": 7,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 9,
+            "end_line": 9,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "io",
+          "type_name": "BundleModule_io",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "io_in_a"
+                  },
+                  {
+                    "sig_name": "io_in_b"
+                  }
+                ]
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "io_in_a"
+                  },
+                  {
+                    "sig_name": "io_in_b"
+                  }
+                ]
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 18,
+            "end_line": 18,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[AnonymousBundle]"
+          }
+        }
+      ],
+      "children": []
+    }
+  ]
+}

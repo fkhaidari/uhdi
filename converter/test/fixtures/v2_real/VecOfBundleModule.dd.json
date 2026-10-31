@@ -1,0 +1,284 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "VecOfBundleModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "struct",
+      "obj_name": "VecOfBundleModule_in_MyBundle",
+      "port_vars": [
+        {
+          "var_name": "a",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ]
+        },
+        {
+          "var_name": "b",
+          "type_name": "logic"
+        }
+      ]
+    },
+    {
+      "kind": "struct",
+      "obj_name": "VecOfBundleModule_in",
+      "port_vars": [
+        {
+          "var_name": "a",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "b",
+          "type_name": "logic",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 17,
+        "end_line": 17,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "struct",
+      "obj_name": "VecOfBundleModule_in_0",
+      "port_vars": [
+        {
+          "var_name": "a",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "b",
+          "type_name": "logic",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 17,
+        "end_line": 17,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "module",
+      "obj_name": "VecOfBundleModule",
+      "module_name": "VecOfBundleModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 5,
+        "end_line": 5,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "VecOfBundleModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 7,
+            "end_line": 7,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 9,
+            "end_line": 9,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "VecOfBundleModule_in_0",
+          "unpacked_range": [
+            1,
+            0
+          ],
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_0_a"
+                  },
+                  {
+                    "sig_name": "in_0_b"
+                  }
+                ]
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_1_a"
+                  },
+                  {
+                    "sig_name": "in_1_b"
+                  }
+                ]
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[MyBundle[2]]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "=> T"
+              },
+              {
+                "name": "length",
+                "type": "Int",
+                "value": "2"
+              }
+            ]
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "VecOfBundleModule_in_0",
+          "unpacked_range": [
+            1,
+            0
+          ],
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_0_a"
+                  },
+                  {
+                    "sig_name": "in_0_b"
+                  }
+                ]
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_1_a"
+                  },
+                  {
+                    "sig_name": "in_1_b"
+                  }
+                ]
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 25,
+            "end_line": 25,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[MyBundle[2]]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "=> T"
+              },
+              {
+                "name": "length",
+                "type": "Int",
+                "value": "2"
+              }
+            ]
+          }
+        }
+      ],
+      "children": []
+    }
+  ]
+}

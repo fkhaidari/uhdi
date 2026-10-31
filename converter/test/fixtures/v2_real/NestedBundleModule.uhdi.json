@@ -1,0 +1,141 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [],
+  "types": [
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "uint",
+      "width": 8
+    },
+    {
+      "kind": "uint",
+      "width": 16
+    },
+    {
+      "kind": "sint",
+      "width": 4
+    },
+    {
+      "fields": [
+        {
+          "name": "x",
+          "type": 3
+        },
+        {
+          "name": "y",
+          "type": 4
+        }
+      ],
+      "kind": "struct",
+      "name": "InnerBundle"
+    },
+    {
+      "fields": [
+        {
+          "name": "head",
+          "type": 2
+        },
+        {
+          "name": "inner",
+          "type": 5
+        },
+        {
+          "name": "tail",
+          "type": 1
+        }
+      ],
+      "kind": "struct",
+      "name": "OuterBundle"
+    }
+  ],
+  "original": {
+    "NestedBundleModule": {
+      "loc": [
+        0,
+        5,
+        3
+      ],
+      "name": "NestedBundleModule",
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            7,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            9,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 6,
+          "loc": [
+            0,
+            16,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 6,
+          "loc": [
+            0,
+            23,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    }
+  },
+  "generated": {
+    "NestedBundleModule": {}
+  },
+  "bindings": [
+    {
+      "original": "NestedBundleModule",
+      "generated": "NestedBundleModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": {
+          "head": "in_head",
+          "inner": {
+            "x": "in_inner_x",
+            "y": "in_inner_y"
+          },
+          "tail": "in_tail"
+        },
+        "out": {
+          "head": "in_head",
+          "inner": {
+            "x": "in_inner_x",
+            "y": "in_inner_y"
+          },
+          "tail": "in_tail"
+        }
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}

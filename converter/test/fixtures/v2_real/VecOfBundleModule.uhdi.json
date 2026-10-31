@@ -1,0 +1,124 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [],
+  "types": [
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "uint",
+      "width": 8
+    },
+    {
+      "fields": [
+        {
+          "name": "a",
+          "type": 2
+        },
+        {
+          "name": "b",
+          "type": 1
+        }
+      ],
+      "kind": "struct",
+      "name": "MyBundle"
+    },
+    {
+      "elem": 3,
+      "kind": "vector",
+      "size": 2
+    }
+  ],
+  "original": {
+    "VecOfBundleModule": {
+      "loc": [
+        0,
+        5,
+        3
+      ],
+      "name": "VecOfBundleModule",
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            7,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            9,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 4,
+          "loc": [
+            0,
+            17,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 4,
+          "loc": [
+            0,
+            25,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    }
+  },
+  "generated": {
+    "VecOfBundleModule": {}
+  },
+  "bindings": [
+    {
+      "original": "VecOfBundleModule",
+      "generated": "VecOfBundleModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": [
+          {
+            "a": "in_0_a",
+            "b": "in_0_b"
+          },
+          {
+            "a": "in_1_a",
+            "b": "in_1_b"
+          }
+        ],
+        "out": [
+          {
+            "a": "in_0_a",
+            "b": "in_0_b"
+          },
+          {
+            "a": "in_1_a",
+            "b": "in_1_b"
+          }
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}

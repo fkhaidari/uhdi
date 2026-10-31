@@ -1,0 +1,413 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "MemModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "module",
+      "obj_name": "mem_16x8",
+      "module_name": "mem_16x8",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 84,
+        "end_line": 84,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "port_vars": [
+        {
+          "var_name": "Memory",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "unpacked_range": [
+            15,
+            0
+          ],
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "Memory[0]"
+              },
+              {
+                "sig_name": "Memory[1]"
+              },
+              {
+                "sig_name": "Memory[2]"
+              },
+              {
+                "sig_name": "Memory[3]"
+              },
+              {
+                "sig_name": "Memory[4]"
+              },
+              {
+                "sig_name": "Memory[5]"
+              },
+              {
+                "sig_name": "Memory[6]"
+              },
+              {
+                "sig_name": "Memory[7]"
+              },
+              {
+                "sig_name": "Memory[8]"
+              },
+              {
+                "sig_name": "Memory[9]"
+              },
+              {
+                "sig_name": "Memory[10]"
+              },
+              {
+                "sig_name": "Memory[11]"
+              },
+              {
+                "sig_name": "Memory[12]"
+              },
+              {
+                "sig_name": "Memory[13]"
+              },
+              {
+                "sig_name": "Memory[14]"
+              },
+              {
+                "sig_name": "Memory[15]"
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 116,
+            "end_line": 116,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "Mem[UInt<8>[16]]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "=> T"
+              },
+              {
+                "name": "length",
+                "type": "Int",
+                "value": "16"
+              }
+            ]
+          }
+        }
+      ],
+      "children": []
+    },
+    {
+      "kind": "module",
+      "obj_name": "smem_16x8",
+      "module_name": "smem_16x8",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 119,
+        "end_line": 119,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "port_vars": [
+        {
+          "var_name": "Memory",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "unpacked_range": [
+            15,
+            0
+          ],
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "Memory[0]"
+              },
+              {
+                "sig_name": "Memory[1]"
+              },
+              {
+                "sig_name": "Memory[2]"
+              },
+              {
+                "sig_name": "Memory[3]"
+              },
+              {
+                "sig_name": "Memory[4]"
+              },
+              {
+                "sig_name": "Memory[5]"
+              },
+              {
+                "sig_name": "Memory[6]"
+              },
+              {
+                "sig_name": "Memory[7]"
+              },
+              {
+                "sig_name": "Memory[8]"
+              },
+              {
+                "sig_name": "Memory[9]"
+              },
+              {
+                "sig_name": "Memory[10]"
+              },
+              {
+                "sig_name": "Memory[11]"
+              },
+              {
+                "sig_name": "Memory[12]"
+              },
+              {
+                "sig_name": "Memory[13]"
+              },
+              {
+                "sig_name": "Memory[14]"
+              },
+              {
+                "sig_name": "Memory[15]"
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 167,
+            "end_line": 167,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "Mem[UInt<8>[16]]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "=> T"
+              },
+              {
+                "name": "length",
+                "type": "Int",
+                "value": "16"
+              }
+            ]
+          }
+        }
+      ],
+      "children": []
+    },
+    {
+      "kind": "module",
+      "obj_name": "MemModule",
+      "module_name": "MemModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 170,
+        "end_line": 170,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "MemModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 183,
+            "end_line": 183,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 185,
+            "end_line": 185,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "waddr",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "value": {
+            "sig_name": "waddr"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 186,
+            "end_line": 186,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>]"
+          }
+        },
+        {
+          "var_name": "wdata",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "value": {
+            "sig_name": "wdata"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 187,
+            "end_line": 187,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "we",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "we"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 189,
+            "end_line": 189,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "raddr",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "value": {
+            "sig_name": "raddr"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 190,
+            "end_line": 190,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>]"
+          }
+        },
+        {
+          "var_name": "rdata",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "value": {
+            "sig_name": "_mem_ext_R0_data"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 191,
+            "end_line": 191,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "sdata",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "value": {
+            "sig_name": "_smem_ext_R0_data"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 192,
+            "end_line": 192,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        }
+      ],
+      "children": [
+        {
+          "name": "mem_ext",
+          "obj_name": "mem_16x8",
+          "module_name": "mem_16x8",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 176,
+            "end_line": 176,
+            "begin_column": 24,
+            "end_column": 24
+          }
+        },
+        {
+          "name": "smem_ext",
+          "obj_name": "smem_16x8",
+          "module_name": "smem_16x8",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 178,
+            "end_line": 178,
+            "begin_column": 25,
+            "end_column": 25
+          }
+        }
+      ]
+    }
+  ]
+}

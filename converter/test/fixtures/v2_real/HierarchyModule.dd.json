@@ -1,0 +1,331 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "HierarchyModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "module",
+      "obj_name": "SubModule",
+      "module_name": "SubModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 5,
+        "end_line": 5,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "SubModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 13,
+            "end_line": 13,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 15,
+            "end_line": 15,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Reset]"
+          }
+        },
+        {
+          "var_name": "a",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "value": {
+            "sig_name": "a"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 16,
+            "end_line": 16,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>]"
+          }
+        },
+        {
+          "var_name": "b",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "value": {
+            "sig_name": "_b_T"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 17,
+            "end_line": 17,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>]"
+          }
+        }
+      ],
+      "children": []
+    },
+    {
+      "kind": "module",
+      "obj_name": "ParamModule_5_true",
+      "module_name": "ParamModule_5_true",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 20,
+        "end_line": 20,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "ParamModule",
+        "params": [
+          {
+            "name": "width",
+            "value": "5",
+            "type": "Int"
+          },
+          {
+            "name": "hasReset",
+            "value": "true",
+            "type": "Boolean"
+          }
+        ]
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 22,
+            "end_line": 22,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 24,
+            "end_line": 24,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Reset]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "logic",
+          "packed_range": [
+            4,
+            0
+          ],
+          "value": {
+            "sig_name": "in"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 25,
+            "end_line": 25,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<5>]"
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "logic",
+          "packed_range": [
+            4,
+            0
+          ],
+          "value": {
+            "sig_name": "in"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 26,
+            "end_line": 26,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<5>]"
+          }
+        }
+      ],
+      "children": []
+    },
+    {
+      "kind": "module",
+      "obj_name": "HierarchyModule",
+      "module_name": "HierarchyModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 29,
+        "end_line": 29,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "HierarchyModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 42,
+            "end_line": 42,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 44,
+            "end_line": 44,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "value": {
+            "sig_name": "in"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 45,
+            "end_line": 45,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>]"
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "logic",
+          "packed_range": [
+            4,
+            0
+          ],
+          "value": {
+            "sig_name": "_param_out"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 46,
+            "end_line": 46,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<5>]"
+          }
+        }
+      ],
+      "children": [
+        {
+          "name": "sub",
+          "obj_name": "SubModule",
+          "module_name": "SubModule",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 36,
+            "end_line": 36,
+            "begin_column": 14,
+            "end_column": 14
+          }
+        },
+        {
+          "name": "param",
+          "obj_name": "ParamModule_5_true",
+          "module_name": "ParamModule_5_true",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 38,
+            "end_line": 38,
+            "begin_column": 18,
+            "end_column": 18
+          }
+        }
+      ]
+    }
+  ]
+}

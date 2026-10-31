@@ -1,60 +1,16 @@
-"""Native v2-layout -> HGLDD converter (`uhdi2.v2.to_hgldd`).
-
-Every tree-shaped / pool-shaped UHDI document available is re-laid into the
-v2 layout by the `to_new.py` oracle (non-Dedup designs only) and converted by
-the native converter. The result must equal the existing tree converter's
-output (`uhdi2.to_hgldd`) on the same design, except for these deltas, which
-the v2 layout drops by design:
-
-* synthetic leaf ports (variables with no source whose name is an aggregate
-  leaf) -- pruned from the tree before the reference run;
-* a `loc` nested inside `target.verilog` (upgrade artifact) -- the oracle
-  reads only `target.loc`, so it is dropped from the tree;
-* extern modules keep no variables, instances or source -- pruned likewise;
-* `hdl_loc` of module objects and of child instances -- the layout keeps
-  only the target file, so the reference output is stripped of them.
-"""
+"""Native v2-layout -> HGLDD converter (`uhdi2.v2.to_hgldd`)."""
 from __future__ import annotations
 
 import copy
-import importlib.util
 import json
-import os
 import pathlib
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pytest
-from uhdi2.to_hgldd import convert as to_hgldd_tree
-from uhdi2.upgrade import upgrade
 from uhdi2.v2.to_hgldd import convert as _convert_v2
 from uhdi_to_hgldd import HGLDDBackend
 
-_REPO = pathlib.Path(__file__).resolve().parent.parent
-_SCRATCH = pathlib.Path(os.environ.get(
-    "UHDI_V2_SCRATCH",
-    "/tmp/claude-1000/-home-farid-thesis-practice-circt/"
-    "f530bb9d-2c21-4160-b837-09fe58cedb66/scratchpad"))
-_TO_NEW = _SCRATCH / "to_new.py"
-
-
-def _documents() -> List[pathlib.Path]:
-    paths = sorted((_REPO / "test" / "fixtures" / "uhdi").glob("*.uhdi.json"))
-    paths += sorted((_REPO / "test" / "fixtures" / "uhdi2").glob("*.json"))
-    paths += sorted((_SCRATCH / "bench").glob("*/u.json"))
-    return paths
-
-
-def _id(p: pathlib.Path) -> str:
-    return p.parent.name + "/" + p.name if p.name == "u.json" else p.name
-
-
-def _to_new():
-    if not _TO_NEW.is_file():
-        pytest.skip("to_new.py oracle not available")
-    spec = importlib.util.spec_from_file_location("to_new", _TO_NEW)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+_REAL = pathlib.Path(__file__).resolve().parent / "fixtures" / "v2_real"
 
 
 def _indexed(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -86,150 +42,12 @@ def to_hgldd_v2(doc: Dict[str, Any]) -> Dict[str, Any]:
     return _convert_v2(_indexed(doc))
 
 
-def _tree(doc: Dict[str, Any]) -> Dict[str, Any]:
-    return doc if "modules" in doc else upgrade(doc)
-
-
-def _run_oracle(tree: Dict[str, Any], keep: bool) -> Dict[str, Any]:
-    mod = _to_new()
-    mod.pending.clear()
-    mod.KEEP = keep
-    return mod.convert(copy.deepcopy(tree))[0]
-
-
-def _listify(v: Any, tref: str, types: Dict[str, Any]) -> Any:
-    """to_new spells vector values as {"0": .., "1": ..}; the layout uses
-    arrays, a hole becomes {"$none": "optimized"}."""
-    t = types[tref]
-    if t["kind"] == "struct" and isinstance(v, dict):
-        return {f["name"]: _listify(v[f["name"]], f["type"], types)
-                for f in t["fields"] if f["name"] in v}
-    if t["kind"] == "vector" and isinstance(v, dict):
-        return [_listify(v[str(i)], t["elem"], types) if str(i) in v
-                else {"$none": "optimized"} for i in range(t["size"])]
-    return v
-
-
-def _relayout(doc: Dict[str, Any]) -> None:
-    """The oracle writes instances as `target[T].inst` and inline sites as
-    `binding.at`; turn both into instance variables of the parent."""
-    types, source, bindings = doc["types"], doc["source"], doc["bindings"]
-
-    def add(target: str, scope: str, name: str, module: str,
-            loc: Any, value: Dict[str, Any]) -> None:
-        tid = "module_" + module
-        types.setdefault(tid, {"kind": "module", "module": module})
-        var = {"type": tid, **({"loc": loc} if loc else {})}
-        for b in bindings:
-            if b["target"] == target and b.get("scope", "") == scope:
-                source[b["source"]]["vars"][name] = dict(var)
-                b["vars"][name] = value
-
-    for tname, tmod in doc["target"].items():
-        for vname, inst in (tmod.pop("inst", None) or {}).items():
-            add(tname, "", inst.get("name", vname), inst["source"],
-                inst.get("at"), {"$inst": vname, "module": inst["module"]})
-    for b in bindings:
-        if scope := b.get("scope"):
-            parent, _, name = scope.rpartition(".")
-            add(b["target"], parent, name, b["source"], b.pop("at", None),
-                {"$inline": scope})
-
-
-def v2_from_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
-    """Oracle output, re-laid into the layout."""
-    doc = _run_oracle(tree, False)
-    for b in doc["bindings"]:
-        sv = doc["source"][b["source"]]["vars"]
-        b["vars"] = {n: _listify(v, sv[n]["type"], doc["types"])
-                     for n, v in b["vars"].items()}
-    _relayout(doc)
-    return _new_keys(doc)
-
-
-def _new_keys(doc: Dict[str, Any]) -> Dict[str, Any]:
-    """The oracle still spells the layout with `source` / `target` and
-    `$none`; rename them to `original` / `generated` and `$optimized_out`."""
-    names = {"source": "original", "target": "generated"}
-
-    def value(v: Any) -> Any:
-        if isinstance(v, list):
-            return [value(x) for x in v]
-        if not isinstance(v, dict):
-            return v
-        if "$none" in v:
-            return {"$optimized_out": True}
-        if "$inline" in v:
-            return {"$inline": v["$inline"].split(".")}
-        if "$op" in v:
-            return {**v, "args": value(v.get("args") or [])}
-        if any(k.startswith("$") for k in v):
-            return v
-        return {k: value(x) for k, x in v.items()}
-
-    out = {names.get(k, k): v for k, v in doc.items()}
-    for f in out["files"]:
-        if "target" in f:
-            f["generated"] = f.pop("target")
-    names["scope"] = "inline_path"
-    out["bindings"] = [
-        {names.get(k, k): (value(x) if k == "vars" else
-                           x.split(".") if k == "scope" else x)
-         for k, x in b.items()}
-        for b in out["bindings"]]
-    return out
-
-
-def _leaf_paths(types: Dict[str, Any], tref: str, prefix: str = ""):
-    t = types[tref]
-    if t["kind"] == "struct":
-        for m in t["members"]:
-            yield from _leaf_paths(types, m["typeRef"], prefix + m["name"] + "_")
-    elif t["kind"] == "vector":
-        for i in range(t["size"]):
-            yield from _leaf_paths(types, t["elementRef"], prefix + str(i) + "_")
-    else:
-        yield prefix[:-1]
-
-
-def _expected(tree: Dict[str, Any]) -> Dict[str, Any]:
-    """Tree converter output with the v2 layout's deliberate deltas applied."""
-    t = copy.deepcopy(tree)
-    for m in t["modules"].values():
-        if m.get("kind") == "extmodule":
-            m.pop("variables", None)
-            m.pop("instances", None)
-            m.pop("source", None)
-            continue
-        leaves = set()
-        for vn, v in m.get("variables", {}).items():
-            if t["types"][v["typeRef"]]["kind"] in ("struct", "vector"):
-                leaves |= {vn + "_" + p for p in _leaf_paths(t["types"], v["typeRef"])}
-        for v in m.get("variables", {}).values():
-            # the oracle reads only target.loc, not a loc nested in verilog
-            vl = v.get("target", {}).get("verilog")
-            if isinstance(vl, dict) and "loc" in vl and "loc" not in v["target"]:
-                vl.pop("loc")
-        m["variables"] = {vn: v for vn, v in m.get("variables", {}).items()
-                          if v.get("source") or vn not in leaves}
-    out = to_hgldd_tree(t)
-    for o in out["objects"]:
-        if o["kind"] != "module":
-            continue
-        o.pop("hdl_loc", None)
-        for c in o["children"]:
-            c.pop("hdl_loc", None)
-    return out
-
-
-@pytest.mark.parametrize("path", _documents(), ids=_id)
-def test_matches_tree_converter(path: pathlib.Path) -> None:
-    tree = _tree(json.loads(path.read_text(encoding="utf-8")))
-    v2 = v2_from_tree(tree)
-    assert v2["uhdi"] == "0.1"
-    got = to_hgldd_v2(v2)
-    want = _expected(tree)
-    assert got == want
+@pytest.mark.parametrize(
+    "path", sorted(_REAL.glob("*.uhdi.json")), ids=lambda p: p.name)
+def test_real_design_matches_golden(path: pathlib.Path) -> None:
+    got = HGLDDBackend().convert(json.loads(path.read_text(encoding="utf-8")))
+    want = path.with_name(path.name.replace(".uhdi.", ".dd."))
+    assert got == json.loads(want.read_text(encoding="utf-8"))
 
 
 def test_backend_dispatches_on_uhdi_2() -> None:

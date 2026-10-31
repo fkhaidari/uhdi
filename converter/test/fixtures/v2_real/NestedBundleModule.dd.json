@@ -1,0 +1,244 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "NestedBundleModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "struct",
+      "obj_name": "NestedBundleModule_in_inner",
+      "port_vars": [
+        {
+          "var_name": "x",
+          "type_name": "logic",
+          "packed_range": [
+            15,
+            0
+          ],
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 16,
+            "end_line": 16,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<16>]"
+          }
+        },
+        {
+          "var_name": "y",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 16,
+            "end_line": 16,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[SInt<4>]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 16,
+        "end_line": 16,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "struct",
+      "obj_name": "NestedBundleModule_in",
+      "port_vars": [
+        {
+          "var_name": "head",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 16,
+            "end_line": 16,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "inner",
+          "type_name": "NestedBundleModule_in_inner",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 16,
+            "end_line": 16,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[InnerBundle]"
+          }
+        },
+        {
+          "var_name": "tail",
+          "type_name": "logic",
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 16,
+            "end_line": 16,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        }
+      ],
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 16,
+        "end_line": 16,
+        "begin_column": 5,
+        "end_column": 5
+      }
+    },
+    {
+      "kind": "module",
+      "obj_name": "NestedBundleModule",
+      "module_name": "NestedBundleModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 5,
+        "end_line": 5,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "NestedBundleModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 7,
+            "end_line": 7,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 9,
+            "end_line": 9,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "NestedBundleModule_in",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "in_head"
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_inner_x"
+                  },
+                  {
+                    "sig_name": "in_inner_y"
+                  }
+                ]
+              },
+              {
+                "sig_name": "in_tail"
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 16,
+            "end_line": 16,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[OuterBundle]"
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "NestedBundleModule_in",
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "in_head"
+              },
+              {
+                "opcode": "'{",
+                "operands": [
+                  {
+                    "sig_name": "in_inner_x"
+                  },
+                  {
+                    "sig_name": "in_inner_y"
+                  }
+                ]
+              },
+              {
+                "sig_name": "in_tail"
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 23,
+            "end_line": 23,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[OuterBundle]"
+          }
+        }
+      ],
+      "children": []
+    }
+  ]
+}

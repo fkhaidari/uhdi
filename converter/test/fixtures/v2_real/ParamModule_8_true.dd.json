@@ -1,0 +1,118 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "ParamModule_8_true.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "module",
+      "obj_name": "ParamModule_8_true",
+      "module_name": "ParamModule_8_true",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 5,
+        "end_line": 5,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "ParamModule",
+        "params": [
+          {
+            "name": "width",
+            "value": "8",
+            "type": "Int"
+          },
+          {
+            "name": "hasReset",
+            "value": "true",
+            "type": "Boolean"
+          }
+        ]
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 7,
+            "end_line": 7,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 9,
+            "end_line": 9,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "value": {
+            "sig_name": "in"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 10,
+            "end_line": 10,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "logic",
+          "packed_range": [
+            7,
+            0
+          ],
+          "value": {
+            "sig_name": "in"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 11,
+            "end_line": 11,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<8>]"
+          }
+        }
+      ],
+      "children": []
+    }
+  ]
+}

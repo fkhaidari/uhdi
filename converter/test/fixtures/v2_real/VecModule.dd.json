@@ -1,0 +1,158 @@
+{
+  "HGLDD": {
+    "version": "1.0",
+    "file_info": [
+      "<stdin>",
+      "VecModule.sv"
+    ],
+    "hdl_file_index": 2
+  },
+  "objects": [
+    {
+      "kind": "module",
+      "obj_name": "VecModule",
+      "module_name": "VecModule",
+      "hgl_loc": {
+        "file": 1,
+        "begin_line": 5,
+        "end_line": 5,
+        "begin_column": 3,
+        "end_column": 3
+      },
+      "source_lang_type_info": {
+        "type_name": "VecModule"
+      },
+      "port_vars": [
+        {
+          "var_name": "clock",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "clock"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 7,
+            "end_line": 7,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Clock]"
+          }
+        },
+        {
+          "var_name": "reset",
+          "type_name": "logic",
+          "value": {
+            "sig_name": "reset"
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 9,
+            "end_line": 9,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[Bool]"
+          }
+        },
+        {
+          "var_name": "in",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "unpacked_range": [
+            2,
+            0
+          ],
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "in_0"
+              },
+              {
+                "sig_name": "in_1"
+              },
+              {
+                "sig_name": "in_2"
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 11,
+            "end_line": 11,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>[3]]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "=> T"
+              },
+              {
+                "name": "length",
+                "type": "Int",
+                "value": "3"
+              }
+            ]
+          }
+        },
+        {
+          "var_name": "out",
+          "type_name": "logic",
+          "packed_range": [
+            3,
+            0
+          ],
+          "unpacked_range": [
+            2,
+            0
+          ],
+          "value": {
+            "opcode": "'{",
+            "operands": [
+              {
+                "sig_name": "in_0"
+              },
+              {
+                "sig_name": "in_1"
+              },
+              {
+                "sig_name": "in_2"
+              }
+            ]
+          },
+          "hgl_loc": {
+            "file": 1,
+            "begin_line": 12,
+            "end_line": 12,
+            "begin_column": 5,
+            "end_column": 5
+          },
+          "source_lang_type_info": {
+            "type_name": "IO[UInt<4>[3]]",
+            "params": [
+              {
+                "name": "gen",
+                "type": "=> T"
+              },
+              {
+                "name": "length",
+                "type": "Int",
+                "value": "3"
+              }
+            ]
+          }
+        }
+      ],
+      "children": []
+    }
+  ]
+}

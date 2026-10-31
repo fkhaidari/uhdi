@@ -1,0 +1,126 @@
+{
+  "uhdi": "0.1",
+  "producer": "CIRCT c9008697f",
+  "profiles": [],
+  "types": [
+    {
+      "kind": "clock"
+    },
+    {
+      "kind": "uint",
+      "name": "Bool",
+      "width": 1
+    },
+    {
+      "kind": "uint",
+      "width": 4
+    },
+    {
+      "kind": "uint",
+      "width": 8
+    },
+    {
+      "elem": 3,
+      "kind": "vector",
+      "size": 4
+    },
+    {
+      "fields": [
+        {
+          "name": "header",
+          "type": 2
+        },
+        {
+          "name": "data",
+          "type": 4
+        }
+      ],
+      "kind": "struct",
+      "name": "VecContainer"
+    }
+  ],
+  "original": {
+    "BundleWithVecModule": {
+      "loc": [
+        0,
+        5,
+        3
+      ],
+      "name": "BundleWithVecModule",
+      "vars": {
+        "clock": {
+          "type": 0,
+          "loc": [
+            0,
+            7,
+            5
+          ],
+          "dir": "in"
+        },
+        "reset": {
+          "type": 1,
+          "loc": [
+            0,
+            9,
+            5
+          ],
+          "dir": "in"
+        },
+        "in": {
+          "type": 5,
+          "loc": [
+            0,
+            13,
+            5
+          ],
+          "dir": "in"
+        },
+        "out": {
+          "type": 5,
+          "loc": [
+            0,
+            15,
+            5
+          ],
+          "dir": "out"
+        }
+      }
+    }
+  },
+  "generated": {
+    "BundleWithVecModule": {}
+  },
+  "bindings": [
+    {
+      "original": "BundleWithVecModule",
+      "generated": "BundleWithVecModule",
+      "vars": {
+        "clock": "clock",
+        "reset": "reset",
+        "in": {
+          "header": "in_header",
+          "data": [
+            "in_data_0",
+            "in_data_1",
+            "in_data_2",
+            "in_data_3"
+          ]
+        },
+        "out": {
+          "header": "in_header",
+          "data": [
+            "in_data_0",
+            "in_data_1",
+            "in_data_2",
+            "in_data_3"
+          ]
+        }
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "<stdin>"
+    }
+  ]
+}
