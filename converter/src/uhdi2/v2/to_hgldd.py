@@ -85,10 +85,11 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from uhdi_common.context import ConversionError
 from uhdi_to_hgldd.convert import _FileInfo
-from . import require_v2
-from .types import named_types
+from .walk import Doc
 from .walk import const_bits
 from .walk import check_bindings
+from .walk import elem_value
+from .walk import is_none
 
 EXT_KEY = "x-chisel"
 
@@ -158,6 +159,16 @@ def _type_description(tref: str, types: Types) -> Dict[str, Any]:
            {"type_name": "logic", "packed_range": [width - 1, 0]}
 
 
+def _child_types(t: Dict[str, Any], vectors: bool = True) -> List[str]:
+    """The types directly under `t`: struct field types, and the element
+    type of a vector when `vectors`."""
+    if t.get("kind") == "struct":
+        return [f.get("type", "") for f in t.get("fields") or []]
+    if vectors and t.get("kind") == "vector":
+        return [t.get("elem", "")]
+    return []
+
+
 def _topo_structs(types: Types) -> List[str]:
     """Struct ids, inner before outer."""
     visiting: set = set()
@@ -174,18 +185,14 @@ def _topo_structs(types: Types) -> List[str]:
         if t is None:
             return
         kind = t.get("kind")
-        if kind == "struct":
+        if kind in ("struct", "vector"):
             visiting.add(tid)
-            for f in t.get("fields") or []:
-                visit(f.get("type", ""))
+            for c in _child_types(t):
+                visit(c)
             visiting.discard(tid)
             visited.add(tid)
-            order.append(tid)
-        elif kind == "vector":
-            visiting.add(tid)
-            visit(t.get("elem", ""))
-            visiting.discard(tid)
-            visited.add(tid)
+            if kind == "struct":
+                order.append(tid)
 
     for tid in types:
         visit(tid)
@@ -308,10 +315,6 @@ def _scalar(v: Any, tref: str, types: Types) -> Dict[str, Any]:
     return {}
 
 
-def _is_none(v: Any) -> bool:
-    return v is None or (isinstance(v, dict) and "$optimized_out" in v)
-
-
 def _value(v: Any, tref: str, types: Types) -> Dict[str, Any]:
     t = types.get(tref) or {}
     kind = t.get("kind")
@@ -323,15 +326,9 @@ def _value(v: Any, tref: str, types: Types) -> Dict[str, Any]:
         elem = t.get("elem", "")
         operands = []
         for i in range(int(t.get("size", 0))):
-            if isinstance(v, list):
-                e = v[i] if i < len(v) else None
-            elif isinstance(v, dict):
-                e = v.get(str(i))
-            else:
-                e = None
-            operands.append(_value(e, elem, types))
+            operands.append(_value(elem_value(v, i), elem, types))
         return {"opcode": "'{", "operands": operands}
-    if not _is_none(v):
+    if not is_none(v):
         if value := _scalar(v, tref, types):
             return value
     # HGLDD has no empty operand, and readers reject one. An unknown leaf is
@@ -377,7 +374,7 @@ def _packed(sig: str, tref: str, lo: int, types: Types) -> Dict[str, Any]:
 
 
 def _top_value(v: Any, tref: str, types: Types) -> Optional[Dict[str, Any]]:
-    if _is_none(v):
+    if is_none(v):
         return None
     kind = (types.get(tref) or {}).get("kind")
     if kind == "vector" and isinstance(v, str):
@@ -406,11 +403,7 @@ def _type_refs(tref: str, types: Types) -> Iterator[str]:
             continue
         seen.add(cur)
         yield cur
-        t = types.get(cur) or {}
-        if t.get("kind") == "struct":
-            stack.extend(f.get("type", "") for f in t.get("fields") or [])
-        elif t.get("kind") == "vector":
-            stack.append(t.get("elem", ""))
+        stack.extend(_child_types(types.get(cur) or {}))
 
 
 def _location_types(tref: str, types: Types,
@@ -421,29 +414,20 @@ def _location_types(tref: str, types: Types,
         return
     seen.add(tref)
     yield tref
-    t = types.get(tref) or {}
-    if t.get("kind") == "struct":
-        for f in t.get("fields") or []:
-            yield from _location_types(f.get("type", ""), types, seen)
+    for c in _child_types(types.get(tref) or {}, vectors=False):
+        yield from _location_types(c, types, seen)
 
 
-class _Doc:
+class _Doc(Doc):
     def __init__(self, doc: Dict[str, Any]):
-        require_v2(doc)
-        doc = named_types(doc)
-        self.types: Types = doc.get("types", {})
-        self.files: List[Dict[str, Any]] = doc.get("files", [])
-        self.source: Dict[str, Any] = doc.get("original", {})
-        self.target: Dict[str, Any] = doc.get("generated", {})
+        super().__init__(doc)
         self.info = _FileInfo()
-        self.unscoped: Dict[str, List[Dict[str, Any]]] = {}
-        self.scoped: Dict[str, List[Dict[str, Any]]] = {}
+        self.scoped_by_target: Dict[str, List[Dict[str, Any]]] = {}
         self.doc_bindings: List[Dict[str, Any]] = doc.get("bindings", [])
         self._infos: Optional[Dict[Tuple[str, str], List[Dict[str, Any]]]] = None
-        check_bindings(doc.get("bindings", []))
-        for b in doc.get("bindings", []):
-            (self.scoped if b.get("inline_path") else self.unscoped).setdefault(
-                b["generated"], []).append(b)
+        for b in self.doc_bindings:
+            if b.get("inline_path"):
+                self.scoped_by_target.setdefault(b["generated"], []).append(b)
 
     def inst_type(self, var: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """The `module` type of a variable, or of the elements of a vector
@@ -472,7 +456,7 @@ class _Doc:
         The name is the variable's, with `_<index>` for each element of a
         vector of instances."""
         for b in bindings:
-            svars = (self.source.get(b["original"]) or {}).get("vars") or {}
+            svars = self.vars(b["original"])
             for vname, value in (b.get("vars") or {}).items():
                 var = svars.get(vname)
                 if var is not None and self.is_instance(var):
@@ -484,14 +468,8 @@ class _Doc:
         t = self.types.get(tref) or {}
         if t.get("kind") == "vector":
             for i in range(int(t.get("size", 0))):
-                if isinstance(value, list):
-                    sub = value[i] if i < len(value) else None
-                elif isinstance(value, dict):
-                    sub = value.get(str(i))
-                else:
-                    sub = None
                 yield from self._elements(f"{name}_{i}", var, t.get("elem", ""),
-                                          sub)
+                                          elem_value(value, i))
         elif isinstance(value, dict):
             yield name, var, value
 
@@ -527,8 +505,8 @@ def _enum_index(d: _Doc) -> Tuple[Dict[str, int], Dict[str, Dict[str, Any]]]:
     defs_by_target: Dict[str, Dict[str, Any]] = {}
     for tname in d.target:
         defs: Dict[str, Any] = {}
-        for b in d.unscoped.get(tname, []) + d.scoped.get(tname, []):
-            for var in (d.source.get(b["original"], {}).get("vars") or {}).values():
+        for b in d.by_target.get(tname, []) + d.scoped_by_target.get(tname, []):
+            for var in d.vars(b["original"]).values():
                 for tref in _type_refs(var.get("type", ""), d.types):
                     t = d.types.get(tref) or {}
                     if t.get("kind") != "enum":
@@ -542,6 +520,22 @@ def _enum_index(d: _Doc) -> Tuple[Dict[str, int], Dict[str, Dict[str, Any]]]:
 
 
 # ---- struct objects ------------------------------------------------------
+
+
+def _field_vars(d: _Doc, t: Dict[str, Any], loc: Optional[Dict[str, Any]],
+                binding: Optional[str], enum_ids: Dict[str, int]
+                ) -> List[Dict[str, Any]]:
+    port_vars = []
+    for f in t.get("fields") or []:
+        pv = {"var_name": f["name"], **_type_description(f["type"], d.types)}
+        if loc:
+            pv["hgl_loc"] = loc
+        if (eid := enum_ids.get(f["type"])) is not None:
+            pv["enum_def_ref"] = eid
+        if binding and (slti := _var_type_info(binding, f["type"], d.types)):
+            pv["source_lang_type_info"] = slti
+        port_vars.append(pv)
+    return port_vars
 
 
 def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
@@ -588,33 +582,14 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
         t = d.types[tid]
         loc = struct_loc.get(tid)
         binding = struct_binding.get(tid)
-        port_vars = []
-        for f in t.get("fields") or []:
-            pv = {"var_name": f["name"], **_type_description(f["type"], d.types)}
-            if loc:
-                pv["hgl_loc"] = loc
-            if (eid := enum_ids.get(f["type"])) is not None:
-                pv["enum_def_ref"] = eid
-            if binding and (slti := _var_type_info(binding, f["type"], d.types)):
-                pv["source_lang_type_info"] = slti
-            port_vars.append(pv)
+        port_vars = _field_vars(d, t, loc, binding, enum_ids)
         obj: Dict[str, Any] = {"kind": "struct", "obj_name": tid, "port_vars": port_vars}
         if loc:
             obj["hgl_loc"] = loc
         out.append(obj)
 
         for vtid, size, vloc, vbinding in vec_by_elem.get(tid, []):
-            elem_pvs = []
-            for f in t.get("fields") or []:
-                epv = {"var_name": f["name"], **_type_description(f["type"], d.types)}
-                if l := (vloc or loc):
-                    epv["hgl_loc"] = l
-                if (eid := enum_ids.get(f["type"])) is not None:
-                    epv["enum_def_ref"] = eid
-                if vbinding and (slti := _var_type_info(
-                        vbinding, f["type"], d.types)):
-                    epv["source_lang_type_info"] = slti
-                elem_pvs.append(epv)
+            elem_pvs = _field_vars(d, t, vloc or loc, vbinding, enum_ids)
             base = {"kind": "struct", "obj_name": vtid, "port_vars": elem_pvs}
             if vloc:
                 base["hgl_loc"] = vloc
@@ -633,7 +608,8 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
 def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
               enum_ids: Dict[str, int], hdl_path: Optional[str]) -> Dict[str, Any]:
     tref = var.get("type", "")
-    value = _top_value((binding.get("vars") or {}).get(name), tref, d.types)
+    raw = (binding.get("vars") or {}).get(name)
+    value = _top_value(raw, tref, d.types)
     var_name = var.get("name") or name
     out: Dict[str, Any] = {"var_name": var_name}
     out.update(_type_description(tref, d.types))
@@ -641,7 +617,6 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
         out["value"] = value
     if loc := d.src_loc(var.get("loc")):
         out["hgl_loc"] = loc
-    raw = (binding.get("vars") or {}).get(name)
     signals = (d.target.get(binding.get("generated", "")) or {}).get("signals") or {}
     vloc = (signals.get(raw) or {}).get("loc") if isinstance(raw, str) else None
     if loc := d.hdl_loc(vloc, hdl_path):
@@ -685,7 +660,7 @@ def _owned_scoped(d: _Doc, tname: str, bindings: List[Dict[str, Any]]
         for _, var, value in d.instances(todo):
             if "$inline" in value:
                 found.extend(
-                    b for b in d.scoped.get(tname, [])
+                    b for b in d.scoped_by_target.get(tname, [])
                     if b["inline_path"] == value["$inline"]
                     and b["original"] == d.inst_module(var) and b not in owned)
         owned.extend(found)
@@ -736,7 +711,7 @@ def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
         for _, var, value in d.instances([b]):
             if "$inst" in value:
                 node["children"].append(_instance_child(d, var, value))
-        for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
+        for vname, var in d.vars(b["original"]).items():
             if d.is_instance(var):
                 continue
             pv = _port_var(d, vname, var, b, enum_ids, hdl_path)
@@ -751,7 +726,7 @@ def _ports(d: _Doc, bindings: List[Dict[str, Any]], enum_ids: Dict[str, int],
     seen: set = set()
     uniquify = _uniquifier(set())
     for b in bindings:
-        for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
+        for vname, var in d.vars(b["original"]).items():
             if vname in seen or d.is_instance(var):
                 continue
             seen.add(vname)
@@ -808,7 +783,7 @@ def _hdl_path(d: _Doc) -> Optional[str]:
         if f.get("generated") and f.get("path"):
             return str(f["path"])
     referenced = {value["module"]
-                  for bs in d.unscoped.values()
+                  for bs in d.by_target.values()
                   for _, _, value in d.instances(bs) if "$inst" in value}
     roots = [t for t in d.target if t not in referenced]
     return roots[0] + ".sv" if roots else None
@@ -826,7 +801,7 @@ def convert(doc: Dict[str, Any]) -> Dict[str, Any]:
         # Dedup merged several sources into this target: one object per
         # source, each with its own variables, so an instance's type
         # names the object it shows.
-        bindings = d.unscoped.get(t, [])
+        bindings = d.by_target.get(t, [])
         groups = [[b] for b in bindings] if len(bindings) > 1 else [bindings]
         objects.extend(_module_object(d, t, g, enum_ids, enum_defs, hdl_path)
                        for g in groups)

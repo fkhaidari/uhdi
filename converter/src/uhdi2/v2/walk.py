@@ -52,8 +52,17 @@ def _insts(value: Any) -> Iterator[Dict[str, Any]]:
             yield from _insts(v)
 
 
-def _is_none(v: Any) -> bool:
+def is_none(v: Any) -> bool:
     return v is None or (isinstance(v, dict) and "$optimized_out" in v)
+
+
+def elem_value(value: Any, i: int) -> Any:
+    """Element `i` of a vector value: a list, or a map by index."""
+    if isinstance(value, list):
+        return value[i] if i < len(value) else None
+    if isinstance(value, dict) and "$op" not in value:
+        return value.get(str(i))
+    return None
 
 
 class Doc:
@@ -187,13 +196,8 @@ class Doc:
                 yield from self._leaves(f"{name}.{f['name']}", sub, f["type"])
         elif t.get("kind") == "vector":
             for i in range(int(t.get("size", 0))):
-                if isinstance(value, list):
-                    sub = value[i] if i < len(value) else None
-                elif isinstance(value, dict) and "$op" not in value:
-                    sub = value.get(str(i))
-                else:
-                    sub = None
-                yield from self._leaves(f"{name}[{i}]", sub, t.get("elem", ""))
+                yield from self._leaves(f"{name}[{i}]", elem_value(value, i),
+                                        t.get("elem", ""))
         else:
             yield name, value, tref
 
@@ -296,7 +300,7 @@ def render(v: Any) -> Optional[str]:
         return "1" if v else "0"
     if isinstance(v, int):
         return str(v)
-    if not isinstance(v, dict) or _is_none(v):
+    if not isinstance(v, dict) or is_none(v):
         return None
     if "$zero_width" in v:
         return "0"
