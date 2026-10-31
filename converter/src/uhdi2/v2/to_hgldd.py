@@ -654,9 +654,7 @@ def _owned_scoped(d: _Doc, tname: str, bindings: List[Dict[str, Any]]
     return owned
 
 
-def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
-                     used: set, enum_ids: Dict[str, int],
-                     hdl_path: Optional[str]) -> List[Dict[str, Any]]:
+def _uniquifier(used: set):
     suffix: Dict[str, int] = {}
 
     def uniquify(name: str) -> str:
@@ -671,6 +669,14 @@ def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
                 suffix[name] = n
                 used.add(cand)
                 return cand
+
+    return uniquify
+
+
+def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
+                     used: set, enum_ids: Dict[str, int],
+                     hdl_path: Optional[str]) -> List[Dict[str, Any]]:
+    uniquify = _uniquifier(used)
 
     scoped = _owned_scoped(d, tname, bindings)
     inline_locs = {tuple(value["$inline"]): var.get("loc")
@@ -704,12 +710,15 @@ def _ports(d: _Doc, bindings: List[Dict[str, Any]], enum_ids: Dict[str, int],
            hdl_path: Optional[str]) -> List[Dict[str, Any]]:
     port_vars: List[Dict[str, Any]] = []
     seen: set = set()
+    uniquify = _uniquifier(set())
     for b in bindings:
         for vname, var in (d.source.get(b["original"], {}).get("vars") or {}).items():
             if vname in seen or d.is_instance(var):
                 continue
             seen.add(vname)
-            port_vars.append(_port_var(d, vname, var, b, enum_ids, hdl_path))
+            pv = _port_var(d, vname, var, b, enum_ids, hdl_path)
+            pv["var_name"] = uniquify(pv["var_name"])
+            port_vars.append(pv)
     return port_vars
 
 

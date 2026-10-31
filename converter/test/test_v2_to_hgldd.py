@@ -549,6 +549,17 @@ def test_var_name_shown_and_key_binds() -> None:
     assert pv[0]["var_name"] == "alpha" and pv[0]["value"] == {"sig_name": "a_0"}
 
 
+def test_top_port_var_names_are_unique() -> None:
+    doc = _dedup_doc()
+    left = doc["original"]["Left"]["vars"]
+    left["a"]["name"] = "alpha"
+    left["a2"] = {**left["a"], "name": "alpha"}
+    out = to_hgldd_v2(doc)
+    pv = _object(out, "Shared", "Left")["port_vars"]
+    names = [v["var_name"] for v in pv]
+    assert len(names) == len(set(names)) and {"alpha", "alpha_0"} <= set(names)
+
+
 def test_instance_child_named_by_verilog_and_vectors() -> None:
     doc = _dedup_doc()
     doc["original"]["Top"]["vars"]["r"]["name"] = "right"
