@@ -680,3 +680,23 @@ def test_instance_inside_inline_is_a_child_of_the_inline_node() -> None:
     assert (w["name"], w["obj_name"], w["module_name"]) == ("h_w", "Left", "Shared")
     assert w["hgl_loc"]["begin_line"] == 20
     assert "w" not in [p["var_name"] for p in h["port_vars"]]
+
+
+def test_struct_bound_to_one_signal_is_sliced() -> None:
+    doc = _dedup_doc()
+    doc["types"]["u3"] = {"kind": "uint", "width": 3}
+    doc["types"]["v2"] = {"kind": "vector", "elem": "u3", "size": 2}
+    doc["types"]["pk"] = {"kind": "struct", "fields": [
+        {"name": "a", "type": "u8"}, {"name": "b", "type": "v2"}]}
+    doc["original"]["Left"]["vars"]["pk"] = {
+        "type": "pk", "loc": [0, 15, 3], "dir": "input"}
+    doc["bindings"][1]["vars"]["pk"] = "pk_0"
+    out = to_hgldd_v2(doc)
+    left = next(o for o in out["objects"] if o["obj_name"] == "Left")
+    pk = next(p for p in left["port_vars"] if p["var_name"].startswith("pk"))
+
+    def sl(hi: int, lo: int) -> Dict[str, Any]:
+        return {"opcode": "[]", "operands": [
+            {"sig_name": "pk_0"}, {"integer_num": hi}, {"integer_num": lo}]}
+    assert pk["value"] == {"opcode": "'{", "operands": [
+        sl(13, 6), {"opcode": "'{", "operands": [sl(2, 0), sl(5, 3)]}]}

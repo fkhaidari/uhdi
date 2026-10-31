@@ -339,6 +339,41 @@ def _value(v: Any, tref: str, types: Types) -> Dict[str, Any]:
     return {"bit_vector": "x" * max(int(t.get("width", 1)), 1)}
 
 
+def _bits(tref: str, types: Types) -> int:
+    t = types.get(tref) or {}
+    if t.get("kind") == "struct":
+        return sum(_bits(f["type"], types) for f in t.get("fields") or [])
+    if t.get("kind") == "vector":
+        return int(t.get("size", 0)) * _bits(t.get("elem", ""), types)
+    if t.get("kind") == "enum":
+        return _bits(t.get("base", ""), types)
+    return int(t.get("width", 0))
+
+
+def _packed(sig: str, tref: str, lo: int, types: Types) -> Dict[str, Any]:
+    """A packed aggregate held by the signal `sig`, its leaves slices of it:
+    the first struct field is the most significant, vector element 0 the
+    least. `lo` is the lowest bit of `tref` in `sig`."""
+    t = types.get(tref) or {}
+    if t.get("kind") == "struct":
+        operands = []
+        hi = lo + _bits(tref, types)
+        for f in t.get("fields") or []:
+            hi -= _bits(f["type"], types)
+            operands.append(_packed(sig, f["type"], hi, types))
+        return {"opcode": "'{", "operands": operands}
+    if t.get("kind") == "vector":
+        elem = t.get("elem", "")
+        w = _bits(elem, types)
+        return {"opcode": "'{", "operands": [
+            _packed(sig, elem, lo + i * w, types)
+            for i in range(int(t.get("size", 0)))]}
+    w = _bits(tref, types)
+    if w == 0:
+        return {"bit_vector": "0"}
+    return _scalar({"$slice": sig, "hi": lo + w - 1, "lo": lo}, tref, types)
+
+
 def _top_value(v: Any, tref: str, types: Types) -> Optional[Dict[str, Any]]:
     if _is_none(v):
         return None
@@ -350,6 +385,8 @@ def _top_value(v: Any, tref: str, types: Types) -> Optional[Dict[str, Any]]:
         size = int((types.get(tref) or {}).get("size", 0))
         return {"opcode": "'{", "operands": [{"sig_name": f"{v}[{i}]"}
                                               for i in range(size)]}
+    if kind == "struct" and isinstance(v, str):
+        return _packed(v, tref, 0, types)
     if kind in ("struct", "vector"):
         return _value(v, tref, types) if isinstance(v, (dict, list)) else None
     return _scalar(v, tref, types) or None
