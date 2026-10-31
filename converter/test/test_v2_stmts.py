@@ -358,3 +358,13 @@ def test_render_select_is_lazy():
     assert render(sel(gone, "a", "b")) is None
     # Any other operator still needs every operand.
     assert render({"$op": "+", "args": ["a", gone]}) is None
+
+
+def test_pdg_expands_renamed_instance(doc):
+    # `inst` statements name the source variable; the `$inst` name may differ.
+    for b in doc["bindings"]:
+        if b["generated"] == "M" and "inline_path" not in b:
+            b["vars"]["k0"]["$inst"] = "k0_x"
+    verts = to_pdg.convert(doc)["vertices"]
+    assert any(v["name"] == "defreg_r" and v["modulePath"] == ["k0_x"]
+               for v in verts)

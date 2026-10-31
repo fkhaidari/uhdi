@@ -91,7 +91,7 @@ class _Builder:
 
     def instance(self, inst: Instance, top: bool) -> List[Dict[str, Any]]:
         cfg: List[Dict[str, Any]] = []
-        children = {c.path.rsplit(".", 1)[1]: c for c in inst.children}
+        children = {c.var: c for c in inst.children}
         for part in inst.parts:
             p = _prefix(inst) + part.prefix
             if not part.prefix:

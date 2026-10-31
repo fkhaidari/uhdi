@@ -36,6 +36,7 @@ class Instance:
     target: str
     parts: List[Part] = field(default_factory=list)
     children: List["Instance"] = field(default_factory=list)
+    var: str = ""
 
 
 def _is_none(v: Any) -> bool:
@@ -108,8 +109,9 @@ class Doc:
         return out
 
     def _instance(self, path: str, target: str, source: str,
-                  binding: Dict[str, Any], on_path: set) -> Instance:
-        inst = Instance(path, target)
+                  binding: Dict[str, Any], on_path: set,
+                  var: str = "") -> Instance:
+        inst = Instance(path, target, var=var)
         if (source, target) in on_path:
             return inst
         on_path = on_path | {(source, target)}
@@ -137,7 +139,7 @@ class Doc:
                     continue
                 inst.children.append(self._instance(
                     f"{inst.path}.{value['$inst']}", child_tgt, child_src, b,
-                    on_path))
+                    on_path, name))
 
     def walk(self) -> Iterator[Instance]:
         stack = list(reversed(self.roots()))
