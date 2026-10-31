@@ -636,7 +636,26 @@ def _instance_child(d: _Doc, var: Dict[str, Any], value: Dict[str, Any]) -> Dict
     return child
 
 
-def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
+def _owned_scoped(d: _Doc, tname: str, bindings: List[Dict[str, Any]]
+                  ) -> List[Dict[str, Any]]:
+    """The scoped bindings reached from `bindings` through `$inline` values."""
+    owned: List[Dict[str, Any]] = []
+    todo = bindings
+    while todo:
+        found = []
+        for _, var, value in d.instances(todo):
+            if "$inline" in value:
+                found.extend(
+                    b for b in d.scoped.get(tname, [])
+                    if b["inline_path"] == value["$inline"]
+                    and b["original"] == d.inst_module(var) and b not in owned)
+        owned.extend(found)
+        todo = found
+    return owned
+
+
+def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
+                     used: set, enum_ids: Dict[str, int],
                      hdl_path: Optional[str]) -> List[Dict[str, Any]]:
     suffix: Dict[str, int] = {}
 
@@ -653,9 +672,9 @@ def _inline_children(d: _Doc, tname: str, used: set, enum_ids: Dict[str, int],
                 used.add(cand)
                 return cand
 
-    scoped = d.scoped.get(tname, [])
+    scoped = _owned_scoped(d, tname, bindings)
     inline_locs = {tuple(value["$inline"]): var.get("loc")
-                   for _, var, value in d.instances(d.unscoped.get(tname, []) + scoped)
+                   for _, var, value in d.instances(bindings + scoped)
                    if "$inline" in value}
     roots: List[Dict[str, Any]] = []
     for b in scoped:
@@ -731,7 +750,7 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
         seen.add(value["$inst"])
         children.append(_instance_child(d, var, value))
     used = {pv["var_name"] for pv in port_vars}
-    children.extend(_inline_children(d, tname, used, enum_ids, hdl_path))
+    children.extend(_inline_children(d, tname, bindings, used, enum_ids, hdl_path))
     out["children"] = children
     return out
 

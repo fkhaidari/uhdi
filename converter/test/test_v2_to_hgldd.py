@@ -350,6 +350,39 @@ def test_dedup_objects_and_inline_scopes() -> None:
     assert out["HGLDD"]["hdl_file_index"] == 2
 
 
+def test_dedup_inline_children_are_per_source() -> None:
+    """A and B merge into one module; each inlines a different module as `w`."""
+    u1 = {"kind": "uint", "width": 1}
+    inst = lambda m: {"type": f"module_{m}", "loc": [0, 5, 5]}
+    doc = {
+        "uhdi": "0.1", "producer": "firtool", "profiles": ["x-chisel"],
+        "files": [{"path": "/src/A.scala"}, {"path": "T.sv", "generated": True}],
+        "types": {"u1": u1, "module_W1": {"kind": "module", "module": "W1"},
+                  "module_W2": {"kind": "module", "module": "W2"}},
+        "original": {
+            "A": {"loc": [0, 1, 1], "vars": {"w": inst("W1")}},
+            "B": {"loc": [0, 2, 1], "vars": {"w": inst("W2")}},
+            "W1": {"loc": [0, 3, 1], "vars": {"p1": {"type": "u1", "loc": [0, 4, 3]}}},
+            "W2": {"loc": [0, 5, 1], "vars": {"p2": {"type": "u1", "loc": [0, 6, 3]}}},
+        },
+        "generated": {"T": {"loc": [1, 1]}},
+        "bindings": [
+            {"original": "A", "generated": "T", "vars": {"w": {"$inline": ["w"]}}},
+            {"original": "W1", "generated": "T", "inline_path": ["w"],
+             "vars": {"p1": "p1"}},
+            {"original": "B", "generated": "T", "vars": {"w": {"$inline": ["w"]}}},
+            {"original": "W2", "generated": "T", "inline_path": ["w"],
+             "vars": {"p2": "p2"}},
+        ],
+    }
+    out = to_hgldd_v2(doc)
+    objs = {o["obj_name"]: o for o in out["objects"] if o["kind"] == "module"}
+    for src, var in (("A", "p1"), ("B", "p2")):
+        (w,) = objs[src]["children"]
+        assert [p["var_name"] for p in w["port_vars"]] == [var]
+        assert w["hgl_loc"]["begin_line"] == 5
+
+
 @pytest.mark.parametrize("index", [1, 5])
 def test_duplicate_binding_rejected(index: int) -> None:
     doc = _dedup_doc()
