@@ -91,7 +91,9 @@ class _Builder:
 
     def instance(self, inst: Instance, top: bool) -> List[Dict[str, Any]]:
         cfg: List[Dict[str, Any]] = []
-        children = {c.var: c for c in inst.children}
+        children: Dict[str, List[Instance]] = {}
+        for c in inst.children:
+            children.setdefault(c.var, []).append(c)
         for part in inst.parts:
             p = _prefix(inst) + part.prefix
             if not part.prefix:
@@ -169,7 +171,8 @@ class _Builder:
             cfg.append({"stmtRef": v})
             if kind == "inst" and s.get("var") in children:
                 self.inst_decl.append(v)
-                cfg += self.instance(children[s["var"]], False)
+                for c in children[s["var"]]:
+                    cfg += self.instance(c, False)
                 self.inst_decl.pop()
         return cfg
 

@@ -368,3 +368,18 @@ def test_pdg_expands_renamed_instance(doc):
     verts = to_pdg.convert(doc)["vertices"]
     assert any(v["name"] == "defreg_r" and v["modulePath"] == ["k0_x"]
                for v in verts)
+
+
+def test_readers_expand_vector_of_instances(doc):
+    doc["types"].append({"kind": "vector", "elem": 6, "size": 2})
+    doc["original"]["M"]["vars"]["k0"]["type"] = len(doc["types"]) - 1
+    for b in doc["bindings"]:
+        if b["generated"] == "M" and "inline_path" not in b:
+            b["vars"]["k0"] = [{"$inst": "k0_0", "module": "Kid"},
+                               {"$inst": "k0_1", "module": "Kid"}]
+    paths = {tuple(v["modulePath"]) for v in to_pdg.convert(doc)["vertices"]
+             if v["name"] == "defreg_r"}
+    assert {("k0_0",), ("k0_1",)} <= paths
+    table = to_hgdb_json.convert(doc)["table"]
+    assert {"k0_0", "k0_1"} <= {i["name"] for m in table
+                                for i in m.get("instances", [])}

@@ -39,6 +39,19 @@ class Instance:
     var: str = ""
 
 
+def _insts(value: Any) -> Iterator[Dict[str, Any]]:
+    """The `$inst` objects of an instance value: one, or those of a vector
+    (a list, or a map by index)."""
+    if isinstance(value, dict) and "$inst" in value:
+        yield value
+    elif isinstance(value, list):
+        for v in value:
+            yield from _insts(v)
+    elif isinstance(value, dict) and not any(k.startswith("$") for k in value):
+        for v in value.values():
+            yield from _insts(v)
+
+
 def _is_none(v: Any) -> bool:
     return v is None or (isinstance(v, dict) and "$optimized_out" in v)
 
@@ -73,6 +86,8 @@ class Doc:
 
     def module_of(self, var: Dict[str, Any]) -> Optional[str]:
         t = self.types.get(var.get("type", "")) or {}
+        while t.get("kind") == "vector":
+            t = self.types.get(t.get("elem", "")) or {}
         return t.get("module") if t.get("kind") == "module" else None
 
     def shown(self, part: Part, path: str, prefixed: bool = True) -> str:
@@ -94,8 +109,8 @@ class Doc:
         referenced = set()
         for b in self.doc.get("bindings", []):
             for v in (b.get("vars") or {}).values():
-                if isinstance(v, dict) and "$inst" in v:
-                    referenced.add(v.get("module"))
+                for i in _insts(v):
+                    referenced.add(i.get("module"))
         out = []
         for t in self.target:
             if t in referenced:
@@ -123,23 +138,24 @@ class Doc:
         svars = self.vars(part.source)
         for name, value in (part.binding.get("vars") or {}).items():
             var = svars.get(name)
-            if var is None or not isinstance(value, dict):
+            if var is None:
                 continue
-            if "$inline" in value:
+            if isinstance(value, dict) and "$inline" in value:
                 path = tuple(value["$inline"])
                 scoped = self.scoped.get((inst.target, path))
                 if scoped is not None:
                     self._lay(inst, Part(scoped["original"], scoped,
                                          ".".join(path) + "."), on_path)
-            elif "$inst" in value:
-                child_src = self.module_of(var) or ""
-                child_tgt = value.get("module", "")
-                b = self.unscoped.get((child_src, child_tgt))
-                if b is None:
-                    continue
-                inst.children.append(self._instance(
-                    f"{inst.path}.{value['$inst']}", child_tgt, child_src, b,
-                    on_path, name))
+            else:
+                for i in _insts(value):
+                    child_src = self.module_of(var) or ""
+                    child_tgt = i.get("module", "")
+                    b = self.unscoped.get((child_src, child_tgt))
+                    if b is None:
+                        continue
+                    inst.children.append(self._instance(
+                        f"{inst.path}.{i['$inst']}", child_tgt, child_src, b,
+                        on_path, name))
 
     def walk(self) -> Iterator[Instance]:
         stack = list(reversed(self.roots()))
