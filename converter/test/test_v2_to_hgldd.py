@@ -263,12 +263,12 @@ def _dedup_doc() -> Dict[str, Any]:
                 "h": {"type": "module_Right", "loc": [0, 6, 5]}}},
             "Mid": {"loc": [0, 30, 1], "vars": {
                 "h": {"type": "module_Left", "loc": [0, 5, 5]}}},
-            "Left": {"loc": [0, 10, 1], "x-chisel": {"type_name": "Left"},
+            "Left": {"loc": [0, 10, 1], "name": "Left",
                      "vars": {"a": {"type": "u8", "loc": [0, 11, 3]},
                               "p": {"type": "pair", "loc": [0, 12, 3]},
                               "v": {"type": "vec2", "loc": [0, 13, 3]},
                               "gone": {"type": "u8", "loc": [0, 14, 3]}}},
-            "Right": {"loc": [0, 20, 1], "x-chisel": {"type_name": "Right"},
+            "Right": {"loc": [0, 20, 1], "name": "Right",
                       "vars": {"b": {"type": "u8", "loc": [0, 21, 3]},
                                "a": {"type": "u8", "loc": [0, 22, 3]}}},
         },
@@ -306,7 +306,7 @@ def test_dedup_objects_and_inline_scopes() -> None:
     # One object per source merged into Shared, each with its own variables.
     shared = objs["Left"]
     assert shared["module_name"] == "Shared"
-    assert [p["var_name"] for p in shared["port_vars"]] == ["a", "p", "v_0", "gone"]
+    assert [p["var_name"] for p in shared["port_vars"]] == ["a", "p", "v", "gone"]
     right = objs["Right"]
     assert right["module_name"] == "Shared"
     assert [(p["var_name"], p["value"]) for p in right["port_vars"]] == [
@@ -331,7 +331,7 @@ def test_dedup_objects_and_inline_scopes() -> None:
     top = mods["Top"]
     assert top["hdl_loc"]["begin_line"] == 40
     assert "hdl_loc" not in mods["Ext"]
-    assert [c["name"] for c in top["children"][:2]] == ["l0", "r"]
+    assert [c["name"] for c in top["children"][:2]] == ["l0", "r0"]
     assert [c["obj_name"] for c in top["children"][:2]] == ["Left", "Right"]
     assert [c["module_name"] for c in top["children"][:2]] == ["Shared", "Shared"]
     inline = {c["name"]: c for c in top["children"][2:]}
@@ -396,7 +396,7 @@ def test_vector_type_info() -> None:
     doc = _dedup_doc()
     doc["types"]["pvec"] = {"kind": "vector", "elem": "pair", "size": 2}
     doc["original"]["Left"]["vars"]["pv"] = {
-        "type": "pvec", "loc": [0, 15, 3], "x-chisel": {"binding": "IO"}}
+        "type": "pvec", "loc": [0, 15, 3], "dir": "input"}
     doc["types"]["u8"]["name"] = "UInt<8>"
     doc["types"]["pvec"]["name"] = "Pair[2]"
     doc["bindings"][1]["vars"]["pv"] = [{"x": "pv_0_x", "y": "pv_0_y"},
@@ -516,15 +516,14 @@ def test_var_name_shown_and_key_binds() -> None:
     assert pv[0]["var_name"] == "alpha" and pv[0]["value"] == {"sig_name": "a_0"}
 
 
-def test_instance_child_keeps_verilog_name_and_vectors() -> None:
+def test_instance_child_named_by_verilog_and_vectors() -> None:
     doc = _dedup_doc()
     doc["original"]["Top"]["vars"]["r"]["name"] = "right"
     top = _object(to_hgldd_v2(doc), "Top")
     r = top["children"][1]
-    assert r["name"] == "right" and r["hdl_obj_name"] == "r0"
+    # tywaves looks the scope up by `name`, so it is the Verilog instance.
+    assert r["name"] == "r0" and "hdl_obj_name" not in r
     assert r["hgl_loc"]["begin_line"] == 4
-    # The Verilog name is left out when it equals the name.
-    assert "hdl_obj_name" not in top["children"][0]
 
     doc = _dedup_doc()
     doc["types"]["module_Left_x2"] = {"kind": "vector", "elem": "module_Left", "size": 2}
@@ -533,9 +532,9 @@ def test_instance_child_keeps_verilog_name_and_vectors() -> None:
                                         {"$inst": "ls_one", "module": "Shared"}]
     top = _object(to_hgldd_v2(doc), "Top")
     ls = [c for c in top["children"] if c["name"].startswith("ls")]
-    assert [(c["name"], c.get("hdl_obj_name"), c["obj_name"], c["module_name"])
-            for c in ls] == [("ls_0", None, "Left", "Shared"),
-                             ("ls_1", "ls_one", "Left", "Shared")]
+    assert [(c["name"], c["obj_name"], c["module_name"])
+            for c in ls] == [("ls_0", "Left", "Shared"),
+                             ("ls_one", "Left", "Shared")]
     assert "ls" not in [p["var_name"] for p in top["port_vars"]]
 
 
@@ -565,11 +564,11 @@ def test_class_info_from_the_instance_first() -> None:
     doc = _dedup_doc()
     # Producers now write the class on the instance, not on the module.
     for m in ("Left", "Right"):
-        del doc["original"][m]["x-chisel"]
+        del doc["original"][m]["name"]
     params = [{"name": "w", "type": "Int", "value": 8}]
-    doc["original"]["Top"]["vars"]["l0"]["x-chisel"] = {
-        "type_name": "LeftImpl", "params": params}
-    doc["original"]["Top"]["vars"]["r"]["x-chisel"] = {"type_name": "RightImpl"}
+    doc["types"]["module_Left"].update(
+        {"name": "LeftImpl", "x-chisel": {"params": params}})
+    doc["types"]["module_Right"]["name"] = "RightImpl"
     out = to_hgldd_v2(doc)
     assert _object(out, "Shared", "Left")["source_lang_type_info"] == {
         "type_name": "LeftImpl",
@@ -577,14 +576,14 @@ def test_class_info_from_the_instance_first() -> None:
     assert _object(out, "Shared", "Right")["source_lang_type_info"] == {
         "type_name": "RightImpl"}
     # The root has no instance; its own record is the fallback.
-    doc["original"]["Top"]["x-chisel"] = {"type_name": "TopImpl"}
+    doc["original"]["Top"]["name"] = "TopImpl"
     assert _object(to_hgldd_v2(doc), "Top")["source_lang_type_info"] == {
         "type_name": "TopImpl"}
 
 
 def test_class_info_instance_wins_over_module() -> None:
     doc = _dedup_doc()
-    doc["original"]["Top"]["vars"]["l0"]["x-chisel"] = {"type_name": "LeftImpl"}
+    doc["types"]["module_Left"]["name"] = "LeftImpl"
     out = to_hgldd_v2(doc)
     assert _object(out, "Shared", "Left")["source_lang_type_info"] == {
         "type_name": "LeftImpl"}
@@ -592,10 +591,11 @@ def test_class_info_instance_wins_over_module() -> None:
 
 def test_class_info_instances_that_differ_fall_back() -> None:
     doc = _dedup_doc()
-    doc["original"]["Top"]["vars"]["m2"] = {"type": "module_Left"}
+    doc["types"]["module_A"] = {"kind": "module", "module": "Left", "name": "A"}
+    doc["types"]["module_B"] = {"kind": "module", "module": "Left", "name": "B"}
+    doc["original"]["Top"]["vars"]["l0"]["type"] = "module_A"
+    doc["original"]["Top"]["vars"]["m2"] = {"type": "module_B"}
     doc["bindings"][0]["vars"]["m2"] = {"$inst": "m2", "module": "Shared"}
-    doc["original"]["Top"]["vars"]["l0"]["x-chisel"] = {"type_name": "A"}
-    doc["original"]["Top"]["vars"]["m2"]["x-chisel"] = {"type_name": "B"}
     out = to_hgldd_v2(doc)
     # Two classes for one module: the module's own record.
     assert _object(out, "Shared", "Left")["source_lang_type_info"] == {

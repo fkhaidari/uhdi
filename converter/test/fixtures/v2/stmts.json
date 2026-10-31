@@ -106,10 +106,7 @@
             2,
             7
           ],
-          "type": 0,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 0
         },
         "b": {
           "dir": "out",
@@ -118,10 +115,7 @@
             3,
             7
           ],
-          "type": 0,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 0
         },
         "clock": {
           "dir": "in",
@@ -195,10 +189,7 @@
             1,
             7
           ],
-          "type": 0,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 0
         },
         "q": {
           "dir": "out",
@@ -207,10 +198,7 @@
             1,
             7
           ],
-          "type": 2,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 2
         },
         "r": {
           "loc": [
@@ -219,9 +207,7 @@
             16
           ],
           "type": 2,
-          "x-chisel": {
-            "binding": "Reg"
-          }
+          "storage": "reg"
         }
       }
     },
@@ -296,10 +282,7 @@
             1,
             7
           ],
-          "type": 0,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 0
         },
         "q": {
           "dir": "out",
@@ -308,10 +291,7 @@
             1,
             7
           ],
-          "type": 2,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 2
         },
         "r": {
           "loc": [
@@ -320,9 +300,7 @@
             16
           ],
           "type": 2,
-          "x-chisel": {
-            "binding": "Reg"
-          }
+          "storage": "reg"
         }
       }
     },
@@ -557,9 +535,7 @@
             20
           ],
           "type": 3,
-          "x-chisel": {
-            "binding": "Reg"
-          }
+          "storage": "reg"
         },
         "d": {
           "dir": "in",
@@ -568,10 +544,7 @@
             1,
             7
           ],
-          "type": 4,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 4
         },
         "i": {
           "loc": [
@@ -608,10 +581,7 @@
             1,
             7
           ],
-          "type": 4,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 4
         },
         "reset": {
           "dir": "in",
@@ -624,10 +594,7 @@
             1,
             7
           ],
-          "type": 0,
-          "x-chisel": {
-            "binding": "IO"
-          }
+          "type": 0
         },
         "t": {
           "loc": [
@@ -644,9 +611,7 @@
             16
           ],
           "type": 8,
-          "x-chisel": {
-            "binding": "Reg"
-          }
+          "storage": "reg"
         },
         "w": {
           "loc": [
@@ -654,10 +619,7 @@
             5,
             15
           ],
-          "type": 4,
-          "x-chisel": {
-            "binding": "Wire"
-          }
+          "type": 4
         }
       }
     }

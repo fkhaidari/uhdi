@@ -125,16 +125,16 @@ def test_schema_extensions(doc):
     assert core.is_valid(other)
     other["profiles"].append("other")
     assert not core.is_valid(other)
-    # The companion checks where `x-chisel` sits.
+    # The companion checks where `x-chisel` sits: a variable has none, its
+    # binding follows from `dir`, `storage` and `node`.
     misplaced = copy.deepcopy(doc)
-    next(t for t in misplaced["types"] if t["kind"] == "uint")["x-chisel"] = {}
+    _first_var(misplaced)[2]["x-chisel"] = {}
     assert core.is_valid(misplaced)
     assert not ext.is_valid(misplaced)
-    # A variable may carry its own class parameters, as `to_hgldd` reads them.
+    # Any type may carry class parameters.
     params = copy.deepcopy(doc)
-    var = next(v for m in params["original"].values()
-               for v in (m.get("vars") or {}).values() if "x-chisel" in v)
-    var["x-chisel"]["params"] = [{"name": "w", "type": "Int", "value": "8"}]
+    next(t for t in params["types"] if t["kind"] == "uint")["x-chisel"] = {
+        "params": [{"name": "w", "typeName": "Int", "value": 8}]}
     assert ext.is_valid(params)
 
 
@@ -161,6 +161,18 @@ def test_schema_storage_values(doc):
     var["storage"] = "mem"
     assert core.is_valid(d)
     var["storage"] = "ram"
+    assert not core.is_valid(d)
+
+
+def test_schema_node_and_module_name(doc):
+    core, _ = _validators()
+    d = copy.deepcopy(doc)
+    mod, _, var = _first_var(d)
+    mod["name"] = "Top"
+    var.pop("storage", None)
+    var["node"] = True
+    assert core.is_valid(d)
+    var["storage"] = "reg"
     assert not core.is_valid(d)
 
 
@@ -216,20 +228,20 @@ def test_schema_generated_module_keys(doc):
     assert not core.is_valid(d)
 
 
-def test_schema_chisel_instance_var(doc):
-    _, ext = _validators()
+def test_schema_chisel_class(doc):
+    core, ext = _validators()
     d = copy.deepcopy(doc)
-    var = next(v for m in d["original"].values()
-               for v in (m.get("vars") or {}).values() if "x-chisel" in v)
-    var["x-chisel"] = {"type_name": "Kid",
-                       "params": [{"name": "w", "type": "Int"}]}
-    assert ext.is_valid(d)
-    var["x-chisel"] = {"params": [{"name": "w", "type": "Int"}]}
+    mod = next(t for t in d["types"] if t["kind"] == "module")
+    # The class is the core `name`; `x-chisel` holds only its parameters.
+    mod["name"] = "Kid"
+    mod["x-chisel"] = {"params": [{"name": "w", "typeName": "Int", "value": "8"}]}
+    assert core.is_valid(d) and ext.is_valid(d)
+    mod["x-chisel"] = {"type_name": "Kid"}
     assert not ext.is_valid(d)
-    var["x-chisel"] = {"binding": "IO"}
-    assert ext.is_valid(d)
-    var["x-chisel"] = {"type_name": 1}
+    mod["x-chisel"] = {"params": [{"typeName": "Int"}]}
     assert not ext.is_valid(d)
+    mod["name"] = 1
+    assert not core.is_valid(d)
 
 
 def test_schema_text_rules():
@@ -263,7 +275,7 @@ def test_validate_x_chisel_only_when_listed(doc):
     from uhdi2.validate import is_valid
     assert "x-chisel" in doc["profiles"]
     bad = copy.deepcopy(doc)
-    next(t for t in bad["types"] if t["kind"] == "uint")["x-chisel"] = {}
+    _first_var(bad)[2]["x-chisel"] = {}
     assert not is_valid(bad)
     bad["profiles"].remove("x-chisel")
     bad["profiles"].append("x-other")

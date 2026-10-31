@@ -339,6 +339,10 @@
             "module": {
               "description": "Key into `original`: the module as written, before dedup.",
               "type": "string"
+            },
+            "name": {
+              "description": "Source-language class of the instance, such as a Chisel `Module` subclass. Two instances of one module may name different classes.",
+              "$ref": "#/$defs/typeName"
             }
           }
         }
@@ -357,6 +361,10 @@
         "loc": {
           "description": "Where the module is declared.",
           "$ref": "#/$defs/loc"
+        },
+        "name": {
+          "description": "Source-language class of the module. A debugger uses it when no instance names one, such as for the top module.",
+          "type": "string"
         },
         "artificial": {
           "description": "Made by the compiler, not written in the source, such as the module a layer block is extracted into; DWARF's `DW_AT_artificial`. A debugger may show its variables in the scope of the module that instantiates it.",
@@ -414,10 +422,20 @@
             "inout"
           ]
         },
+        "node": {
+          "description": "The variable names an expression, such as a FIRRTL `node`, rather than a declared wire. Never with `storage`.",
+          "const": true
+        },
         "artificial": {
           "description": "Made by the compiler, not written in the source, such as an instance of an artificial module.",
           "const": true
         }
+      },
+      "not": {
+        "required": [
+          "node",
+          "storage"
+        ]
       }
     },
     "generatedModule": {

@@ -20,19 +20,27 @@ see below):
   HGLDD expression with that opcode.
 * An instance is a source variable whose type has `kind: "module"`, or a
   vector of them. It is not a port variable. A `{"$inst": I, "module": T}`
-  value makes a child `{name (= the variable's name), hdl_obj_name (= I,
-  when it differs from the name), obj_name (= the type's source module),
-  module_name (= T), hgl_loc (= the variable's loc)}`. An element of a
-  vector is a child named `<variable>_<index>`.
+  value makes a child `{name (= I), obj_name (= the type's source module),
+  module_name (= T), hgl_loc (= the variable's loc)}`. tywaves finds the
+  instance's scope in the waveform by `name` and ignores `hdl_obj_name`, so
+  the name is the Verilog one, as native HGLDD writes it.
 * A *scoped* binding (`inline_path`, the instance names inside the target) is
   an inlined module. It becomes a nested child `{name, hgl_loc,
   port_vars, children}` named by each path component, as the pool
   converter does for `dbg.scope` inline scopes. `hgl_loc` is the loc of
   the instance variable whose value is `{"$inline": path}`.
-* Class info (`x-chisel.type_name/params`) becomes the module's
-  `source_lang_type_info`. It is read from the variable that instantiates
-  the module in its parent, and from the source module when no instance
-  names a single class (the root, or instances that differ).
+* The class of a module (`name` and `x-chisel.params`) becomes its
+  `source_lang_type_info`. It is read from the `module` type of the
+  variable that instantiates the module in its parent, and from the source
+  module when no instance names a single class (the root, or instances
+  that differ).
+* The `source_lang_type_info` of a variable or a struct field is
+  `<binding>[<type name>]`, as native HGLDD writes it. The binding comes
+  from the variable: `IO` for a port, `Reg` and `Mem` from `storage`,
+  `OpResult` for a node, `Wire` otherwise. A field takes the binding of the
+  variable. The type name is the type's `name`, or one derived from its
+  kind (`UInt<8>`, `Clock`, `Bool[2]`). Parameters come from
+  `x-chisel.params` of the type.
 
 Dedup: several unscoped bindings can point at one target. Each becomes
 its own object, `obj_name` = the source and `module_name` = the target,
@@ -195,26 +203,55 @@ def _hgldd_params(params: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
-def _class_info(xc: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    if not xc or not xc.get("type_name"):
+def _class_info(entry: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """The class of a `module` type or a source module."""
+    if not entry or not entry.get("name"):
         return None
-    out: Dict[str, Any] = {"type_name": xc["type_name"]}
-    if params := xc.get("params"):
+    out: Dict[str, Any] = {"type_name": entry["name"]}
+    if params := (entry.get(EXT_KEY) or {}).get("params"):
         out["params"] = _hgldd_params(params)
     return out
 
 
-def _var_type_info(var_xc: Dict[str, Any], tref: str,
-                   types: Types) -> Optional[Dict[str, Any]]:
-    """`binding[TypeName]` of a variable, params from the variable, else
-    from the type."""
+def _binding(var: Dict[str, Any]) -> str:
+    """The Chisel binding of a variable, as native HGLDD names it."""
+    if var.get("dir"):
+        return "IO"
+    if (storage := var.get("storage")) == "reg":
+        return "Reg"
+    if storage == "mem":
+        return "Mem"
+    return "OpResult" if var.get("node") else "Wire"
+
+
+_KIND_NAMES = {"clock": "Clock", "reset": "Reset", "asyncreset": "AsyncReset"}
+
+
+def _type_name(tref: str, types: Types) -> Optional[str]:
+    """The source name of a type, derived from its kind when it has none."""
     t = types.get(tref) or {}
-    name = t.get("name")
+    if name := t.get("name"):
+        return name
+    kind = t.get("kind")
+    if kind == "uint":
+        return f"UInt<{t.get('width')}>"
+    if kind == "sint":
+        return f"SInt<{t.get('width')}>"
+    if kind == "vector":
+        elem = _type_name(t.get("elem", ""), types)
+        return f"{elem}[{t.get('size', 0)}]" if elem else None
+    return _KIND_NAMES.get(kind)
+
+
+def _var_type_info(binding: str, tref: str,
+                   types: Types) -> Optional[Dict[str, Any]]:
+    """`binding[TypeName]` of a variable, params from the type."""
+    t = types.get(tref) or {}
+    name = _type_name(tref, types)
     if not name:
         return None
-    binding = var_xc.get("binding")
-    out: Dict[str, Any] = {"type_name": f"{binding}[{name}]" if binding else name}
-    params = var_xc.get("params") or (t.get(EXT_KEY) or {}).get("params")
+    out: Dict[str, Any] = {"type_name": f"{binding}[{name}]"}
+    params = (t.get(EXT_KEY) or {}).get("params")
     if not params and t.get("kind") == "vector":
         # The parameters of Chisel's `Vec(length, gen)`, as native HGLDD
         # lists them.
@@ -314,15 +351,6 @@ def _top_value(v: Any, tref: str, types: Types) -> Optional[Dict[str, Any]]:
     return _scalar(v, tref, types) or None
 
 
-def _first_leaf_sig(value: Optional[Dict[str, Any]]) -> str:
-    while value and value.get("operands"):
-        first = value["operands"][0]
-        if "sig_name" in first:
-            return first["sig_name"]
-        value = first
-    return ""
-
-
 # ---- document access ----------------------------------------------------
 
 
@@ -374,19 +402,23 @@ class _Doc:
             (self.scoped if b.get("inline_path") else self.unscoped).setdefault(
                 b["generated"], []).append(b)
 
-    def inst_module(self, var: Dict[str, Any]) -> Optional[str]:
-        """The source module a variable instantiates: its type's module, or
-        that of the elements of a vector of instances."""
+    def inst_type(self, var: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """The `module` type of a variable, or of the elements of a vector
+        of instances."""
         tref, seen = var.get("type", ""), set()
         while tref not in seen:
             seen.add(tref)
             t = self.types.get(tref) or {}
             if t.get("kind") == "module":
-                return t.get("module")
+                return t
             if t.get("kind") != "vector":
                 return None
             tref = t.get("elem", "")
         return None
+
+    def inst_module(self, var: Dict[str, Any]) -> Optional[str]:
+        """The source module a variable instantiates."""
+        return (self.inst_type(var) or {}).get("module")
 
     def is_instance(self, var: Dict[str, Any]) -> bool:
         return self.inst_module(var) is not None
@@ -427,7 +459,7 @@ class _Doc:
             self._infos = {}
             for b in self.doc_bindings:
                 for _, var, value in self.instances([b]):
-                    info = _class_info(var.get(EXT_KEY))
+                    info = _class_info(self.inst_type(var))
                     if "$inst" in value and info:
                         key = (self.inst_module(var), value.get("module"))
                         records = self._infos.setdefault(key, [])
@@ -477,7 +509,7 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
             loc = var.get("loc")
             if not loc:
                 continue
-            binding = (var.get(EXT_KEY) or {}).get("binding")
+            binding = _binding(var)
             for tref in _location_types(var.get("type", ""), d.types):
                 kind = (d.types.get(tref) or {}).get("kind")
                 if kind == "struct":
@@ -486,7 +518,7 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
                     vecs[tref] = (loc, skey, binding)
 
     struct_loc: Dict[str, Any] = {}
-    struct_binding: Dict[str, Optional[str]] = {}
+    struct_binding: Dict[str, str] = {}
     for tid, cands in structs.items():
         loc, _skey, binding = min(
             cands, key=lambda c: (str(c[1]), int(c[0][1]), int(c[0][2]) if len(c[0]) > 2 else 0))
@@ -520,7 +552,7 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
                 pv["hgl_loc"] = loc
             if (eid := enum_ids.get(f["type"])) is not None:
                 pv["enum_def_ref"] = eid
-            if binding and (slti := _var_type_info({"binding": binding}, f["type"], d.types)):
+            if binding and (slti := _var_type_info(binding, f["type"], d.types)):
                 pv["source_lang_type_info"] = slti
             port_vars.append(pv)
         obj: Dict[str, Any] = {"kind": "struct", "obj_name": tid, "port_vars": port_vars}
@@ -537,7 +569,7 @@ def _struct_objects(d: _Doc, enum_ids: Dict[str, int]) -> List[Dict[str, Any]]:
                 if (eid := enum_ids.get(f["type"])) is not None:
                     epv["enum_def_ref"] = eid
                 if vbinding and (slti := _var_type_info(
-                        {"binding": vbinding}, f["type"], d.types)):
+                        vbinding, f["type"], d.types)):
                     epv["source_lang_type_info"] = slti
                 elem_pvs.append(epv)
             base = {"kind": "struct", "obj_name": vtid, "port_vars": elem_pvs}
@@ -560,9 +592,6 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
     tref = var.get("type", "")
     value = _top_value((binding.get("vars") or {}).get(name), tref, d.types)
     var_name = var.get("name") or name
-    if (d.types.get(tref) or {}).get("kind") == "vector":
-        if first := _first_leaf_sig(value):
-            var_name = first
     out: Dict[str, Any] = {"var_name": var_name}
     out.update(_type_description(tref, d.types))
     if value:
@@ -574,8 +603,7 @@ def _port_var(d: _Doc, name: str, var: Dict[str, Any], binding: Dict[str, Any],
     vloc = (signals.get(raw) or {}).get("loc") if isinstance(raw, str) else None
     if loc := d.hdl_loc(vloc, hdl_path):
         out["hdl_loc"] = loc
-    xc = var.get(EXT_KEY) or {}
-    if xc.get("binding") and (slti := _var_type_info(xc, tref, d.types)):
+    if slti := _var_type_info(_binding(var), tref, d.types):
         out["source_lang_type_info"] = slti
     if (eid := enum_ids.get(tref)) is not None:
         out["enum_def_ref"] = eid
@@ -589,7 +617,7 @@ def _module_class_info(d: _Doc, bindings: List[Dict[str, Any]]) -> Optional[Dict
     for b in bindings:
         infos = d.class_infos(b["original"], b["generated"])
         info = infos[0] if len(infos) == 1 else _class_info(
-            (d.source.get(b["original"]) or {}).get(EXT_KEY))
+            d.source.get(b["original"]))
         if info and info not in records:
             records.append(info)
     return records[0] if len(records) == 1 else None
@@ -681,13 +709,11 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
 
     children = []
     seen = set()
-    for iname, var, value in d.instances(bindings):
-        if "$inst" not in value or iname in seen:
+    for _, var, value in d.instances(bindings):
+        if "$inst" not in value or value["$inst"] in seen:
             continue
-        seen.add(iname)
-        child: Dict[str, Any] = {"name": iname}
-        if value["$inst"] != iname:
-            child["hdl_obj_name"] = value["$inst"]
+        seen.add(value["$inst"])
+        child: Dict[str, Any] = {"name": value["$inst"]}
         child["obj_name"] = d.inst_module(var)
         child["module_name"] = value["module"]
         if loc := d.src_loc(var.get("loc")):
