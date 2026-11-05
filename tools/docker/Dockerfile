@@ -51,6 +51,47 @@ RUN --mount=type=cache,target=/root/.ccache cd /src/circt && \
         (mkdir -p /opt/circt/bin && cp build/bin/firtool /opt/circt/bin/)) && \
     strip /opt/circt/bin/firtool
 
+# ---- circt with the Debug-op stack (bench/tyview) ------------------------
+# Same unified build as circt-build, at another fork revision.
+FROM base-build AS circt-dbg-build
+ARG CIRCT_DBG_URL
+ARG CIRCT_DBG_REV
+ARG LLVM_URL
+ARG CIRCT_DBG_LLVM_REV
+WORKDIR /src
+RUN git-pin circt-dbg "$CIRCT_DBG_URL" "$CIRCT_DBG_REV" && \
+    git-pin circt-dbg/llvm "$LLVM_URL" "$CIRCT_DBG_LLVM_REV"
+RUN --mount=type=cache,target=/root/.ccache cd /src/circt-dbg && \
+    cmake -G Ninja -S llvm/llvm -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DLLVM_ENABLE_PROJECTS=mlir \
+        -DLLVM_EXTERNAL_PROJECTS=circt \
+        -DLLVM_EXTERNAL_CIRCT_SOURCE_DIR=/src/circt-dbg \
+        -DLLVM_TARGETS_TO_BUILD=host \
+        -DLLVM_ENABLE_ASSERTIONS=OFF \
+        -DLLVM_BUILD_EXAMPLES=OFF \
+        -DLLVM_INCLUDE_EXAMPLES=OFF \
+        -DLLVM_INCLUDE_TESTS=OFF \
+        -DLLVM_INCLUDE_BENCHMARKS=OFF \
+        -DCIRCT_LLHD_SIM_ENABLED=OFF \
+        -DCIRCT_BINDINGS_PYTHON_ENABLED=OFF \
+        -DOR_TOOLS_DISABLE=ON && \
+    cmake --build build --target firtool && \
+    mkdir -p /opt/circt-dbg/bin && cp build/bin/firtool /opt/circt-dbg/bin/ && \
+    strip /opt/circt-dbg/bin/firtool
+
+# ---- native tywaves firtool (rameloni/circt release) ---------------------
+FROM base-build AS tywaves-firtool-fetch
+ARG TYWAVES_FIRTOOL_URL
+ARG TYWAVES_FIRTOOL_SHA256
+RUN curl -fsSL -o /tmp/firtool.tgz "$TYWAVES_FIRTOOL_URL" && \
+    echo "$TYWAVES_FIRTOOL_SHA256  /tmp/firtool.tgz" | sha256sum -c - && \
+    tar -xzf /tmp/firtool.tgz -C /tmp && \
+    mkdir -p /opt/tywaves-circt/bin && \
+    cp /tmp/bin/firtool-type-dbg-info-* /opt/tywaves-circt/bin/firtool
+
 # ---- hgdb-circt (legacy --hgdb=<file>) -----------------------------------
 FROM base-build AS hgdb-circt-build
 ARG HGDB_CIRCT_URL
@@ -213,6 +254,41 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cp target/release/surfer-tywaves /opt/tywaves/bin/tywaves && \
     strip /opt/tywaves/bin/tywaves
 
+# ---- chisel with the handle-tree debug intrinsics (mill publishLocal) -----
+FROM docker.io/eclipse-temurin:21-jdk AS chisel-dbg-publish
+ARG CHISEL_DBG_URL
+ARG CHISEL_DBG_REV
+ARG CHISEL_DBG_VERSION
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://github.com/coursier/coursier/releases/download/v2.1.10/cs-x86_64-pc-linux.gz \
+        | gunzip > /usr/local/bin/cs && chmod +x /usr/local/bin/cs
+COPY git-pin /usr/local/bin/git-pin
+RUN chmod +x /usr/local/bin/git-pin
+WORKDIR /src
+# build.mill takes the version from `git describe`. The shallow pin has no
+# tags, so tag HEAD with the version. unipublish publishes the plugin too.
+RUN git-pin chisel-dbg "$CHISEL_DBG_URL" "$CHISEL_DBG_REV" && \
+    cd chisel-dbg && \
+    git tag "v${CHISEL_DBG_VERSION}" HEAD && \
+    ./mill --no-daemon 'unipublish[2.13].publishLocal'
+RUN cs fetch -r ivy2Local "org.chipsalliance::chisel:${CHISEL_DBG_VERSION}" \
+        "org.chipsalliance:::chisel-plugin:${CHISEL_DBG_VERSION}" \
+        --scala-version 2.13.18
+
+# ---- tydump (bench/tyview: tywaves-rs typed view of a VCD) ---------------
+# rust 1.89: the dependency versions in tydump/Cargo.lock need >= 1.88.
+FROM docker.io/rust:1.89-slim-bookworm AS tydump-build
+ARG UHDI_URL
+ARG UHDI_REV
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN cargo install --locked --git "$UHDI_URL" --rev "$UHDI_REV" \
+        --root /opt/tydump tydump
+
 # ---- runtime image (what gets pushed) ------------------------------------
 FROM ubuntu:24.04 AS runtime
 ARG SCALA_CLI_VERSION
@@ -223,6 +299,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-21-jre-headless \
         python3 python3-venv python3-pip \
         git curl ca-certificates xz-utils \
+        verilator build-essential \
     && rm -rf /var/lib/apt/lists/* && \
     ln -sf /usr/bin/python3 /usr/local/bin/python
 
@@ -236,6 +313,11 @@ COPY --from=hgdb-circt-build /opt/hgdb-circt   /opt/hgdb-circt
 COPY --from=hgdb-firrtl-build /opt/hgdb-firrtl /opt/hgdb-firrtl
 COPY --from=hgdb-py-build    /opt/hgdb         /opt/hgdb
 COPY --from=tywaves-build    /opt/tywaves      /opt/tywaves
+COPY --from=circt-dbg-build  /opt/circt-dbg    /opt/circt-dbg
+COPY --from=tywaves-firtool-fetch /opt/tywaves-circt /opt/tywaves-circt
+COPY --from=tydump-build     /opt/tydump       /opt/tydump
+COPY --from=chisel-dbg-publish /root/.ivy2/local /opt/ivy2-local
+COPY --from=chisel-dbg-publish /root/.cache/coursier /opt/coursier-cache
 COPY --from=chisel-publish   /root/.ivy2/local /opt/ivy2-local
 COPY --from=chisel-publish   /root/.cache/coursier /opt/coursier-cache
 
@@ -245,6 +327,9 @@ ENV FIRTOOL=/opt/circt/bin/firtool \
     HGDB_FIRRTL_JAR=/opt/hgdb-firrtl/bin/hgdb-firrtl.jar \
     HGDB_PY=/opt/hgdb/bindings/python \
     TYWAVES=/opt/tywaves/bin/tywaves \
+    TYWAVES_FIRTOOL=/opt/tywaves-circt/bin/firtool \
+    TYVIEW_FIRTOOL=/opt/circt-dbg/bin/firtool \
+    TYDUMP=/opt/tydump/bin/tydump \
     COURSIER_CACHE=/opt/coursier-cache \
     PATH=/opt/circt/bin:/opt/hgdb-circt/bin:/opt/tywaves/bin:/usr/local/bin:/usr/bin:/bin
 

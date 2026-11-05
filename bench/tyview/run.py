@@ -264,7 +264,7 @@ def compare(stem, views, report):
 def main():
     discover()
     tc = discover_toolchain()
-    firtool = os.environ['FIRTOOL']
+    firtool = os.environ.get('TYVIEW_FIRTOOL') or os.environ['FIRTOOL']
     report, bad = [], False
     for stem in sys.argv[1:] or FIXTURES:
         try:

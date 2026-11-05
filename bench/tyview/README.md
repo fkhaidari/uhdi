@@ -31,13 +31,24 @@ The exit code is 1 if any fixture fails to build or shows a
 
 | Piece | Where it comes from | Override |
 |---|---|---|
-| firtool (ours) | circt branch with the Debug-op stack | `FIRTOOL` (required) |
+| firtool (ours) | circt branch with the Debug-op stack | `TYVIEW_FIRTOOL`, else `FIRTOOL` (one is required) |
 | Chisel (ours) | `7.16.0+37-0422e52a-SNAPSHOT`, `publishLocal` of the chisel branch with the handle-tree intrinsics | `UHDI_BENCH_UHDI_CHISEL`, `UHDI_BENCH_UHDI_PLUGIN` |
 | firtool (native) | `firtool-type-dbg-info-0.1.5` from the rameloni/circt release `v0.1.5-tywaves-SNAPSHOT` | `TYWAVES_FIRTOOL` |
 | Chisel (native) | rameloni/chisel `v6.4.3-tywaves-SNAPSHOT`, `publishLocal` | `UHDI_BENCH_TYWAVES_CHISEL`, `UHDI_BENCH_TYWAVES_PLUGIN` |
 | tywaves-rs | rameloni/tywaves-rs main, pinned in `tydump/Cargo.toml` | `[patch]` in `.cargo/config.toml` |
 | Verilator | 5.020 was used; needs `--trace-underscore` | `PATH` |
 | tydump | `tydump/` | `TYDUMP` |
+
+The `ghcr.io/fkhaidari/uhdi-tools` image carries all of them, pinned in
+`tools/versions.env`, and sets the env vars above:
+
+```sh
+TAG=$(cat tools/docker/image-tag.txt)
+docker run --rm -v "$PWD":/work -w /work \
+    ghcr.io/fkhaidari/uhdi-tools:$TAG \
+    bash -c 'pip install --break-system-packages -e ./converter -e ./bench \
+             && python bench/tyview/run.py'
+```
 
 Both Chisel builds resolve from `~/.ivy2/local`. Behind a Maven mirror
 that does not carry them, set `COURSIER_MIRRORS=/dev/null`.
