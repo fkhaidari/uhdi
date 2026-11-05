@@ -28,7 +28,10 @@ see below):
   an inlined module. It becomes a nested child `{name, hgl_loc,
   port_vars, children}` named by each path component, as the pool
   converter does for `dbg.scope` inline scopes. `hgl_loc` is the loc of
-  the instance variable whose value is `{"$inline": path}`.
+  the instance variable whose value is `{"$inline": path}`. An instance
+  inside an inlined module is a child of the target object, not of the
+  nested child: it sits in the target's Verilog module, and tywaves finds
+  its waveform scope by path.
 * The class of a module (`name` and `x-chisel.params`) becomes its
   `source_lang_type_info`. It is read from the `module` type of the
   variable that instantiates the module in its parent, and from the source
@@ -689,7 +692,10 @@ def _uniquifier(used: set):
 
 def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
                      used: set, enum_ids: Dict[str, int],
-                     hdl_path: Optional[str]) -> List[Dict[str, Any]]:
+                     hdl_path: Optional[str]
+                     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """The nested children of inlined modules, and the instances inside
+    them, which belong to the target object."""
     uniquify = _uniquifier(used)
 
     scoped = _owned_scoped(d, tname, bindings)
@@ -697,6 +703,7 @@ def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
                    for _, var, value in d.instances(bindings + scoped)
                    if "$inline" in value}
     roots: List[Dict[str, Any]] = []
+    insts: List[Dict[str, Any]] = []
     for b in scoped:
         level = roots
         node: Dict[str, Any] = {}
@@ -710,14 +717,14 @@ def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
             node["hgl_loc"] = loc
         for _, var, value in d.instances([b]):
             if "$inst" in value:
-                node["children"].append(_instance_child(d, var, value))
+                insts.append(_instance_child(d, var, value))
         for vname, var in d.vars(b["original"]).items():
             if d.is_instance(var):
                 continue
             pv = _port_var(d, vname, var, b, enum_ids, hdl_path)
             pv["var_name"] = uniquify(pv["var_name"])
             node["port_vars"].append(pv)
-    return roots
+    return roots, insts
 
 
 def _ports(d: _Doc, bindings: List[Dict[str, Any]], enum_ids: Dict[str, int],
@@ -773,7 +780,9 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
         seen.add(value["$inst"])
         children.append(_instance_child(d, var, value))
     used = {pv["var_name"] for pv in port_vars}
-    children.extend(_inline_children(d, tname, bindings, used, enum_ids, hdl_path))
+    roots, insts = _inline_children(d, tname, bindings, used, enum_ids, hdl_path)
+    children.extend(c for c in insts if c["name"] not in seen)
+    children.extend(roots)
     out["children"] = children
     return out
 
