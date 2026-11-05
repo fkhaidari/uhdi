@@ -117,6 +117,9 @@ Cells skip cleanly when scala-cli or firtool are absent -- so on a
 fresh checkout, `pytest` is green-by-default and only flips to
 "actually running" once the toolchains are wired.
 
+To compare what tywaves shows over a real simulation, ours against
+native HGLDD, see [`tyview/README.md`](tyview/README.md).
+
 ## Adding a fixture
 
 1. Drop `bench/fixtures/<Name>.scala` -- a Chisel `Module` plus a

@@ -1,0 +1,9 @@
+[package]
+name = "tydump"
+version = "0.1.0"
+edition = "2021"
+
+# Upstream tywaves-rs main, the library surfer-tywaves links. Override with a
+# local checkout through `[patch]` in .cargo/config.toml to test a fix.
+[dependencies]
+tywaves-rs = { git = "https://github.com/rameloni/tywaves-rs", rev = "5ca1413f6e565bd0359a039221eff4e0bd8c6420" }
