@@ -34,6 +34,15 @@ fn leaves(v: &Variable, path: &str, out: &mut Vec<String>) {
     }
 }
 
+fn scope_types(scope: &ScopeDef, parent: &[String], out: &mut Vec<String>) {
+    let mut path = parent.to_vec();
+    path.push(scope.get_trace_name().cloned().unwrap_or_else(|| "?".into()));
+    out.push(format!("{}\t{}", path.join("."), scope.high_level_info.type_name));
+    for child in scope.subscopes.values() {
+        scope_types(&child.read().unwrap(), &path, out);
+    }
+}
+
 fn walk(s: &ScopeDef, path: &[String], out: &mut Vec<String>, lv: &mut Vec<String>) {
     let name = s.get_trace_name().cloned().unwrap_or_else(|| "?".into());
     let p = [path, &[name]].concat();
@@ -80,6 +89,11 @@ fn main() {
     }
     let ty = b.get_copy().expect("tyvcd");
     let scopes: Vec<ScopeDef> = ty.scopes.values().map(|v| v.read().unwrap().clone()).collect();
+    let mut scope_lines = vec![];
+    for scope in &scopes {
+        scope_types(scope, &[], &mut scope_lines);
+    }
+    std::fs::write(format!("{}.scopes.tsv", out), scope_lines.join("\n") + "\n").unwrap();
     let (mut lines, mut lv) = (vec![], vec![]);
     for s in &scopes {
         walk(s, &[], &mut lines, &mut lv);

@@ -1,0 +1,9 @@
+{
+  "circt": "b35e1eef158670a3eb4efb451d5b5cc6db2b88b0",
+  "converter": "c2a67460b9a96bd404b8b2e7ee79b07cb10db2a4",
+  "tywaves_rs": "a1bdc350c5a056b13d82dc43c891d78056b6ab19",
+  "surfer_tywaves": "34f7ed249febd75c6a050437f555058e7dc793ad",
+  "chisel": "7.16.0+37-0422e52a-SNAPSHOT",
+  "scala": "2.13.18",
+  "publication": "Local series commits; apply the accompanying patches or use the prepared local checkouts before building. These hashes are not claimed to be available from upstream remotes."
+}
