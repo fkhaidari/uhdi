@@ -18,20 +18,12 @@ see below):
   the order of the source variables. `{"$optimized_out": ...}` or a missing entry
   gives a variable without `value`. A `$op` (expr profile) becomes the
   HGLDD expression with that opcode.
-* An instance is a source variable whose type has `kind: "module"`, or a
-  vector of them. It is not a port variable. A `{"$inst": I, "module": T}`
-  value makes a child `{name (= I), obj_name (= the type's source module),
-  module_name (= T), hgl_loc (= the variable's loc)}`. tywaves finds the
-  instance's scope in the waveform by `name` and ignores `hdl_obj_name`, so
-  the name is the Verilog one, as native HGLDD writes it.
-* A *scoped* binding (`inline_path`, the instance names inside the target) is
-  an inlined module. It becomes a nested child `{name, hgl_loc,
-  port_vars, children}` named by each path component, as the pool
-  converter does for `dbg.scope` inline scopes. `hgl_loc` is the loc of
-  the instance variable whose value is `{"$inline": path}`. An instance
-  inside an inlined module is a child of the target object, not of the
-  nested child: it sits in the target's Verilog module, and tywaves finds
-  its waveform scope by path.
+* An instance is a source variable with a module type, or a vector of them.
+  Its child keeps the source name; `hdl_obj_name` records a different physical
+  path. Inlined scopes retain their source children and class metadata.
+* A scoped binding becomes a nested source child. `$inline` resolves its
+  binding; it does not add physical path components. Variable names are
+  unique within each source scope, not across all inlined scopes.
 * The class of a module (`name` and `x-chisel.params`) becomes its
   `source_lang_type_info`. It is read from the `module` type of the
   variable that instantiates the module in its parent, and from the source
@@ -102,7 +94,6 @@ class HGLDDV2ConversionError(ConversionError):
 
 
 Types = Dict[str, Any]
-
 
 # ---- locations ---------------------------------------------------------
 
@@ -499,7 +490,6 @@ class _Doc(Doc):
         return _hgldd_loc(loc, self.files, True, fallback, self.info)
 
 
-
 # ---- enums ---------------------------------------------------------------
 
 
@@ -644,31 +634,16 @@ def _module_class_info(d: _Doc, bindings: List[Dict[str, Any]]) -> Optional[Dict
     return records[0] if len(records) == 1 else None
 
 
-def _instance_child(d: _Doc, var: Dict[str, Any], value: Dict[str, Any]) -> Dict[str, Any]:
-    child: Dict[str, Any] = {"name": value["$inst"]}
+def _instance_child(d: _Doc, name: str, var: Dict[str, Any],
+                    value: Dict[str, Any]) -> Dict[str, Any]:
+    child: Dict[str, Any] = {"name": name}
+    if name != value["$inst"]:
+        child["hdl_obj_name"] = value["$inst"]
     child["obj_name"] = d.inst_module(var)
     child["module_name"] = value["module"]
     if loc := d.src_loc(var.get("loc")):
         child["hgl_loc"] = loc
     return child
-
-
-def _owned_scoped(d: _Doc, tname: str, bindings: List[Dict[str, Any]]
-                  ) -> List[Dict[str, Any]]:
-    """The scoped bindings reached from `bindings` through `$inline` values."""
-    owned: List[Dict[str, Any]] = []
-    todo = bindings
-    while todo:
-        found = []
-        for _, var, value in d.instances(todo):
-            if "$inline" in value:
-                found.extend(
-                    b for b in d.scoped_by_target.get(tname, [])
-                    if b["inline_path"] == value["$inline"]
-                    and b["original"] == d.inst_module(var) and b not in owned)
-        owned.extend(found)
-        todo = found
-    return owned
 
 
 def _uniquifier(used: set):
@@ -690,41 +665,48 @@ def _uniquifier(used: set):
     return uniquify
 
 
-def _inline_children(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
-                     used: set, enum_ids: Dict[str, int],
-                     hdl_path: Optional[str]
-                     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """The nested children of inlined modules, and the instances inside
-    them, which belong to the target object."""
-    uniquify = _uniquifier(used)
-
-    scoped = _owned_scoped(d, tname, bindings)
-    inline_locs = {tuple(value["$inline"]): var.get("loc")
-                   for _, var, value in d.instances(bindings + scoped)
-                   if "$inline" in value}
-    roots: List[Dict[str, Any]] = []
-    insts: List[Dict[str, Any]] = []
-    for b in scoped:
-        level = roots
-        node: Dict[str, Any] = {}
-        for comp in b["inline_path"]:
-            node = next((n for n in level if n["name"] == comp), None)
-            if node is None:
-                node = {"name": comp, "port_vars": [], "children": []}
-                level.append(node)
-            level = node["children"]
-        if loc := d.src_loc(inline_locs.get(tuple(b["inline_path"]))):
+def _source_children(
+    d: _Doc,
+    tname: str,
+    bindings: List[Dict[str, Any]],
+    enum_ids: Dict[str, int],
+    hdl_path: Optional[str],
+    active: frozenset = frozenset()
+) -> List[Dict[str, Any]]:
+    children = []
+    for name, var, value in d.instances(bindings):
+        if "$inst" in value:
+            children.append(_instance_child(d, name, var, value))
+            continue
+        if "$inline" not in value:
+            continue
+        key = (d.inst_module(var), tuple(value["$inline"]))
+        if key in active:
+            raise HGLDDV2ConversionError("cyclic inline source hierarchy")
+        scoped = [
+            b for b in d.scoped_by_target.get(tname, [])
+            if b["original"] == key[0] and tuple(b["inline_path"]) == key[1]
+        ]
+        if not scoped:
+            continue
+        node = {
+            "name":
+            name,
+            "obj_name":
+            key[0],
+            "port_vars":
+            _ports(d, scoped, enum_ids, hdl_path),
+            "children":
+            _source_children(d, tname, scoped, enum_ids, hdl_path,
+                             active | {key})
+        }
+        if loc := d.src_loc(var.get("loc")):
             node["hgl_loc"] = loc
-        for _, var, value in d.instances([b]):
-            if "$inst" in value:
-                insts.append(_instance_child(d, var, value))
-        for vname, var in d.vars(b["original"]).items():
-            if d.is_instance(var):
-                continue
-            pv = _port_var(d, vname, var, b, enum_ids, hdl_path)
-            pv["var_name"] = uniquify(pv["var_name"])
-            node["port_vars"].append(pv)
-    return roots, insts
+        if info := (_class_info(d.inst_type(var))
+                    or _class_info(d.source.get(key[0]))):
+            node["source_lang_type_info"] = info
+        children.append(node)
+    return children
 
 
 def _ports(d: _Doc, bindings: List[Dict[str, Any]], enum_ids: Dict[str, int],
@@ -744,13 +726,19 @@ def _ports(d: _Doc, bindings: List[Dict[str, Any]], enum_ids: Dict[str, int],
 
 
 def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
-                   enum_ids: Dict[str, int],
-                   enum_defs: Dict[str, Dict[str, Any]],
+                   enum_ids: Dict[str, int], enum_defs: Dict[str, Dict[str,
+                                                                       Any]],
                    hdl_path: Optional[str]) -> Dict[str, Any]:
     tmod = d.target[tname]
     first_src = bindings[0]["original"] if bindings else tname
-    out: Dict[str, Any] = {"kind": "module", "obj_name": first_src, "module_name": tname}
+    out: Dict[str, Any] = {
+        "kind": "module",
+        "obj_name": first_src,
+        "module_name": tname
+    }
     hdl_loc = d.hdl_loc(tmod.get("loc"), hdl_path)
+    if slti := _module_class_info(d, bindings):
+        out["source_lang_type_info"] = slti
     if tmod.get("kind") == "extern":
         out["isExtModule"] = 1
         if defs := enum_defs.get(tname):
@@ -764,26 +752,13 @@ def _module_object(d: _Doc, tname: str, bindings: List[Dict[str, Any]],
             break
     if hdl_loc:
         out["hdl_loc"] = hdl_loc
-    if slti := _module_class_info(d, bindings):
-        out["source_lang_type_info"] = slti
     if defs := enum_defs.get(tname):
         out["enum_defs"] = defs
 
     port_vars = _ports(d, bindings, enum_ids, hdl_path)
     out["port_vars"] = port_vars
 
-    children = []
-    seen = set()
-    for _, var, value in d.instances(bindings):
-        if "$inst" not in value or value["$inst"] in seen:
-            continue
-        seen.add(value["$inst"])
-        children.append(_instance_child(d, var, value))
-    used = {pv["var_name"] for pv in port_vars}
-    roots, insts = _inline_children(d, tname, bindings, used, enum_ids, hdl_path)
-    children.extend(c for c in insts if c["name"] not in seen)
-    children.extend(roots)
-    out["children"] = children
+    out["children"] = _source_children(d, tname, bindings, enum_ids, hdl_path)
     return out
 
 
@@ -806,17 +781,54 @@ def convert(doc: Dict[str, Any]) -> Dict[str, Any]:
     enum_ids, enum_defs = _enum_index(d)
 
     objects = _struct_objects(d, enum_ids)
+    referenced = {
+        value["module"]
+        for binding in d.doc_bindings
+        for _, _, value in d.instances([binding]) if "$inst" in value
+    }
+    pending = []
+    for target, bindings in d.by_target.items():
+        if target not in referenced:
+            named = [b for b in bindings if b["original"] == target]
+            pending.extend(named or bindings)
+    reached, reachable = set(), set()
+    while pending:
+        binding = pending.pop()
+        key = (binding["original"], binding["generated"],
+               tuple(binding.get("inline_path", [])))
+        if key in reached:
+            continue
+        reached.add(key)
+        if not key[2]:
+            reachable.add(key[:2])
+        for _, var, value in d.instances([binding]):
+            source = d.inst_module(var)
+            if "$inst" in value:
+                child = d.unscoped.get((source, value["module"]))
+                if child:
+                    pending.append(child)
+            elif "$inline" in value:
+                pending.extend(b for b in d.scoped_by_target.get(key[1], [])
+                               if b["original"] == source
+                               and b["inline_path"] == value["$inline"])
     for t in d.target:
         # Dedup merged several sources into this target: one object per
         # source, each with its own variables, so an instance's type
         # names the object it shows.
-        bindings = d.by_target.get(t, [])
+        bindings = [
+            b for b in d.by_target.get(t, [])
+            if (b["original"], t) in reachable
+        ]
+        if not bindings and d.by_target.get(t):
+            continue
         groups = [[b] for b in bindings] if len(bindings) > 1 else [bindings]
-        objects.extend(_module_object(d, t, g, enum_ids, enum_defs, hdl_path)
-                       for g in groups)
+        objects.extend(
+            _module_object(d, t, g, enum_ids, enum_defs, hdl_path)
+            for g in groups)
 
     info = d.info
-    hdl_start = info.hdl_start if info.hdl_start is not None else len(info.ordered)
+    hdl_start = info.hdl_start if info.hdl_start is not None else len(
+        info.ordered)
     hgldd: Dict[str, Any] = {"version": "1.0", "file_info": list(info.ordered)}
     if info.ordered:
         hgldd["hdl_file_index"] = hdl_start + 1

@@ -384,7 +384,7 @@
       ],
       "children": [
         {
-          "name": "mem_ext",
+          "name": "mem",
           "obj_name": "mem_16x8",
           "module_name": "mem_16x8",
           "hgl_loc": {
@@ -393,10 +393,11 @@
             "end_line": 176,
             "begin_column": 24,
             "end_column": 24
-          }
+          },
+          "hdl_obj_name": "mem_ext"
         },
         {
-          "name": "smem_ext",
+          "name": "smem",
           "obj_name": "smem_16x8",
           "module_name": "smem_16x8",
           "hgl_loc": {
@@ -405,7 +406,8 @@
             "end_line": 178,
             "begin_column": 25,
             "end_column": 25
-          }
+          },
+          "hdl_obj_name": "smem_ext"
         }
       ]
     }

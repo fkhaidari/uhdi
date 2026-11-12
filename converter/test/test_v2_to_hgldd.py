@@ -42,8 +42,9 @@ def to_hgldd_v2(doc: Dict[str, Any]) -> Dict[str, Any]:
     return _convert_v2(_indexed(doc))
 
 
-@pytest.mark.parametrize(
-    "path", sorted(_REAL.glob("*.uhdi.json")), ids=lambda p: p.name)
+@pytest.mark.parametrize("path",
+                         sorted(_REAL.glob("*.uhdi.json")),
+                         ids=lambda p: p.name)
 def test_real_design_matches_golden(path: pathlib.Path) -> None:
     got = HGLDDBackend().convert(json.loads(path.read_text(encoding="utf-8")))
     want = path.with_name(path.name.replace(".uhdi.", ".dd."))
@@ -119,39 +120,68 @@ def _dedup_doc() -> Dict[str, Any]:
 def test_dedup_objects_and_inline_scopes() -> None:
     out = to_hgldd_v2(_dedup_doc())
     objs = {o["obj_name"]: o for o in out["objects"] if o["kind"] == "module"}
-    mods = {o["module_name"]: o for o in out["objects"] if o["kind"] == "module"}
+    mods = {
+        o["module_name"]: o
+        for o in out["objects"] if o["kind"] == "module"
+    }
 
     # One object per source merged into Shared, each with its own variables.
     shared = objs["Left"]
     assert shared["module_name"] == "Shared"
-    assert [p["var_name"] for p in shared["port_vars"]] == ["a", "p", "v", "gone"]
+    assert [p["var_name"]
+            for p in shared["port_vars"]] == ["a", "p", "v", "gone"]
     right = objs["Right"]
     assert right["module_name"] == "Shared"
-    assert [(p["var_name"], p["value"]) for p in right["port_vars"]] == [
-        ("b", {"sig_name": "b_0"}), ("a", {"sig_name": "clash"})]
+    assert [(p["var_name"], p["value"])
+            for p in right["port_vars"]] == [("b", {
+                "sig_name": "b_0"
+            }), ("a", {
+                "sig_name": "clash"
+            })]
     assert right["source_lang_type_info"] == {"type_name": "Right"}
     # Both objects of Shared point at its one Verilog declaration.
     assert shared["hdl_loc"] == right["hdl_loc"] == {
-        "file": 2, "begin_line": 2, "end_line": 2}
+        "file": 2,
+        "begin_line": 2,
+        "end_line": 2
+    }
     a = shared["port_vars"][0]
     assert a["value"] == {"sig_name": "a_0"}
-    assert a["hgl_loc"] == {"file": 1, "begin_line": 11, "end_line": 11,
-                            "begin_column": 3, "end_column": 3}
+    assert a["hgl_loc"] == {
+        "file": 1,
+        "begin_line": 11,
+        "end_line": 11,
+        "begin_column": 3,
+        "end_column": 3
+    }
     assert a["hdl_loc"]["file"] == 2 and a["hdl_loc"]["begin_line"] == 7
     assert shared["port_vars"][1]["value"] == {
-        "opcode": "'{", "operands": [{"sig_name": "p_x"}, {"bit_vector": "00000101"}]}
+        "opcode": "'{",
+        "operands": [{
+            "sig_name": "p_x"
+        }, {
+            "bit_vector": "00000101"
+        }]
+    }
     # An element without a value is unknown: x bits, as HGLDD has no empty operand.
     assert shared["port_vars"][2]["value"] == {
-        "opcode": "'{", "operands": [{"sig_name": "v_0"}, {"bit_vector": "xxxxxxxx"}]}
+        "opcode": "'{",
+        "operands": [{
+            "sig_name": "v_0"
+        }, {
+            "bit_vector": "xxxxxxxx"
+        }]
+    }
     assert "value" not in shared["port_vars"][3]  # $optimized_out
     assert shared["source_lang_type_info"] == {"type_name": "Left"}
 
     top = mods["Top"]
     assert top["hdl_loc"]["begin_line"] == 40
     assert "hdl_loc" not in mods["Ext"]
-    assert [c["name"] for c in top["children"][:2]] == ["l0", "r0"]
+    assert [c["name"] for c in top["children"][:2]] == ["l0", "r"]
     assert [c["obj_name"] for c in top["children"][:2]] == ["Left", "Right"]
-    assert [c["module_name"] for c in top["children"][:2]] == ["Shared", "Shared"]
+    assert [c["module_name"]
+            for c in top["children"][:2]] == ["Shared", "Shared"]
     inline = {c["name"]: c for c in top["children"][2:]}
     assert set(inline) == {"m", "h"}
     assert inline["m"]["port_vars"] == []
@@ -378,25 +408,36 @@ def test_top_port_var_names_are_unique() -> None:
     assert len(names) == len(set(names)) and {"alpha", "alpha_0"} <= set(names)
 
 
-def test_instance_child_named_by_verilog_and_vectors() -> None:
+def test_instance_child_keeps_source_and_verilog_names() -> None:
     doc = _dedup_doc()
     doc["original"]["Top"]["vars"]["r"]["name"] = "right"
     top = _object(to_hgldd_v2(doc), "Top")
     r = top["children"][1]
-    # tywaves looks the scope up by `name`, so it is the Verilog instance.
-    assert r["name"] == "r0" and "hdl_obj_name" not in r
+    assert r["name"] == "right" and r["hdl_obj_name"] == "r0"
     assert r["hgl_loc"]["begin_line"] == 4
 
     doc = _dedup_doc()
-    doc["types"]["module_Left_x2"] = {"kind": "vector", "elem": "module_Left", "size": 2}
-    doc["original"]["Top"]["vars"]["ls"] = {"type": "module_Left_x2", "loc": [0, 8, 5]}
-    doc["bindings"][0]["vars"]["ls"] = [{"$inst": "ls_0", "module": "Shared"},
-                                        {"$inst": "ls_one", "module": "Shared"}]
+    doc["types"]["module_Left_x2"] = {
+        "kind": "vector",
+        "elem": "module_Left",
+        "size": 2
+    }
+    doc["original"]["Top"]["vars"]["ls"] = {
+        "type": "module_Left_x2",
+        "loc": [0, 8, 5]
+    }
+    doc["bindings"][0]["vars"]["ls"] = [{
+        "$inst": "ls_0",
+        "module": "Shared"
+    }, {
+        "$inst": "ls_one",
+        "module": "Shared"
+    }]
     top = _object(to_hgldd_v2(doc), "Top")
     ls = [c for c in top["children"] if c["name"].startswith("ls")]
     assert [(c["name"], c["obj_name"], c["module_name"])
             for c in ls] == [("ls_0", "Left", "Shared"),
-                             ("ls_one", "Left", "Shared")]
+                             ("ls_1", "Left", "Shared")]
     assert "ls" not in [p["var_name"] for p in top["port_vars"]]
 
 
@@ -488,17 +529,20 @@ def test_named_types_keeps_ext_values_opaque() -> None:
     assert out["array_0"]["elem"] == "#0"
 
 
-def test_instance_inside_inline_is_a_child_of_the_target() -> None:
-    # The instance sits in Top's Verilog module, and tywaves finds its
-    # waveform scope by path, so it is not nested under the inline node.
+def test_instance_inside_inline_keeps_source_parent() -> None:
     doc = _dedup_doc()
-    doc["original"]["Right"]["vars"]["w"] = {"type": "module_Left", "loc": [0, 20, 5]}
+    doc["original"]["Right"]["vars"]["w"] = {
+        "type": "module_Left",
+        "loc": [0, 20, 5]
+    }
     doc["bindings"][5]["vars"]["w"] = {"$inst": "h_w", "module": "Shared"}
     top = _object(to_hgldd_v2(doc), "Top")
     h = next(c for c in top["children"] if c["name"] == "h")
-    assert h["children"] == []
-    w = next(c for c in top["children"] if c["name"] == "h_w")
-    assert (w["name"], w["obj_name"], w["module_name"]) == ("h_w", "Left", "Shared")
+    (w, ) = h["children"]
+    assert (w["name"], w["obj_name"], w["module_name"]) == ("w", "Left",
+                                                            "Shared")
+    assert w["hdl_obj_name"] == "h_w"
+    assert "h_w" not in [c["name"] for c in top["children"]]
     assert w["hgl_loc"]["begin_line"] == 20
     assert "w" not in [p["var_name"] for p in h["port_vars"]]
 
@@ -521,3 +565,53 @@ def test_struct_bound_to_one_signal_is_sliced() -> None:
             {"sig_name": "pk_0"}, {"integer_num": hi}, {"integer_num": lo}]}
     assert pk["value"] == {"opcode": "'{", "operands": [
         sl(13, 6), {"opcode": "'{", "operands": [sl(2, 0), sl(5, 3)]}]}
+
+
+def test_inline_names_and_constructor_metadata_are_local():
+    doc = _dedup_doc()
+    doc["original"]["Top"]["vars"]["io"]["name"] = "a"
+    doc["types"]["module_Right"]["name"] = "pkg.Right"
+    doc["types"]["module_Right"]["x-chisel"] = {
+        "params": [{
+            "name": "width",
+            "type": "Int",
+            "value": 8
+        }]
+    }
+    top = _object(to_hgldd_v2(doc), "Top")
+    h = next(c for c in top["children"] if c["name"] == "h")
+    assert [v["var_name"] for v in h["port_vars"]] == ["b", "a"]
+    assert h["source_lang_type_info"] == {
+        "type_name": "pkg.Right",
+        "params": [{
+            "name": "width",
+            "type": "Int",
+            "value": "8"
+        }]
+    }
+
+
+def test_external_class_and_reachable_source_definitions():
+    doc = _dedup_doc()
+    doc["generated"]["Shared"]["kind"] = "extern"
+    doc["original"]["Unused"] = {"name": "Unused", "vars": {}}
+    doc["bindings"].append({
+        "original": "Unused",
+        "generated": "Shared",
+        "vars": {}
+    })
+    doc["original"]["OtherRoot"] = {"vars": {"a": {"type": "u8"}}}
+    doc["generated"]["OtherRoot"] = {}
+    doc["bindings"].append({
+        "original": "OtherRoot",
+        "generated": "OtherRoot",
+        "vars": {
+            "a": "a"
+        }
+    })
+    out = to_hgldd_v2(doc)
+    objects = {o["obj_name"]: o for o in out["objects"]}
+    assert "Unused" not in objects
+    assert {"Top", "OtherRoot", "Left", "Right"} <= objects.keys()
+    assert objects["Left"]["source_lang_type_info"] == {"type_name": "Left"}
+    assert objects["Right"]["source_lang_type_info"] == {"type_name": "Right"}
